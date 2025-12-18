@@ -23,11 +23,6 @@ const realm = process.env.AUTH_REALM // e.g. subspace
 const clientId = process.env.API_CLIENT_ID
 const clientSecret = process.env.API_CLIENT_SECRET
 
-logger.debug('[AUTH] oauth.ts loaded', {
-  file: import.meta.url,
-  mcpServerUrl,
-})
-
 export const oauthMetadataRouter = mcpAuthMetadataRouter({
   oauthMetadata,
   resourceServerUrl: new URL(mcpServerUrl!),
@@ -41,7 +36,7 @@ export const authMiddleware = requireBearerAuth({
       logger.info('[AUTH] running token validation')
       const authInfo = await verifyToken(token)
 
-      logger.error('[AUTH] pre-sdk-check authInfo', {
+      logger.debug('[AUTH] pre-sdk-check authInfo', {
         hasScopes: Array.isArray((authInfo as any).scopes),
         scopesType: typeof (authInfo as any).scopes,
         expiresAt: (authInfo as any).expiresAt,
@@ -92,7 +87,6 @@ async function verifyToken(token: string) {
     params.set('client_secret', clientSecret)
   }
 
-  logger.info('WHAT THE HELL')
   let response: Response
   try {
     response = await fetch(endpoint, {
@@ -143,15 +137,26 @@ async function verifyToken(token: string) {
   try {
     const audRaw = data.aud
     const audiences = Array.isArray(audRaw) ? audRaw : typeof audRaw === 'string' ? [audRaw] : []
-    const allowed = audiences.some((a) =>
-      checkResourceAllowed({
+
+    const configured = mcpServerUrl!
+
+    const allowed = audiences.some((a) => {
+      // Only run URL-based matching if `a` is a URL
+      try {
+        new URL(a)
+      } catch {
+        return false // ignore non-URL audiences
+      }
+
+      return checkResourceAllowed({
         requestedResource: a,
-        configuredResource: mcpServerUrl!,
+        configuredResource: configured,
       })
-    )
+    })
+
     if (!allowed) {
-      logger.warn(`[AUTH] Retrieved audiences not allowed. Expected ${mcpServerUrl} but got ${audiences.join(',')}`)
-      throw new InsufficientScopeError('Retrieved audiences not allowed')
+      logger.warn(`[AUTH] Audience not allowed. Expected ${configured} but got ${audiences.join(',')}`)
+      throw new InsufficientScopeError('Audience not allowed')
     }
   } catch (e) {
     logger.error(`[AUTH] Error checking audiences ${e}`)
