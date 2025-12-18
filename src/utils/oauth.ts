@@ -126,14 +126,24 @@ async function verifyToken(token: string) {
 
   const exp = data.exp
   if (typeof exp !== 'number' || Number.isNaN(exp)) {
-    // If Keycloak ever omits exp, make it a 401 not a 500
+    logger.error('[AUTH] Invalid token - token has no expiration time')
     authError(401, 'invalid_token', 'Token has no expiration time')
   }
+
+  const scopes = typeof data.scope === 'string' ? data.scope.split(' ') : []
+  logger.info('[AUTH] mapped authInfo', {
+    clientId: data.client_id,
+    expiresAt: exp,
+    expiresAtType: typeof exp,
+    scopesType: typeof scopes,
+    scopesIsArray: Array.isArray(scopes),
+    scopesLen: scopes.length,
+  })
 
   return {
     token,
     clientId: data.client_id,
-    scopes: typeof data.scope === 'string' ? data.scope.split(' ') : [],
+    scopes: scopes,
     expiresAt: exp,
     extra: {
       sub: data.sub,

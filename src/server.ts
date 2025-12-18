@@ -96,6 +96,20 @@ const safe = (fn: RequestHandler): RequestHandler => {
   }
 }
 
+const authMiddlewareWithDiag: RequestHandler = (req, res, next) => {
+  const origJson = res.json.bind(res);
+  res.json = (body: any) => {
+    logger.error('[AUTH] authMiddleware responded', {
+      status: res.statusCode,
+      wwwAuthenticate: res.getHeader('www-authenticate') ?? res.getHeader('WWW-Authenticate') ?? 'none',
+      body,
+    });
+    return origJson(body);
+  };
+  return (authMiddleware as any)(req, res, next);
+};
+
+
 server.all("/mcp",
   (req, res, next) => {
     res.on("finish", () => {
@@ -105,7 +119,7 @@ server.all("/mcp",
     next()
   },
   logIncomingAuth,
-  safe(authMiddleware as RequestHandler),
+  safe(authMiddlewareWithDiag as RequestHandler),
   (req, _res, next) => { logger.info("[MCP] passed auth"); next() },
   safe(async (req: Request, res: Response) => {
     await mcpTransport.handleRequest(req, res, req.body)
@@ -178,6 +192,8 @@ server.use(oauthMetadataRouter)
 //     authorization_servers: [`https://auth.subtype.space`],
 //   })
 // })
+
+
 
 server.use((err: any, _req: any, res: any, _next: any) => {
   logger.error('[UNHANDLED]', err?.stack ?? err)
