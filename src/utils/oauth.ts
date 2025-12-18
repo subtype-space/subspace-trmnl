@@ -66,6 +66,8 @@ async function verifyToken(token: string) {
     params.set('client_secret', clientSecret)
   }
 
+  logger.info('WHAT THE HELL')
+
   let response: Response
   try {
     response = await fetch(endpoint, {
@@ -79,6 +81,8 @@ async function verifyToken(token: string) {
     logger.error('[AUTH] introspection fetch threw', e)
     throw new ServerError('Introspection failed')
   }
+
+  logger.info('PAST FETCH ENDPOINT')
 
   if (!response.ok) {
     const txt = await response.text()
