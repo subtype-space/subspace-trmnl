@@ -159,21 +159,6 @@ server.use(oauthMetadataRouter)
 //   })
 // })
 
-// custom error handler
-server.use(function (err: any, req: Request, res: Response, next: NextFunction) {
-  logger.debug(err)
-
-  if (err.name === 'UnauthorizedError') {
-    logger.warn('JWT failed authentication')
-    res.status(401).send({ message: 'Unauthorized' })
-  } else if (err.code === 'credentials_required') {
-    logger.warn('No token provided')
-    res.status(401).json({ message: 'No token provided' })
-  } else {
-    next(err)
-  }
-})
-
 server.listen(PORT, () => {
   logger.info(`Using log level: ${process.env.LOG_LEVEL || 'info'}`)
   logger.info('Using API version:', ACTIVE_VERSION)
