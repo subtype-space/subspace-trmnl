@@ -46,7 +46,7 @@ async function verifyToken(token: string) {
       realm: !!realm,
       clientId: !!clientId,
     })
-    throw new Error('Auth not configured')
+    throw new ServerError('Auth not configured')
   }
 
   const endpoint = oauthMetadata.introspection_endpoint
@@ -103,7 +103,7 @@ async function verifyToken(token: string) {
     logger.debug(`[AUTH] Introspection response: ${raw}`)
   } catch (e) {
     logger.error('[AUTH] failed to parse introspection JSON', { error: String(e), body: raw })
-    throw new Error('Failed to parse introspection JSON')
+    throw new ServerError('Failed to parse introspection JSON')
   }
 
   if (!data.active) {
