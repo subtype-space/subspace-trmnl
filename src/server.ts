@@ -9,6 +9,9 @@ import session from 'express-session'
 import KeycloakConnect from 'keycloak-connect'
 import { keycloakConfig } from './configs/keycloakConfig.js'
 
+// OAuth implementation
+import { oauthMetadataRouter, authMiddleware } from './utils/oauth.js'
+
 // MCP import shenanigans
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
@@ -59,18 +62,18 @@ server.set('trust proxy', 1)
 
 logger.info('Setting up middleware...')
 // SESSION_SECRET should just be a super long random base64 encoded string
-server.use(
-  session({
-    secret: process.env.SESSION_SECRET!,
-    resave: false,
-    saveUninitialized: true,
-    store: memoryStore,
-    cookie: {
-      secure: true, // Setting this to true requires trust proxy set in express
-    },
-  })
-)
-server.use(keycloak.middleware())
+// server.use(
+//   session({
+//     secret: process.env.SESSION_SECRET!,
+//     resave: false,
+//     saveUninitialized: true,
+//     store: memoryStore,
+//     cookie: {
+//       secure: true, // Setting this to true requires trust proxy set in express
+//     },
+//   })
+// )
+// server.use(keycloak.middleware())
 server.use(helmet())
 server.use(rateLimiter)
 server.use(express.json())
@@ -97,7 +100,7 @@ server.use(function (err: any, req: Request, res: Response, next: NextFunction) 
 })
 
 // MCP Setup - stateless
-server.all('/mcp', logIncomingAuth, keycloak.protect(), async (req, res) => {
+server.all('/mcp', logIncomingAuth, authMiddleware, async (req, res) => {
   try {
     await mcpTransport.handleRequest(req, res, req.body)
   } catch (err) {
@@ -146,13 +149,23 @@ server.post('/discord/token', logIncomingAuth, async (req, res) => {
 
 
 // oauth
-server.get('/.well-known/oauth-protected-resource', async (_: Request, res: Response) => {
-  const baseURL = `https://api.subtype.space`
-  res.json({
-    resource: baseURL,
-    authorization_servers: [`https://auth.subtype.space`],
-  })
-})
+// oauthMetadataRouter should automatically mount /.well-known/oauth-protected-resource and etc.
+server.use(oauthMetadataRouter)
+// server.get('/.well-known/oauth-protected-resource', async (_: Request, res: Response) => {
+//   const baseURL = `https://api.subtype.space`
+//   res.json({
+//     resource: baseURL,
+//     authorization_servers: [`https://auth.subtype.space`],
+//   })
+// })
+
+// server.get('/.well-known/oauth-authorization-server', async (_: Request, res: Response) => {
+//   const baseURL = `https://api.subtype.space`
+//   res.json({
+//     resource: baseURL,
+//     authorization_servers: [`https://auth.subtype.space`],
+//   })
+// })
 
 server.listen(PORT, () => {
   logger.info(`Using log level: ${process.env.LOG_LEVEL || 'info'}`)
