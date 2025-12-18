@@ -17,7 +17,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { registerTools } from './v1/mcp/registerTools.js'
 
-import { logIncomingAuth } from './utils/auth.js'
+import { logAuthedIdentity, logIncomingAuth } from './utils/auth.js'
 import { rateLimiter } from './utils/rateLimiter.js'
 
 logger.info('Initializing stateless MCP server...')
@@ -95,37 +95,15 @@ const safe = (fn: RequestHandler): RequestHandler => {
   }
 }
 
-const authMiddlewareWithDiag: RequestHandler = (req, res, next) => {
-  const origJson = res.json.bind(res)
-  res.json = (body: any) => {
-    logger.error('[AUTH] authMiddleware responded', {
-      status: res.statusCode,
-      wwwAuthenticate: res.getHeader('www-authenticate') ?? res.getHeader('WWW-Authenticate') ?? 'none',
-      body,
-    })
-    return origJson(body)
-  }
-  return (authMiddleware as any)(req, res, next)
-}
-
 server.all(
   '/mcp',
-  (req, res, next) => {
-    res.on('finish', () => {
-      logger.info(`[MCP] response ${res.statusCode}`)
-      logger.info(`[MCP] www-authenticate=${res.getHeader('www-authenticate') ?? 'none'}`)
-    })
-    next()
-  },
   logIncomingAuth,
   authMiddleware,
+  logAuthedIdentity,
   safe(async (req: Request, res: Response) => {
     await mcpTransport.handleRequest(req, res, req.body)
   })
 )
-
-logger.debug("[AUTH] authMiddleware type", { type: typeof authMiddleware });
-
 
 // // MCP Setup - stateless
 // server.all('/mcp', logIncomingAuth, authMiddleware, logAuthedIdentity, async (req, res) => {
@@ -178,7 +156,6 @@ server.post('/discord/token', logIncomingAuth, async (req, res) => {
 // oauthMetadataRouter should automatically mount /.well-known/oauth-protected-resource and etc.
 logger.debug(oauthMetadataRouter.toString())
 server.use(oauthMetadataRouter)
-
 
 server.use((err: any, _req: any, res: any, _next: any) => {
   logger.error('[UNHANDLED]', err?.stack ?? err)

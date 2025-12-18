@@ -51,14 +51,6 @@ export const authMiddleware = requireBearerAuth({
   resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(new URL(mcpServerUrl!)),
 })
 
-// export const authMiddleware = requireBearerAuth({
-//   verifier: {
-//     verifyAccessToken: verifyToken,
-//   },
-//   requiredScopes: [],
-//   resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(new URL(mcpServerUrl!)),
-// })
-
 async function verifyToken(token: string) {
   if (!mcpServerUrl || !authServerUrl || !realm || !clientId) {
     logger.error('[AUTH] missing env', {
