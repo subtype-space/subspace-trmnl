@@ -1,24 +1,21 @@
-// TODO: fine-grained tool access
-// https://developers.cloudflare.com/agents/model-context-protocol/authorization/
+import { Request, Response, NextFunction } from "express"
+import { logger } from "./logger.js"
 
-import { Request, Response, NextFunction } from 'express'
-import { logger } from './logger.js'
+export function logIncomingAuth(req: Request, _res: Response, next: NextFunction) {
+  const ip = (req.headers["cf-connecting-ip"] as string) ?? req.ip
+  const country = (req.headers["cf-ipcountry"] as string) ?? "unknown country"
 
-// all of this may change due to keycloak oauth support
-export function logIncomingAuth(req: Request, res: Response, next: NextFunction) {
-  logger.info(
-    `[AUTH] Connection from ${req.headers['cf-connecting-ip'] ?? req.ip} - ${req.headers['cf-ipcountry'] ?? 'unknown country'}`
-  )
+  const auth = req.headers.authorization ?? ""
+  const hasBearer = auth.toLowerCase().startsWith("bearer ")
 
-  // For Keycloak-specific OIDC
-  // TODO -- users may not want Keycloak, make this optional/toggle disable
-  const user = req.kauth?.grant?.access_token?.content
-  if (user) {
-    logger.info(`[AUTH] Authenticated as ${user.preferred_username ?? user.clientId ?? 'unknown'} (${user.sub})`)
-  } else {
-    logger.warn('[AUTH] No grant found on request')
-    logger.warn('[AUTH] Possible auth failure')
+  logger.info(`[AUTH] Connection from ${ip} - ${country} bearer=${hasBearer}`)
+  next()
+}
+
+export function logAuthedIdentity(req: Request, _res: Response, next: NextFunction) {
+  const authInfo = (req as any).auth ?? (req as any).mcpAuth ?? (req as any).oauth ?? null
+  if (authInfo) {
+    logger.info(`[AUTH] Authenticated client=${authInfo.clientId} scopes=${(authInfo.scopes ?? []).join(" ")}`)
   }
-
   next()
 }

@@ -1,6 +1,6 @@
 import './utils/env.js' // I hate how I have to do this but whatever. Stupid shim.
 import { logger } from './utils/logger.js'
-import express, { Request, NextFunction, Response } from 'express'
+import express, { Request, NextFunction, Response, RequestHandler } from 'express'
 import trmnlRouter from './v1/routers/trmnlRouter.js'
 import statusRouter from './v1/routers/statusRouter.js'
 import helmet from 'helmet'
@@ -9,12 +9,15 @@ import session from 'express-session'
 import KeycloakConnect from 'keycloak-connect'
 import { keycloakConfig } from './configs/keycloakConfig.js'
 
+// OAuth implementation
+import { oauthMetadataRouter, authMiddleware } from './utils/oauth.js'
+
 // MCP import shenanigans
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { registerTools } from './v1/mcp/registerTools.js'
 
-import { logIncomingAuth } from './utils/auth.js'
+import { logAuthedIdentity, logIncomingAuth } from './utils/auth.js'
 import { rateLimiter } from './utils/rateLimiter.js'
 
 logger.info('Initializing stateless MCP server...')
@@ -54,23 +57,28 @@ const ACTIVE_VERSION = process.env.API_VERSION || 'v1'
 const memoryStore = new session.MemoryStore()
 const keycloak = new KeycloakConnect({ store: memoryStore }, keycloakConfig)
 
+server.use((req, _res, next) => {
+  logger.info(`[REQ] ${req.method} ${req.path}`)
+  next()
+})
+
 // reverse proxy -- removing this will cause issues with secure cookies
 server.set('trust proxy', 1)
 
 logger.info('Setting up middleware...')
 // SESSION_SECRET should just be a super long random base64 encoded string
-server.use(
-  session({
-    secret: process.env.SESSION_SECRET!,
-    resave: false,
-    saveUninitialized: true,
-    store: memoryStore,
-    cookie: {
-      secure: true, // Setting this to true requires trust proxy set in express
-    },
-  })
-)
-server.use(keycloak.middleware())
+// server.use(
+//   session({
+//     secret: process.env.SESSION_SECRET!,
+//     resave: false,
+//     saveUninitialized: true,
+//     store: memoryStore,
+//     cookie: {
+//       secure: true, // Setting this to true requires trust proxy set in express
+//     },
+//   })
+// )
+// server.use(keycloak.middleware())
 server.use(helmet())
 server.use(rateLimiter)
 server.use(express.json())
@@ -81,39 +89,40 @@ logger.info('Initializing routes...')
 server.use('/', statusRouter)
 server.use('/health', express.json(), statusRouter)
 
-// custom error handler
-server.use(function (err: any, req: Request, res: Response, next: NextFunction) {
-  logger.debug(err)
-
-  if (err.name === 'UnauthorizedError') {
-    logger.warn('JWT failed authentication')
-    res.status(401).send({ message: 'Unauthorized' })
-  } else if (err.code === 'credentials_required') {
-    logger.warn('No token provided')
-    res.status(401).json({ message: 'No token provided' })
-  } else {
-    next(err)
+const safe = (fn: RequestHandler): RequestHandler => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next)
   }
-})
+}
 
-// MCP Setup - stateless
-server.all('/mcp', logIncomingAuth, keycloak.protect(), async (req, res) => {
-  try {
+server.all(
+  '/mcp',
+  logIncomingAuth,
+  authMiddleware,
+  logAuthedIdentity,
+  safe(async (req: Request, res: Response) => {
     await mcpTransport.handleRequest(req, res, req.body)
-  } catch (err) {
-    logger.error('MCP transport error:', err)
-    res.status(500).json({
-      error: 'MCP transport failure',
-      detail: err
-    })
-  }
-})
+  })
+)
+
+// // MCP Setup - stateless
+// server.all('/mcp', logIncomingAuth, authMiddleware, logAuthedIdentity, async (req, res) => {
+//   try {
+//     await mcpTransport.handleRequest(req, res, req.body)
+//   } catch (err) {
+//     logger.error('MCP transport error:', err)
+//     res.status(500).json({
+//       error: 'MCP transport failure',
+//       detail: err
+//     })
+//   }
+// })
 
 server.get('/mcp/health', async (_: Request, res: Response) => {
   if (!mcpReady) {
     res.status(503).json({
       status: 'unhealthy',
-      reason: 'MCP server not connected to transport'
+      reason: 'MCP server not connected to transport',
     })
   }
   res.status(200).json({ status: 'ok' })
@@ -143,15 +152,15 @@ server.post('/discord/token', logIncomingAuth, async (req, res) => {
   res.send({ access_token })
 })
 
-
-
 // oauth
-server.get('/.well-known/oauth-protected-resource', async (_: Request, res: Response) => {
-  const baseURL = `https://api.subtype.space`
-  res.json({
-    resource: baseURL,
-    authorization_servers: [`https://auth.subtype.space`],
-  })
+// oauthMetadataRouter should automatically mount /.well-known/oauth-protected-resource and etc.
+logger.debug(oauthMetadataRouter.toString())
+server.use(oauthMetadataRouter)
+
+server.use((err: any, _req: any, res: any, _next: any) => {
+  logger.error('[UNHANDLED]', err?.stack ?? err)
+  if (res.headersSent) return
+  res.status(500).json({ error: 'server_error', error_description: 'Internal Server Error' })
 })
 
 server.listen(PORT, () => {
