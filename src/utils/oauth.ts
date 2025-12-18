@@ -39,7 +39,6 @@ export const authMiddleware = requireBearerAuth({
   verifier: {
     verifyAccessToken: async (token: string) => {
       logger.info('[AUTH] running token validation')
-      return verifyToken(token)
       const authInfo = await verifyToken(token)
 
       logger.error('[AUTH] pre-sdk-check authInfo', {
