@@ -118,23 +118,7 @@ server.all(
     next()
   },
   logIncomingAuth,
-  (req, _res, next) => {
-    logger.error('[AUTH] req extensibility before auth', {
-      extensible: Object.isExtensible(req),
-      sealed: Object.isSealed(req),
-      frozen: Object.isFrozen(req),
-    })
-    next()
-  },
-  authMiddlewareWithDiag,
-  (req, _res, next) => {
-    logger.info('[MCP] after auth middleware', {
-      hasAuth: Object.prototype.hasOwnProperty.call(req as any, 'auth'),
-      authType: typeof (req as any).auth,
-      extensible: Object.isExtensible(req),
-    })
-    next()
-  },
+  authMiddleware,
   safe(async (req: Request, res: Response) => {
     await mcpTransport.handleRequest(req, res, req.body)
   })
