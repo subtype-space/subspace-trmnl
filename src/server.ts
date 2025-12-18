@@ -19,6 +19,7 @@ import { registerTools } from './v1/mcp/registerTools.js'
 
 import { logAuthedIdentity, logIncomingAuth } from './utils/auth.js'
 import { rateLimiter } from './utils/rateLimiter.js'
+import { wrap } from 'module'
 
 logger.info('Initializing stateless MCP server...')
 const mcpServer = new McpServer(
@@ -108,6 +109,28 @@ const authMiddlewareWithDiag: RequestHandler = (req, res, next) => {
   return (authMiddleware as any)(req, res, next)
 }
 
+const wrappedAuth: RequestHandler = async (req, res, next) => {
+  try {
+    await new Promise<void>((resolve, reject) => {
+      (authMiddleware as any)(req, res, (err?: any) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+    next();
+  } catch (e: any) {
+    logger.error("[AUTH] wrappedAuth caught error from requireBearerAuth", {
+      name: e?.name,
+      message: e?.message,
+      stack: e?.stack,
+    });
+    // If the SDK already wrote a response, don’t double-send
+    if (res.headersSent) return;
+    res.status(500).json({ error: "server_error", error_description: "Internal Server Error" });
+  }
+};
+
+
 server.all(
   '/mcp',
   (req, res, next) => {
@@ -118,7 +141,7 @@ server.all(
     next()
   },
   logIncomingAuth,
-  safe(authMiddlewareWithDiag as RequestHandler),
+  wrappedAuth,
   (req, _res, next) => {
     logger.info('[MCP] after auth middleware', {
       hasAuth: Object.prototype.hasOwnProperty.call(req as any, 'auth'),
