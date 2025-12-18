@@ -4,6 +4,7 @@ import { logger } from './logger.js'
 import { checkResourceAllowed } from '@modelcontextprotocol/sdk/shared/auth-utils.js'
 import { requireBearerAuth } from '@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js'
 import { getOAuthProtectedResourceMetadataUrl, mcpAuthMetadataRouter } from '@modelcontextprotocol/sdk/server/auth/router.js'
+import { InsufficientScopeError, InvalidTokenError, ServerError } from '@modelcontextprotocol/sdk/server/auth/errors.js'
 
 // Built with reference from MCP documentation:
 // https://modelcontextprotocol.io/docs/tutorials/security/authorization
@@ -53,7 +54,7 @@ async function verifyToken(token: string) {
 
   if (!endpoint) {
     logger.error('[AUTH] no introspection endpoint in metadata')
-    authError(500 as any, 'server_error', 'No introspection endpoint')
+    throw new ServerError('Introspection not possible at this time.')
   }
 
   const params = new URLSearchParams({
@@ -76,7 +77,7 @@ async function verifyToken(token: string) {
     })
   } catch (e) {
     logger.error('[AUTH] introspection fetch threw', e)
-    throw new Error('Introspection failed')
+    throw new ServerError('Introspection failed')
   }
 
   if (!response.ok) {
@@ -92,7 +93,7 @@ async function verifyToken(token: string) {
     }
 
     logger.error(`Invalid or expired token: ${txt}`)
-    authError(401, 'invalid_token', 'Invalid or expired token')
+    throw new InvalidTokenError('Invalid or expired token')
   }
 
   const raw = await response.text()
@@ -107,7 +108,7 @@ async function verifyToken(token: string) {
 
   if (!data.active) {
     logger.error('[AUTH] inactive token')
-    authError(401, 'invalid_token', 'Inactive token')
+    throw new InvalidTokenError('Token is inactive')
   }
 
   const audRaw = data.aud
@@ -121,13 +122,13 @@ async function verifyToken(token: string) {
 
   if (!allowed) {
     logger.warn(`[AUTH] Retrieved audiences not allowed. Expected ${mcpServerUrl} but got ${audiences.join(',')}`)
-    authError(403, 'insufficient_scope', 'Audience not allowed')
+    throw new InsufficientScopeError('Retrieved audiences not allowed')
   }
 
   const exp = data.exp
   if (typeof exp !== 'number' || Number.isNaN(exp)) {
     logger.error('[AUTH] Invalid token - token has no expiration time')
-    authError(401, 'invalid_token', 'Token has no expiration time')
+    throw new InvalidTokenError('Token has no expiration time')
   }
 
   const scopes = typeof data.scope === 'string' ? data.scope.split(' ') : []
@@ -151,12 +152,4 @@ async function verifyToken(token: string) {
       preferred_username: data.preferred_username,
     },
   }
-}
-
-function authError(status: 401 | 403, error: string, desc: string): never {
-  const e: any = new Error(desc)
-  e.status = status
-  e.error = error
-  e.error_description = desc
-  throw e
 }
