@@ -75,7 +75,7 @@ async function verifyToken(token: string) {
       },
       body: params.toString(),
     })
-    logger.debug(`[AUTH] Introspection response: ${response}`)
+    logger.debug(`[AUTH] Introspection response: ${response.text}`)
   } catch (e) {
     logger.error('[AUTH] introspection fetch threw', e)
     throw new Error('Introspection failed')
@@ -101,7 +101,7 @@ async function verifyToken(token: string) {
   let data: any
   try {
     data = JSON.parse(raw)
-    logger.debug(`[AUTH] Introspection response: ${data}`)
+    logger.debug(`[AUTH] Introspection response: ${raw}}`)
   } catch (e) {
     logger.error('[AUTH] failed to parse introspection JSON', { error: String(e), body: raw })
     throw new Error('Failed to parse introspection JSON')
