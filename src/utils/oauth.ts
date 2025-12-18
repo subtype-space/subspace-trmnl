@@ -38,8 +38,10 @@ export const oauthMetadataRouter = mcpAuthMetadataRouter({
 export const authMiddleware = requireBearerAuth({
   verifier: {
     verifyAccessToken: async (token: string) => {
+      logger.info('[AUTH] running token validation')
+      return verifyToken(token)
       const authInfo = await verifyToken(token)
-
+      
       logger.error('[AUTH] pre-sdk-check authInfo', {
         hasScopes: Array.isArray((authInfo as any).scopes),
         scopesType: typeof (authInfo as any).scopes,

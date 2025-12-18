@@ -194,21 +194,7 @@ server.post('/discord/token', logIncomingAuth, async (req, res) => {
 // oauthMetadataRouter should automatically mount /.well-known/oauth-protected-resource and etc.
 logger.debug(oauthMetadataRouter.toString())
 server.use(oauthMetadataRouter)
-// server.get('/.well-known/oauth-protected-resource', async (_: Request, res: Response) => {
-//   const baseURL = `https://api.subtype.space`
-//   res.json({
-//     resource: baseURL,
-//     authorization_servers: [`https://auth.subtype.space`],
-//   })
-// })
 
-// server.get('/.well-known/oauth-authorization-server', async (_: Request, res: Response) => {
-//   const baseURL = `https://api.subtype.space`
-//   res.json({
-//     resource: baseURL,
-//     authorization_servers: [`https://auth.subtype.space`],
-//   })
-// })
 
 server.use((err: any, _req: any, res: any, _next: any) => {
   logger.error('[UNHANDLED]', err?.stack ?? err)
