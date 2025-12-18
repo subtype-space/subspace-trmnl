@@ -17,7 +17,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { registerTools } from './v1/mcp/registerTools.js'
 
-import { logIncomingAuth } from './utils/auth.js'
+import { logAuthedIdentity, logIncomingAuth } from './utils/auth.js'
 import { rateLimiter } from './utils/rateLimiter.js'
 
 logger.info('Initializing stateless MCP server...')
@@ -84,23 +84,8 @@ logger.info('Initializing routes...')
 server.use('/', statusRouter)
 server.use('/health', express.json(), statusRouter)
 
-// custom error handler
-server.use(function (err: any, req: Request, res: Response, next: NextFunction) {
-  logger.debug(err)
-
-  if (err.name === 'UnauthorizedError') {
-    logger.warn('JWT failed authentication')
-    res.status(401).send({ message: 'Unauthorized' })
-  } else if (err.code === 'credentials_required') {
-    logger.warn('No token provided')
-    res.status(401).json({ message: 'No token provided' })
-  } else {
-    next(err)
-  }
-})
-
 // MCP Setup - stateless
-server.all('/mcp', logIncomingAuth, authMiddleware, async (req, res) => {
+server.all('/mcp', logIncomingAuth, authMiddleware, logAuthedIdentity, async (req, res) => {
   try {
     await mcpTransport.handleRequest(req, res, req.body)
   } catch (err) {
@@ -147,7 +132,6 @@ server.post('/discord/token', logIncomingAuth, async (req, res) => {
 })
 
 
-
 // oauth
 // oauthMetadataRouter should automatically mount /.well-known/oauth-protected-resource and etc.
 server.use(oauthMetadataRouter)
@@ -166,6 +150,21 @@ server.use(oauthMetadataRouter)
 //     authorization_servers: [`https://auth.subtype.space`],
 //   })
 // })
+
+// custom error handler
+server.use(function (err: any, req: Request, res: Response, next: NextFunction) {
+  logger.debug(err)
+
+  if (err.name === 'UnauthorizedError') {
+    logger.warn('JWT failed authentication')
+    res.status(401).send({ message: 'Unauthorized' })
+  } else if (err.code === 'credentials_required') {
+    logger.warn('No token provided')
+    res.status(401).json({ message: 'No token provided' })
+  } else {
+    next(err)
+  }
+})
 
 server.listen(PORT, () => {
   logger.info(`Using log level: ${process.env.LOG_LEVEL || 'info'}`)
