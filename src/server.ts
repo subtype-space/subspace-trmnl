@@ -58,10 +58,9 @@ const memoryStore = new session.MemoryStore()
 const keycloak = new KeycloakConnect({ store: memoryStore }, keycloakConfig)
 
 server.use((req, _res, next) => {
-  logger.info(`[REQ] ${req.method} ${req.path}`);
-  next();
-});
-
+  logger.info(`[REQ] ${req.method} ${req.path}`)
+  next()
+})
 
 // reverse proxy -- removing this will cause issues with secure cookies
 server.set('trust proxy', 1)
@@ -97,35 +96,41 @@ const safe = (fn: RequestHandler): RequestHandler => {
 }
 
 const authMiddlewareWithDiag: RequestHandler = (req, res, next) => {
-  const origJson = res.json.bind(res);
+  const origJson = res.json.bind(res)
   res.json = (body: any) => {
     logger.error('[AUTH] authMiddleware responded', {
       status: res.statusCode,
       wwwAuthenticate: res.getHeader('www-authenticate') ?? res.getHeader('WWW-Authenticate') ?? 'none',
       body,
-    });
-    return origJson(body);
-  };
-  return (authMiddleware as any)(req, res, next);
-};
+    })
+    return origJson(body)
+  }
+  return (authMiddleware as any)(req, res, next)
+}
 
-
-server.all("/mcp",
+server.all(
+  '/mcp',
   (req, res, next) => {
-    res.on("finish", () => {
+    res.on('finish', () => {
       logger.info(`[MCP] response ${res.statusCode}`)
-      logger.info(`[MCP] www-authenticate=${res.getHeader("www-authenticate") ?? "none"}`)
+      logger.info(`[MCP] www-authenticate=${res.getHeader('www-authenticate') ?? 'none'}`)
     })
     next()
   },
   logIncomingAuth,
   safe(authMiddlewareWithDiag as RequestHandler),
-  (req, _res, next) => { logger.info("[MCP] passed auth"); next() },
+  (req, _res, next) => {
+    logger.info('[MCP] after auth middleware', {
+      hasAuth: Object.prototype.hasOwnProperty.call(req as any, 'auth'),
+      authType: typeof (req as any).auth,
+      extensible: Object.isExtensible(req),
+    })
+    next()
+  },
   safe(async (req: Request, res: Response) => {
     await mcpTransport.handleRequest(req, res, req.body)
   })
 )
-
 
 // // MCP Setup - stateless
 // server.all('/mcp', logIncomingAuth, authMiddleware, logAuthedIdentity, async (req, res) => {
@@ -192,8 +197,6 @@ server.use(oauthMetadataRouter)
 //     authorization_servers: [`https://auth.subtype.space`],
 //   })
 // })
-
-
 
 server.use((err: any, _req: any, res: any, _next: any) => {
   logger.error('[UNHANDLED]', err?.stack ?? err)
