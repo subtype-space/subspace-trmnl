@@ -50,11 +50,11 @@ async function verifyToken(token: string) {
   }
 
   const endpoint = oauthMetadata.introspection_endpoint
-  logger.info(`[AUTH] introspection endpoint=${endpoint}`)
+  logger.info(`[AUTH] introspection endpoint: ${endpoint}`)
 
   if (!endpoint) {
     logger.error('[AUTH] no introspection endpoint in metadata')
-    throw new Error('No introspection endpoint')
+    authError(500 as any, "server_error", "No introspection endpoint")
   }
 
   const params = new URLSearchParams({
@@ -75,7 +75,6 @@ async function verifyToken(token: string) {
       },
       body: params.toString(),
     })
-    logger.debug(`[AUTH] Introspection response: ${response.text}`)
   } catch (e) {
     logger.error('[AUTH] introspection fetch threw', e)
     throw new Error('Introspection failed')
@@ -94,7 +93,7 @@ async function verifyToken(token: string) {
     }
 
     logger.error(`Invalid or expired token: ${txt}`)
-    throw new Error('Invalid or expired token')
+    authError(401, "invalid_token", "Invalid or expired token")
   }
 
   const raw = await response.text()
@@ -109,7 +108,7 @@ async function verifyToken(token: string) {
 
   if (!data.active) {
     logger.error('[AUTH] inactive token')
-    throw new Error('Invalid or inactive token')
+    authError(401, "invalid_token", "Inactive token")
   }
 
   const audRaw = data.aud
@@ -123,7 +122,7 @@ async function verifyToken(token: string) {
 
   if (!allowed) {
     logger.warn(`[AUTH] Retrieved audiences not allowed. Expected ${mcpServerUrl} but got ${audiences.join(',')}`)
-    throw new Error('Audience not allowed')
+    authError(403, "insufficient_scope", "Audience not allowed")
   }
 
   return {
@@ -133,3 +132,12 @@ async function verifyToken(token: string) {
     expiresAt: data.exp,
   }
 }
+
+function authError(status: 401 | 403, error: string, desc: string): never {
+  const e: any = new Error(desc)
+  e.status = status
+  e.error = error
+  e.error_description = desc
+  throw e
+}
+
