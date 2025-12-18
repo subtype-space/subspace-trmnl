@@ -124,10 +124,17 @@ async function verifyToken(token: string) {
     authError(403, 'insufficient_scope', 'Audience not allowed')
   }
 
+  const exp = data.exp
+  if (typeof exp !== 'number' || Number.isNaN(exp)) {
+    // If Keycloak ever omits exp, make it a 401 not a 500
+    authError(401, 'invalid_token', 'Token has no expiration time')
+  }
+
   return {
     token,
     clientId: data.client_id,
     scopes: typeof data.scope === 'string' ? data.scope.split(' ') : [],
+    expiresAt: exp,
     extra: {
       sub: data.sub,
       azp: data.azp,
