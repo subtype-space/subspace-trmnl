@@ -101,7 +101,7 @@ async function verifyToken(token: string) {
   let data: any
   try {
     data = JSON.parse(raw)
-    logger.debug(`[AUTH] Introspection response: ${raw}}`)
+    logger.debug(`[AUTH] Introspection response: ${raw}`)
   } catch (e) {
     logger.error('[AUTH] failed to parse introspection JSON', { error: String(e), body: raw })
     throw new Error('Failed to parse introspection JSON')
