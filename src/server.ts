@@ -57,6 +57,11 @@ const ACTIVE_VERSION = process.env.API_VERSION || 'v1'
 const memoryStore = new session.MemoryStore()
 const keycloak = new KeycloakConnect({ store: memoryStore }, keycloakConfig)
 
+server.use((req, _res, next) => {
+  logger.info(`[REQ] ${req.method} ${req.path}`)
+  next()
+})
+
 // reverse proxy -- removing this will cause issues with secure cookies
 server.set('trust proxy', 1)
 
