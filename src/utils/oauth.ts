@@ -23,10 +23,10 @@ const realm = process.env.AUTH_REALM // e.g. subspace
 const clientId = process.env.API_CLIENT_ID
 const clientSecret = process.env.API_CLIENT_SECRET
 
-logger.debug("[AUTH] oauth.ts loaded", {
+logger.debug('[AUTH] oauth.ts loaded', {
   file: import.meta.url,
   mcpServerUrl,
-});
+})
 
 export const oauthMetadataRouter = mcpAuthMetadataRouter({
   oauthMetadata,
@@ -41,7 +41,7 @@ export const authMiddleware = requireBearerAuth({
       logger.info('[AUTH] running token validation')
       return verifyToken(token)
       const authInfo = await verifyToken(token)
-      
+
       logger.error('[AUTH] pre-sdk-check authInfo', {
         hasScopes: Array.isArray((authInfo as any).scopes),
         scopesType: typeof (authInfo as any).scopes,
@@ -108,8 +108,6 @@ async function verifyToken(token: string) {
     throw new ServerError('Introspection failed')
   }
 
-  logger.info('PAST FETCH ENDPOINT')
-
   if (!response.ok) {
     const txt = await response.text()
     logger.error('[AUTH] introspection not OK', { status: response.status })
@@ -126,6 +124,8 @@ async function verifyToken(token: string) {
     throw new InvalidTokenError('Invalid or expired token')
   }
 
+  logger.debug('[AUTH] Checking introspection raw data')
+
   const raw = await response.text()
   let data: any
   try {
@@ -141,18 +141,21 @@ async function verifyToken(token: string) {
     throw new InvalidTokenError('Token is inactive')
   }
 
-  const audRaw = data.aud
-  const audiences = Array.isArray(audRaw) ? audRaw : typeof audRaw === 'string' ? [audRaw] : []
-  const allowed = audiences.some((a) =>
-    checkResourceAllowed({
-      requestedResource: a,
-      configuredResource: mcpServerUrl!,
-    })
-  )
-
-  if (!allowed) {
-    logger.warn(`[AUTH] Retrieved audiences not allowed. Expected ${mcpServerUrl} but got ${audiences.join(',')}`)
-    throw new InsufficientScopeError('Retrieved audiences not allowed')
+  try {
+    const audRaw = data.aud
+    const audiences = Array.isArray(audRaw) ? audRaw : typeof audRaw === 'string' ? [audRaw] : []
+    const allowed = audiences.some((a) =>
+      checkResourceAllowed({
+        requestedResource: a,
+        configuredResource: mcpServerUrl!,
+      })
+    )
+    if (!allowed) {
+      logger.warn(`[AUTH] Retrieved audiences not allowed. Expected ${mcpServerUrl} but got ${audiences.join(',')}`)
+      throw new InsufficientScopeError('Retrieved audiences not allowed')
+    }
+  } catch (e) {
+    logger.error(`[AUTH] Error checking audiences ${e}`)
   }
 
   const exp = data.exp
@@ -162,6 +165,7 @@ async function verifyToken(token: string) {
   }
 
   const scopes = typeof data.scope === 'string' ? data.scope.split(' ') : []
+  logger.debug(`[AUTH] Detected scopes: ${scopes}`)
   logger.info('[AUTH] mapped authInfo', {
     clientId: data.client_id,
     expiresAt: exp,
