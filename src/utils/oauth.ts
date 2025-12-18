@@ -12,7 +12,7 @@ import { getOAuthProtectedResourceMetadataUrl, mcpAuthMetadataRouter } from '@mo
 
 const oauthURLs = createOAuthURLs()
 const oauthMetadata: OAuthMetadata = {
-  ...oauthURLs,
+  ...oauthURLs!,
   response_types_supported: ['code'],
 }
 
