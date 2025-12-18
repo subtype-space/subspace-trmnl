@@ -1,6 +1,6 @@
 import './utils/env.js' // I hate how I have to do this but whatever. Stupid shim.
 import { logger } from './utils/logger.js'
-import express, { Request, NextFunction, Response } from 'express'
+import express, { Request, NextFunction, Response, RequestHandler } from 'express'
 import trmnlRouter from './v1/routers/trmnlRouter.js'
 import statusRouter from './v1/routers/statusRouter.js'
 import helmet from 'helmet'
@@ -84,13 +84,25 @@ logger.info('Initializing routes...')
 server.use('/', statusRouter)
 server.use('/health', express.json(), statusRouter)
 
+const safe = (fn: RequestHandler): RequestHandler => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next)
+  }
+}
 
-const safe = (mw: any) => (req: any, res: any, next: any) =>
-  Promise.resolve(mw(req, res, next)).catch(next)
+server.all(
+  '/mcp',
+  logIncomingAuth,
+  safe(authMiddleware as RequestHandler),
+  safe(async (req: Request, res: Response) => {
+    logger.info('[MCP] handling request', {
+      method: req.method,
+      ct: req.headers['content-type'],
+    })
 
-server.all("/mcp", logIncomingAuth, safe(authMiddleware), async (req, res) => {
-  await mcpTransport.handleRequest(req, res, req.body)
-})
+    await mcpTransport.handleRequest(req, res, req.body)
+  })
+)
 
 // // MCP Setup - stateless
 // server.all('/mcp', logIncomingAuth, authMiddleware, logAuthedIdentity, async (req, res) => {
@@ -109,7 +121,7 @@ server.get('/mcp/health', async (_: Request, res: Response) => {
   if (!mcpReady) {
     res.status(503).json({
       status: 'unhealthy',
-      reason: 'MCP server not connected to transport'
+      reason: 'MCP server not connected to transport',
     })
   }
   res.status(200).json({ status: 'ok' })
@@ -139,7 +151,6 @@ server.post('/discord/token', logIncomingAuth, async (req, res) => {
   res.send({ access_token })
 })
 
-
 // oauth
 // oauthMetadataRouter should automatically mount /.well-known/oauth-protected-resource and etc.
 server.use(oauthMetadataRouter)
@@ -160,11 +171,10 @@ server.use(oauthMetadataRouter)
 // })
 
 server.use((err: any, _req: any, res: any, _next: any) => {
-  logger.error("[UNHANDLED]", err?.stack ?? err)
+  logger.error('[UNHANDLED]', err?.stack ?? err)
   if (res.headersSent) return
-  res.status(500).json({ error: "server_error", error_description: "Internal Server Error" })
+  res.status(500).json({ error: 'server_error', error_description: 'Internal Server Error' })
 })
-
 
 server.listen(PORT, () => {
   logger.info(`Using log level: ${process.env.LOG_LEVEL || 'info'}`)
