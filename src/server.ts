@@ -118,6 +118,14 @@ server.all(
     next()
   },
   logIncomingAuth,
+  (req, _res, next) => {
+    logger.error('[AUTH] req extensibility before auth', {
+      extensible: Object.isExtensible(req),
+      sealed: Object.isSealed(req),
+      frozen: Object.isFrozen(req),
+    })
+    next()
+  },
   authMiddlewareWithDiag,
   (req, _res, next) => {
     logger.info('[MCP] after auth middleware', {

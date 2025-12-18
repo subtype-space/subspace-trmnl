@@ -32,11 +32,31 @@ export const oauthMetadataRouter = mcpAuthMetadataRouter({
 
 export const authMiddleware = requireBearerAuth({
   verifier: {
-    verifyAccessToken: verifyToken,
+    verifyAccessToken: async (token: string) => {
+      const authInfo = await verifyToken(token)
+
+      logger.error('[AUTH] pre-sdk-check authInfo', {
+        hasScopes: Array.isArray((authInfo as any).scopes),
+        scopesType: typeof (authInfo as any).scopes,
+        expiresAt: (authInfo as any).expiresAt,
+        expiresAtType: typeof (authInfo as any).expiresAt,
+        keys: Object.keys(authInfo as any),
+      })
+
+      return authInfo
+    },
   },
   requiredScopes: [],
   resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(new URL(mcpServerUrl!)),
 })
+
+// export const authMiddleware = requireBearerAuth({
+//   verifier: {
+//     verifyAccessToken: verifyToken,
+//   },
+//   requiredScopes: [],
+//   resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(new URL(mcpServerUrl!)),
+// })
 
 async function verifyToken(token: string) {
   if (!mcpServerUrl || !authServerUrl || !realm || !clientId) {
@@ -144,7 +164,7 @@ async function verifyToken(token: string) {
     scopesLen: scopes.length,
   })
 
-  logger.info("[AUTH] verifyToken returning; will pass to requireBearerAuth checks");
+  logger.info('[AUTH] verifyToken returning; will pass to requireBearerAuth checks')
 
   return {
     token,
