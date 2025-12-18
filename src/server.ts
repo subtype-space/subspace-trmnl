@@ -159,6 +159,13 @@ server.use(oauthMetadataRouter)
 //   })
 // })
 
+server.use((err: any, _req: any, res: any, _next: any) => {
+  logger.error("[UNHANDLED]", err?.stack ?? err)
+  if (res.headersSent) return
+  res.status(500).json({ error: "server_error", error_description: "Internal Server Error" })
+})
+
+
 server.listen(PORT, () => {
   logger.info(`Using log level: ${process.env.LOG_LEVEL || 'info'}`)
   logger.info('Using API version:', ACTIVE_VERSION)
