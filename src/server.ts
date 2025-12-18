@@ -96,19 +96,22 @@ const safe = (fn: RequestHandler): RequestHandler => {
   }
 }
 
-server.all(
-  '/mcp',
-  (req, _res, next) => {
-    logger.info('[MCP] route matched')
+server.all("/mcp",
+  (req, res, next) => {
+    res.on("finish", () => {
+      logger.info(`[MCP] response ${res.statusCode}`)
+      logger.info(`[MCP] www-authenticate=${res.getHeader("www-authenticate") ?? "none"}`)
+    })
     next()
   },
   logIncomingAuth,
   safe(authMiddleware as RequestHandler),
-  (req, res) => {
-    logger.info('[MCP] passed auth')
-    return mcpTransport.handleRequest(req, res, req.body)
-  }
+  (req, _res, next) => { logger.info("[MCP] passed auth"); next() },
+  safe(async (req: Request, res: Response) => {
+    await mcpTransport.handleRequest(req, res, req.body)
+  })
 )
+
 
 // // MCP Setup - stateless
 // server.all('/mcp', logIncomingAuth, authMiddleware, logAuthedIdentity, async (req, res) => {

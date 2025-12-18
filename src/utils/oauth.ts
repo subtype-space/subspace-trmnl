@@ -38,6 +38,7 @@ export const authMiddleware = requireBearerAuth({
 })
 
 async function verifyToken(token: string) {
+  logger.debug(`Attempting to verify token: ${token}`)
   if (!mcpServerUrl || !authServerUrl || !realm || !clientId) {
     logger.error('[AUTH] missing env', {
       mcpServerUrl: !!mcpServerUrl,
@@ -49,6 +50,8 @@ async function verifyToken(token: string) {
   }
 
   const endpoint = oauthMetadata.introspection_endpoint
+  logger.info(`[AUTH] introspection endpoint=${endpoint}`)
+
   if (!endpoint) {
     logger.error('[AUTH] no introspection endpoint in metadata')
     throw new Error('No introspection endpoint')
