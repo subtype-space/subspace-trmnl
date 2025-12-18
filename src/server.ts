@@ -140,6 +140,9 @@ server.all(
   })
 )
 
+logger.debug("[AUTH] authMiddleware type", { type: typeof authMiddleware });
+
+
 // // MCP Setup - stateless
 // server.all('/mcp', logIncomingAuth, authMiddleware, logAuthedIdentity, async (req, res) => {
 //   try {
