@@ -1,3 +1,17 @@
+/**
+ * Built with reference from MCP documentation and AI assisted debugging.
+ * https://modelcontextprotocol.io/docs/tutorials/security/authorization
+ * 
+ * Documentation on implementing the OAuth spec into MCP is lacking, so please take this class with a grain of salt.
+ * This was also created to replace the now deprecated keycloak-connect node package.
+ * 
+ * Also, this effectively switches the MCP server from a bearer only mode to a resource server (or protected resource)
+ * Basically this just loops in the resource server communicating with the authentication server to validate credentials after
+ *   an access token and all that.
+ * 
+ * OAuth hard.
+ */
+
 import { createOAuthURLs } from './generateOAuthURL.js'
 import { OAuthMetadata } from '@modelcontextprotocol/sdk/shared/auth.js'
 import { logger } from './logger.js'
@@ -5,11 +19,6 @@ import { checkResourceAllowed } from '@modelcontextprotocol/sdk/shared/auth-util
 import { requireBearerAuth } from '@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js'
 import { getOAuthProtectedResourceMetadataUrl, mcpAuthMetadataRouter } from '@modelcontextprotocol/sdk/server/auth/router.js'
 import { InsufficientScopeError, InvalidTokenError, ServerError } from '@modelcontextprotocol/sdk/server/auth/errors.js'
-
-// Built with reference from MCP documentation:
-// https://modelcontextprotocol.io/docs/tutorials/security/authorization
-// You will need to generate an OAuth client for this API (if subtype isn't hosting) so it can pull credentials on its behalf
-// In a way, this is 'sorta' replacing the keycloak middleware.
 
 const oauthURLs = createOAuthURLs()
 const oauthMetadata: OAuthMetadata = {
@@ -63,7 +72,7 @@ async function verifyToken(token: string) {
   }
 
   const endpoint = oauthMetadata.introspection_endpoint
-  logger.info(`[AUTH] introspection endpoint: ${endpoint}`)
+  logger.debug(`[AUTH] introspection endpoint: ${endpoint}`)
 
   if (!endpoint) {
     logger.error('[AUTH] no introspection endpoint in metadata')
@@ -79,6 +88,7 @@ async function verifyToken(token: string) {
     params.set('client_secret', clientSecret)
   }
 
+  // This performs a POST to the auth server endpoint with the OIDC/OAuth client credentials that "belong" to the API server
   let response: Response
   try {
     response = await fetch(endpoint, {
@@ -115,7 +125,7 @@ async function verifyToken(token: string) {
   let data: any
   try {
     data = JSON.parse(raw)
-    logger.debug(`[AUTH] Introspection response: ${raw}`)
+    logger.debug(`[AUTH] Auth server introspection response: ${raw}`)
   } catch (e) {
     logger.error('[AUTH] failed to parse introspection JSON', { error: String(e), body: raw })
     throw new ServerError('Failed to parse introspection JSON')
@@ -131,7 +141,9 @@ async function verifyToken(token: string) {
     const audiences = Array.isArray(audRaw) ? audRaw : typeof audRaw === 'string' ? [audRaw] : []
 
     const configured = mcpServerUrl!
-
+    // After looking at the SDK code, checkResourceAllowed may freak out if you pass in non-URL audiences
+    // To be honest, I'm not sure what the 'correct' method is, but my gut feeling is telling me that the
+    // MCP sdk only supports URLs returned in the claim
     const allowed = audiences.some((a) => {
       // Only run URL-based matching if `a` is a URL
       try {
@@ -161,17 +173,16 @@ async function verifyToken(token: string) {
   }
 
   const scopes = typeof data.scope === 'string' ? data.scope.split(' ') : []
-  logger.debug(`[AUTH] Detected scopes: ${scopes}`)
-  logger.info('[AUTH] mapped authInfo', {
+  logger.info('[AUTH] Authenticating user with following info:', {
     clientId: data.client_id,
+    scopes: scopes, 
     expiresAt: exp,
-    expiresAtType: typeof exp,
-    scopesType: typeof scopes,
-    scopesIsArray: Array.isArray(scopes),
-    scopesLen: scopes.length,
+    extra: {
+      sub: data.sub,
+      azp: data.azp,
+      preferred_username: data.preferred_username,
+    }
   })
-
-  logger.info('[AUTH] verifyToken returning; will pass to requireBearerAuth checks')
 
   return {
     token,

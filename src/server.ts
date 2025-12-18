@@ -17,7 +17,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { registerTools } from './v1/mcp/registerTools.js'
 
-import { logAuthedIdentity, logIncomingAuth } from './utils/auth.js'
+import { logAuthedIdentity, logIncomingAuth } from './utils/authLogger.js'
 import { rateLimiter } from './utils/rateLimiter.js'
 
 logger.info('Initializing stateless MCP server...')
@@ -57,28 +57,10 @@ const ACTIVE_VERSION = process.env.API_VERSION || 'v1'
 const memoryStore = new session.MemoryStore()
 const keycloak = new KeycloakConnect({ store: memoryStore }, keycloakConfig)
 
-server.use((req, _res, next) => {
-  logger.info(`[REQ] ${req.method} ${req.path}`)
-  next()
-})
-
 // reverse proxy -- removing this will cause issues with secure cookies
 server.set('trust proxy', 1)
 
 logger.info('Setting up middleware...')
-// SESSION_SECRET should just be a super long random base64 encoded string
-// server.use(
-//   session({
-//     secret: process.env.SESSION_SECRET!,
-//     resave: false,
-//     saveUninitialized: true,
-//     store: memoryStore,
-//     cookie: {
-//       secure: true, // Setting this to true requires trust proxy set in express
-//     },
-//   })
-// )
-// server.use(keycloak.middleware())
 server.use(helmet())
 server.use(rateLimiter)
 server.use(express.json())
@@ -89,6 +71,7 @@ logger.info('Initializing routes...')
 server.use('/', statusRouter)
 server.use('/health', express.json(), statusRouter)
 
+// Wrapper around the handleRequest - I don't know if this is actually needed but it was suggested to me
 const safe = (fn: RequestHandler): RequestHandler => {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next)
@@ -104,19 +87,6 @@ server.all(
     await mcpTransport.handleRequest(req, res, req.body)
   })
 )
-
-// // MCP Setup - stateless
-// server.all('/mcp', logIncomingAuth, authMiddleware, logAuthedIdentity, async (req, res) => {
-//   try {
-//     await mcpTransport.handleRequest(req, res, req.body)
-//   } catch (err) {
-//     logger.error('MCP transport error:', err)
-//     res.status(500).json({
-//       error: 'MCP transport failure',
-//       detail: err
-//     })
-//   }
-// })
 
 server.get('/mcp/health', async (_: Request, res: Response) => {
   if (!mcpReady) {
@@ -154,7 +124,6 @@ server.post('/discord/token', logIncomingAuth, async (req, res) => {
 
 // oauth
 // oauthMetadataRouter should automatically mount /.well-known/oauth-protected-resource and etc.
-logger.debug(oauthMetadataRouter.toString())
 server.use(oauthMetadataRouter)
 
 server.use((err: any, _req: any, res: any, _next: any) => {
