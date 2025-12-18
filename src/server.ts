@@ -84,18 +84,26 @@ logger.info('Initializing routes...')
 server.use('/', statusRouter)
 server.use('/health', express.json(), statusRouter)
 
-// MCP Setup - stateless
-server.all('/mcp', logIncomingAuth, authMiddleware, logAuthedIdentity, async (req, res) => {
-  try {
-    await mcpTransport.handleRequest(req, res, req.body)
-  } catch (err) {
-    logger.error('MCP transport error:', err)
-    res.status(500).json({
-      error: 'MCP transport failure',
-      detail: err
-    })
-  }
+
+const safe = (mw: any) => (req: any, res: any, next: any) =>
+  Promise.resolve(mw(req, res, next)).catch(next)
+
+server.all("/mcp", logIncomingAuth, safe(authMiddleware), async (req, res) => {
+  await mcpTransport.handleRequest(req, res, req.body)
 })
+
+// // MCP Setup - stateless
+// server.all('/mcp', logIncomingAuth, authMiddleware, logAuthedIdentity, async (req, res) => {
+//   try {
+//     await mcpTransport.handleRequest(req, res, req.body)
+//   } catch (err) {
+//     logger.error('MCP transport error:', err)
+//     res.status(500).json({
+//       error: 'MCP transport failure',
+//       detail: err
+//     })
+//   }
+// })
 
 server.get('/mcp/health', async (_: Request, res: Response) => {
   if (!mcpReady) {
