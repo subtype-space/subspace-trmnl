@@ -67,7 +67,6 @@ async function verifyToken(token: string) {
   }
 
   logger.info('WHAT THE HELL')
-
   let response: Response
   try {
     response = await fetch(endpoint, {
@@ -144,6 +143,8 @@ async function verifyToken(token: string) {
     scopesIsArray: Array.isArray(scopes),
     scopesLen: scopes.length,
   })
+
+  logger.info("[AUTH] verifyToken returning; will pass to requireBearerAuth checks");
 
   return {
     token,
