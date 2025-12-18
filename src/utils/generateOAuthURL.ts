@@ -8,7 +8,7 @@ export function createOAuthURLs() {
     return null
   }
 
-  const realmBase = new URL(`/realms/${realm}`, authServer)
+  const realmBase = new URL(`/realms/${realm}/`, authServer)
   const issuer = realmBase.toString().replace(/\/$/, '')
 
   logger.debug(`[AUTH] Generated OAuthURLs: realmBase set to ${realmBase}\nissuer ${issuer}`)
