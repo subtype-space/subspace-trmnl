@@ -23,10 +23,15 @@ npm run build && npm run start
 # Setting up your .env
 | Env var | Purpose |
 |---------|--------|
-| PORT | Defaults to 9595. The port for the API and MCP server to listen on. |
-| LOG_LEVEL | Defaults to 'info'. Set the logging level. |
 | ACTIVE_VERSION | Defaults to 'v1', currently not implemented fully. |
+| ACTIVITY_DISCORD_CLIENT_ID | Used for Discord OAuth when serving a Discord activity |
+| ACTIVITY_DISCORD_CLIENT_SECRET | Used for Discord OAuth when serving a Discord activity |
+| API_CLIENT_ID | REQUIRED to perform token introspection. Used to communicate with Auth server |
+| API_CLIENT_SECRET | See above. |
+| AUTH_SERVER_URL | The authentication server for OAuth implementation |
+| AUTH_REALM | (keycloak based) the realm associated with both incoming clients, and the MCP server OAuth client |
+| LOG_LEVEL | Defaults to 'info'. Set the logging level. |
+| MCP_SERVER_URL | This sets the Protected Resource of what the incoming clients should have in their audience claim |
+| PORT | Defaults to 9595. The port for the API and MCP server to listen on. |
 | WMATA_PRIMARY_KEY | The API key to use for obtaining WMATA status. |
-| JWT_SECRET | (DEPRECATED) This is the secret key that is used for encrypting and decrypting JWT tokens. |
-| SESSION_SECRET | Base64 encoded random string that you can probably generate with `openssl rand -base64 64`. |
 | TZ | (Optional) Lets the container/logger format log messages with the machine's local time zone. |
