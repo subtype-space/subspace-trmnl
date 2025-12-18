@@ -17,7 +17,6 @@ export function logIncomingAuth(req: Request, res: Response, next: NextFunction)
     logger.info(`[AUTH] Authenticated as ${user.preferred_username ?? user.clientId ?? 'unknown'} (${user.sub})`)
   } else {
     logger.warn('[AUTH] No grant found on request')
-    logger.warn('[AUTH] Possible auth failure')
   }
 
   next()

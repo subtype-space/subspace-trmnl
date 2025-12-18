@@ -11,6 +11,8 @@ export function createOAuthURLs() {
   const realmBase = new URL(`/realms/${realm}`, authServer)
   const issuer = realmBase.toString().replace(/\/$/, '')
 
+  logger.debug(`[AUTH] Generated OAuthURLs: realmBase set to ${realmBase}\nissuer ${issuer}`)
+
   return {
     issuer: issuer,
     introspection_endpoint: new URL('protocol/openid-connect/token/introspect', realmBase).toString(),

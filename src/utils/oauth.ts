@@ -84,7 +84,7 @@ async function verifyToken(token: string) {
     // Format the error
     try {
       const obj = JSON.parse(txt)
-      logger.info(JSON.stringify(obj, null, 2))
+      logger.error(JSON.stringify(obj, null, 2))
     } catch {
       logger.error(txt)
     }
