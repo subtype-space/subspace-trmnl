@@ -57,6 +57,12 @@ const ACTIVE_VERSION = process.env.API_VERSION || 'v1'
 const memoryStore = new session.MemoryStore()
 const keycloak = new KeycloakConnect({ store: memoryStore }, keycloakConfig)
 
+server.use((req, _res, next) => {
+  logger.info(`[REQ] ${req.method} ${req.path}`);
+  next();
+});
+
+
 // reverse proxy -- removing this will cause issues with secure cookies
 server.set('trust proxy', 1)
 
@@ -92,16 +98,16 @@ const safe = (fn: RequestHandler): RequestHandler => {
 
 server.all(
   '/mcp',
+  (req, _res, next) => {
+    logger.info('[MCP] route matched')
+    next()
+  },
   logIncomingAuth,
   safe(authMiddleware as RequestHandler),
-  safe(async (req: Request, res: Response) => {
-    logger.info('[MCP] handling request', {
-      method: req.method,
-      ct: req.headers['content-type'],
-    })
-
-    await mcpTransport.handleRequest(req, res, req.body)
-  })
+  (req, res) => {
+    logger.info('[MCP] passed auth')
+    return mcpTransport.handleRequest(req, res, req.body)
+  }
 )
 
 // // MCP Setup - stateless
