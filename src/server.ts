@@ -192,6 +192,7 @@ server.post('/discord/token', logIncomingAuth, async (req, res) => {
 
 // oauth
 // oauthMetadataRouter should automatically mount /.well-known/oauth-protected-resource and etc.
+logger.debug(oauthMetadataRouter.toString())
 server.use(oauthMetadataRouter)
 // server.get('/.well-known/oauth-protected-resource', async (_: Request, res: Response) => {
 //   const baseURL = `https://api.subtype.space`
