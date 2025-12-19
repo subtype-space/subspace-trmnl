@@ -22,7 +22,7 @@ const trmnlInstallController: RequestHandler = async (req, res): Promise<void> =
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams({
-      token,
+      code: token,
       client_id: process.env.TRMNL_CLIENT_ID!,
       client_secret: process.env.TRMNL_CLIENT_SECRET!,
       grant_type: 'authorization_code',
