@@ -1,9 +1,22 @@
 import { Request, Response } from 'express'
 import { logger } from '../../utils/logger.js'
 
+/**
+ * Use a simpler auth flow than the oauth for MCP
+ * We're not operating in an resource server for this endpoint, bearer only
+ * TRMNL tokens are not introspectable. Basically, legit users will only have a token from TRMNL
+ * tl;dr - possention-based endpoints
+ * 
+ * 1) installation request
+ * 2) Fetch access token from TRMNL
+ * 3) TRMNL responds with access token
+ * 4) Use installation_callback_url to redirect back to TRMNL
+ * 5) TRMNL sends success notificaation to success webhook
+ */
+
 interface TrmnlTokenResponse {
   access_token: string
-  [key: string]: any // For other potential fields in the response
+  [key: string]: any
 }
 
 const trmnlController = async (request: Request, response: Response): Promise<void> => {
