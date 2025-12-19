@@ -10,6 +10,15 @@ import { mkdirSync } from 'fs'
 import { dirname } from 'path'
 const DB_PATH = process.env.TRMNL_DB_PATH || './trmnl.sqlite'
 
+export type TrmnlSettings = {
+  user_uuid: string
+  metro_station?: string | null
+  lines?: string | null
+  crass_level?: number | null
+  plugin_setting_id?: number | null
+}
+
+
 // Let this file manage the lifecycle of the db
 let db: Database.Database | null = null
 function getDb(): Database.Database {
@@ -37,6 +46,8 @@ export function initTrmnlDB() {
     user_uuid text primary key,
     metro_station text,
     lines text,
+    plugin_setting_id integer,
+    crass_level integer,
     updated_at integer not null
   );
 `)
@@ -117,4 +128,48 @@ export async function revokeByUserUuid(userUuid: string) {
     where user_uuid = ?
   `
   ).run(Date.now(), userUuid)
+}
+
+// Read settings for one plugin instance (uuid)
+export async function getSettingsByUuid(userUuid: string): Promise<TrmnlSettings | null> {
+  const db = getDb()
+  const row = db
+    .prepare(
+      `
+      select user_uuid, metro_station, lines, updated_at
+      from trmnl_settings
+      where user_uuid = ?
+    `
+    )
+    .get(userUuid) as
+    | { user_uuid: string; metro_station: string | null; lines: string | null; updated_at: number }
+    | undefined
+
+  if (!row) return null
+
+  return {
+    user_uuid: row.user_uuid,
+    metro_station: row.metro_station,
+    lines: row.lines,
+  }
+}
+
+// Insert or update settings (upsert)
+export async function upsertSettings(input: TrmnlSettings) {
+  const db = getDb()
+
+  const userUuid = input.user_uuid
+  const metroStation = input.metro_station ?? null
+  const lines = input.lines ?? null
+
+  db.prepare(
+    `
+    insert into trmnl_settings (user_uuid, metro_station, lines, updated_at)
+    values (?, ?, ?, ?)
+    on conflict(user_uuid) do update set
+      metro_station = excluded.metro_station,
+      lines = excluded.lines,
+      updated_at = excluded.updated_at
+  `
+  ).run(userUuid, metroStation, lines, Date.now())
 }
