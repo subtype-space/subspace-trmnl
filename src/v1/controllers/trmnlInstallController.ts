@@ -9,7 +9,7 @@ const sha256 = (v: string) =>
 // oWo
 // retrieve the access token from TRMNL (step 1ish and 2ish in auth flow)
 const trmnlInstallController: RequestHandler = async (req, res): Promise<void> => {
-  const token = req.query.token as string | undefined
+  const token = req.query.code as string | undefined
   const callback = req.query.installation_callback_url as string | undefined
 
   if (!token || !callback) {
@@ -47,7 +47,6 @@ const trmnlInstallController: RequestHandler = async (req, res): Promise<void> =
 
   const hash = sha256(access_token)
   logger.info('[TRMNL] Storing hashed access token...')
-  logger.debug(`[TRMNL] ${hash}`)
   await storeTrmnlToken(hash)
 
   logger.info('[TRMNL] installation complete')
