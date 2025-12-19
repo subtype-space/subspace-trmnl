@@ -12,13 +12,15 @@
  * OAuth hard.
  */
 
-import { getOAuthEnv } from './oauthEnv.js'
-import { createOAuthURLs } from './generateOAuthURL.js'
+import { getOAuthEnv } from '../utils/oauthEnv.js'
+import { createOAuthURLs } from '../utils/generateOAuthURL.js'
 import { OAuthMetadata } from '@modelcontextprotocol/sdk/shared/auth.js'
-import { logger } from './logger.js'
+import { logger } from '../utils/logger.js'
 import { checkResourceAllowed } from '@modelcontextprotocol/sdk/shared/auth-utils.js'
 import { requireBearerAuth } from '@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js'
 import { getOAuthProtectedResourceMetadataUrl, mcpAuthMetadataRouter } from '@modelcontextprotocol/sdk/server/auth/router.js'
+
+// requireBearerAuth is looking for instanceof error types, so we try to match and throw specific errors
 import { InsufficientScopeError, InvalidTokenError, ServerError } from '@modelcontextprotocol/sdk/server/auth/errors.js'
 
 const { authServerUrl, realm, mcpServerUrl, clientId, clientSecret } = getOAuthEnv()

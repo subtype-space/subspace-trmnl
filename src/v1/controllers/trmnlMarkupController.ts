@@ -10,6 +10,7 @@ const trmnlMarkupController = async (req: Request, res: Response) => {
   logger.debug('[TRMNL] body', req.body)
 
   // Temporary stub response so TRMNL is happy
+  // TODO: fetch user settings eventually
   res.json({
     screen: {
       title: 'Commute Health',

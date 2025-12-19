@@ -7,7 +7,7 @@ import statusRouter from './v1/routers/statusRouter.js'
 import helmet from 'helmet'
 
 // OAuth implementation
-import { oauthMetadataRouter, authMiddleware } from './utils/oauth.js'
+import { oauthMetadataRouter, authMiddleware } from './auth/oauth.js'
 
 // MCP import shenanigans
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'

@@ -1,5 +1,5 @@
 import express from 'express'
-import { requireTrmnlAuth } from '../../utils/trmnlAuth.js'
+import { requireTrmnlAuth } from '../../auth/trmnlAuth.js'
 import trmnlInstallController from '../controllers/trmnlInstallController.js'
 import trmnlMarkupController from '../controllers/trmnlMarkupController.js'
 import { trmnlInstallSuccessController } from '../controllers/trmnlInstallSuccessController.js'
