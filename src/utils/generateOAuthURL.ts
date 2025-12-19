@@ -1,17 +1,13 @@
+// By this point, all required env vars should be validated by oauthEnv.ts
 import { logger } from './logger.js'
-export function createOAuthURLs() {
-  const authServer = process.env.AUTH_SERVER_URL
-  const realm = process.env.AUTH_REALM
 
-  if (!authServer || !realm) {
-    logger.error('[AUTH] ENV VAR AUTH_SERVER_URL or AUTH_REALM not set. No auth possible.')
-    return null
-  }
-
-  const realmBase = new URL(`/realms/${realm}/`, authServer)
+// Generate OAuth URLs for introspection, auth, and token endpoint given an auth and realm
+export function createOAuthURLs(opts: { authServerUrl: string; realm: string }) {
+  logger.debug('[AUTH] Generating OAuth URLs')
+  const realmBase = new URL(`/realms/${opts.realm}/`, opts.authServerUrl)
   const issuer = realmBase.toString().replace(/\/$/, '')
 
-  logger.debug(`[AUTH] Generated OAuthURLs: realmBase set to ${realmBase}\nissuer ${issuer}`)
+  logger.debug(`[AUTH] Issuer URL set to ${issuer}`)
 
   return {
     issuer: issuer,
