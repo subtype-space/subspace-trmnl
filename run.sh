@@ -3,7 +3,7 @@
 set -euo pipefail
 
 MODE=${1:-prod}
-BRANCH=${2:-rc-v1}
+BRANCH=${2:-v1}
 LATEST_RELEASE="v1"
 
 echo "🚀 Starting subspace-api in '$MODE' mode (branch: $BRANCH)..."
@@ -18,7 +18,7 @@ case "$MODE" in
     docker compose pull && docker compose up -d
     ;;
 
-  rc|dev)
+  branch)
     echo "🔀 Switching to branch '$BRANCH'..."
     git fetch origin "$BRANCH"
     git checkout "$BRANCH"
@@ -29,10 +29,18 @@ case "$MODE" in
     docker compose -f docker-compose.dev.yml up -d
     ;;
 
+  dev)
+    echo "🔧 Building development locally..."
+    docker compose -f docker-compose.dev.yml build
+    docker compose -f docker-compose.dev.yml up -d
+  ;;
+
   *)
     echo "Unknown mode: $MODE"
-    echo "Usage: $0 [dev|rc|prod] [branch (optional)]"
-    echo "Note: dev and rc flags currently do the same thing!"
+    echo "Usage: $0 [dev|branch|prod] [branch (optional)]"
+    echo "  dev to build and start whatever is in the current directory"
+    echo "  branch to switch branches to [option] and build"
+    echo "  prod (default) pull down latest image from GHCR.io and run"
     exit 1
     ;;
 esac

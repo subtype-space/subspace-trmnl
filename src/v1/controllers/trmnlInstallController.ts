@@ -35,6 +35,7 @@ const trmnlInstallController: RequestHandler = async (req, res): Promise<void> =
     return
   }
 
+  logger.debug(`[TRMNL] TRMNL exchange response: ${trmnlResp}`)
   // dont log raw access tokens, even in debug
   // dont do it andrew
   const { access_token } = await trmnlResp.json()
