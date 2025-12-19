@@ -5,6 +5,7 @@
  * also todo, stop switching back and forth on comment conventions
  */
 import Database from 'better-sqlite3'
+import { logger } from './logger.js'
 import { mkdirSync } from 'fs'
 import { dirname } from 'path'
 const DB_PATH = process.env.TRMNL_DB_PATH || './trmnl.sqlite'
@@ -22,6 +23,7 @@ function getDb(): Database.Database {
 // Am I smart? Extensible maybe? Time will tell
 // multiple init functions maybe?
 export function initTrmnlDB() {
+  logger.info('[ DB ] Init DB')
   const db = getDb()
   db.exec(`
   create table if not exists trmnl_connections (
@@ -43,6 +45,7 @@ export function initTrmnlDB() {
 // Everything below here is beyond me - like I know what's going on, but the syntax...
 export async function storeTrmnlToken(tokenHash: string) {
   const db = getDb()
+  logger.debug('[ DB ] Storing token')
   db.prepare(
     `
     insert or ignore into trmnl_connections
@@ -54,6 +57,7 @@ export async function storeTrmnlToken(tokenHash: string) {
 
 export async function isKnownTrmnlToken(tokenHash: string): Promise<boolean> {
   const db = getDb()
+  logger.debug('[ DB ] Check if token is known')
   const row = db
     .prepare(
       `
@@ -69,6 +73,7 @@ export async function isKnownTrmnlToken(tokenHash: string): Promise<boolean> {
 
 export async function touchTrmnlToken(tokenHash: string) {
   const db = getDb()
+  logger.debug('[ DB ] Refreshing user token')
   db.prepare(
     `
     update trmnl_connections
@@ -80,6 +85,7 @@ export async function touchTrmnlToken(tokenHash: string) {
 
 export async function attachUserUuid(tokenHash: string, userUuid: string) {
   const db = getDb()
+  logger.debug('[ DB ] Associating user UUID to token')
   db.prepare(
     `
     update trmnl_connections
@@ -91,6 +97,7 @@ export async function attachUserUuid(tokenHash: string, userUuid: string) {
 
 export async function revokeTrmnlToken(tokenHash: string) {
   const db = getDb()
+  logger.debug('[ DB ] Revoking token...')
   db.prepare(
     `
     update trmnl_connections
@@ -102,6 +109,7 @@ export async function revokeTrmnlToken(tokenHash: string) {
 
 export async function revokeByUserUuid(userUuid: string) {
   const db = getDb()
+  logger.debug('[ DB ] Revoking by user UUID...')
   db.prepare(
     `
     update trmnl_connections

@@ -10,6 +10,7 @@ export const trmnlUninstallController: RequestHandler = async (req, res) => {
     res.status(400).json({ error: 'missing user_uuid' })
     return
   }
+  logger.info('[TRMNL] Received uninstall request for ', { userUuid })
 
   // Mark revoked (or delete) everything tied to this install
   await revokeByUserUuid(userUuid)
