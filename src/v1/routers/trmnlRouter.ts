@@ -8,7 +8,7 @@ import { trmnlUninstallController } from '../controllers/trmnlUninstallControlle
 const router = express.Router()
 
 // Should be mounted at /trmnl, so <api endpoint>/v1/trmnl/install and etc.
-router.post('/install', trmnlInstallController)
+router.get('/install', trmnlInstallController)
 router.post('/install_success', requireTrmnlAuth, trmnlInstallSuccessController)
 router.post('/markup', express.urlencoded({ extended: false }), requireTrmnlAuth, trmnlMarkupController)
 router.post('/uninstall', requireTrmnlAuth, trmnlUninstallController)
