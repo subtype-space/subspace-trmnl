@@ -32,8 +32,7 @@ const trmnlInstallController: RequestHandler = async (req, res): Promise<void> =
   const raw = await trmnlResp.text()
 
   if (!trmnlResp.ok) {
-    const text = await trmnlResp.text()
-    logger.warn('[TRMNL] token exchange failed', text)
+    logger.warn('[TRMNL] token exchange failed', raw)
     res.status(502).json({ error: 'trmnl_exchange_failed' })
     return
   }
@@ -60,7 +59,7 @@ const trmnlInstallController: RequestHandler = async (req, res): Promise<void> =
   logger.info('[TRMNL] Storing hashed access token...')
   await storeTrmnlToken(hash)
 
-  logger.info('[TRMNL] installation complete')
+  logger.debug('[TRMNL] Redirecting user back to', callback)
   res.redirect(callback)
   return
 }
