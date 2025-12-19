@@ -6,9 +6,6 @@ import statusRouter from './v1/routers/statusRouter.js'
 import helmet from 'helmet'
 import session from 'express-session'
 
-import KeycloakConnect from 'keycloak-connect'
-import { keycloakConfig } from './configs/keycloakConfig.js'
-
 // OAuth implementation
 import { oauthMetadataRouter, authMiddleware } from './utils/oauth.js'
 
@@ -48,7 +45,6 @@ try {
 } catch (err) {
   logger.error('There was an error connecting the MCP server to transport', err)
 }
-logger.debug(mcpServer)
 
 // Express setup
 const server = express()
@@ -91,7 +87,7 @@ server.get('/mcp/health', async (_: Request, res: Response) => {
   if (!mcpReady) {
     res.status(503).json({
       status: 'unhealthy',
-      reason: 'MCP server not connected to transport',
+      reason: 'MCP server not ready',
     })
   }
   res.status(200).json({ status: 'ok' })

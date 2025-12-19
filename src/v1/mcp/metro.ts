@@ -3,7 +3,7 @@ const PRIMARY_API_KEY = process.env.WMATA_PRIMARY_KEY
 if (!PRIMARY_API_KEY) {
   logger.error('API key is missing!')
 } else {
-  console.debug('WMATA API key loaded successfully')
+  logger.debug('WMATA API key loaded successfully')
 }
 
 type MetroIncidentResponse = {
@@ -65,7 +65,7 @@ export async function getStationInfo({ stationCodes }: { stationCodes: string[] 
     return 'Station codes were not supplied.'
   }
 
-  logger.debug('Station codes:', stationCodes)
+  logger.info(`[MCP] - WMATA tool - getting station info for ${ stationCodes }`)
 
   const response = await fetch(`https://api.wmata.com/StationPrediction.svc/json/GetPrediction/${stationCodes}`, {
     method: 'GET',
@@ -75,6 +75,7 @@ export async function getStationInfo({ stationCodes }: { stationCodes: string[] 
   })
 
   if (!response.ok) {
+    logger.warn(`WMATA API returned ${response.status} with ${response.statusText}`)
     return `WMATA API Error: returned ${response.status} with ${response.statusText}`
   }
 
@@ -85,7 +86,8 @@ export async function getStationInfo({ stationCodes }: { stationCodes: string[] 
 }
 
 export async function getIncidents() {
-  logger.debug('Attempting API call to WMATA')
+  logger.info('[MCP] - WMATA tool - getting incidents')
+  
   const response = await fetch('https://api.wmata.com/Incidents.svc/json/Incidents', {
     method: 'GET',
     headers: {
@@ -94,6 +96,7 @@ export async function getIncidents() {
   })
 
   if (!response.ok) {
+    logger.warn(`WMATA API returned ${response.status} with ${response.statusText}`)
     return `WMATA API Error: returned ${response.status} with ${response.statusText}`
   }
   const incidentData: MetroIncidentResponse = await response.json()
@@ -131,7 +134,6 @@ function formatIncidentsData(incidentData: MetroIncident[]): string {
 }
 
 function formatRailPredictionData(predicitonData: RailPrediction[]): string {
-  logger.debug('Attempting API call to WMATA for rail predictions')
   if (predicitonData.length === 0) {
     return 'There is no information for the given station codes, or the metro is closed'
   }

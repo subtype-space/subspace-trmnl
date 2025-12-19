@@ -74,6 +74,7 @@ interface ForecastResponse {
 }
 
 export async function getAlerts({ state }: { state: string }) {
+  logger.info(`[MCP] - weather.ts - weather tool called, getting alerts for ${state}`)
   const stateCode = state.toUpperCase()
   const alertsUrl = `${NWS_API_BASE}/alerts?area=${stateCode}`
   const alertsData = await makeNWSRequest<AlertsResponse>(alertsUrl)
@@ -94,6 +95,7 @@ export async function getAlerts({ state }: { state: string }) {
 }
 
 export async function getForecast({ latitude, longitude }: { latitude: Number; longitude: Number }) {
+  logger.info('[MCP] - weather.ts - weather tool called, getting forecast')
   const pointsUrl = `${NWS_API_BASE}/points/${latitude.toFixed(4)},${longitude.toFixed(4)}`
   const pointsData = await makeNWSRequest<PointsResponse>(pointsUrl)
 

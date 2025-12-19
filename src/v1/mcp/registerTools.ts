@@ -1,5 +1,3 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { CallToolRequest, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import { getAlerts, getForecast } from './weather.js'
 import { getStockDetails } from './stocks.js'
