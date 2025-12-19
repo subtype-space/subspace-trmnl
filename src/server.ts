@@ -4,7 +4,6 @@ import express, { Request, NextFunction, Response, RequestHandler } from 'expres
 import trmnlRouter from './v1/routers/trmnlRouter.js'
 import statusRouter from './v1/routers/statusRouter.js'
 import helmet from 'helmet'
-import session from 'express-session'
 
 // OAuth implementation
 import { oauthMetadataRouter, authMiddleware } from './utils/oauth.js'
@@ -50,7 +49,6 @@ try {
 const server = express()
 const PORT = process.env.PORT || 9595
 const ACTIVE_VERSION = process.env.API_VERSION || 'v1'
-const memoryStore = new session.MemoryStore()
 
 // reverse proxy -- removing this will cause issues with secure cookies
 server.set('trust proxy', 1)
