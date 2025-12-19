@@ -1,17 +1,18 @@
 /**
  * Built with reference from MCP documentation and AI assisted debugging.
  * https://modelcontextprotocol.io/docs/tutorials/security/authorization
- * 
+ *
  * Documentation on implementing the OAuth spec into MCP is lacking, so please take this class with a grain of salt.
  * This was also created to replace the now deprecated keycloak-connect node package.
- * 
+ *
  * Also, this effectively switches the MCP server from a bearer only mode to a resource server (or protected resource)
  * Basically this just loops in the resource server communicating with the authentication server to validate credentials after
  *   an access token and all that.
- * 
+ *
  * OAuth hard.
  */
 
+import { getOAuthEnv } from './oauthEnv.js'
 import { createOAuthURLs } from './generateOAuthURL.js'
 import { OAuthMetadata } from '@modelcontextprotocol/sdk/shared/auth.js'
 import { logger } from './logger.js'
@@ -20,21 +21,16 @@ import { requireBearerAuth } from '@modelcontextprotocol/sdk/server/auth/middlew
 import { getOAuthProtectedResourceMetadataUrl, mcpAuthMetadataRouter } from '@modelcontextprotocol/sdk/server/auth/router.js'
 import { InsufficientScopeError, InvalidTokenError, ServerError } from '@modelcontextprotocol/sdk/server/auth/errors.js'
 
-const oauthURLs = createOAuthURLs()
+const { authServerUrl, realm, mcpServerUrl, clientId, clientSecret } = getOAuthEnv()
+const oauthURLs = createOAuthURLs({ authServerUrl, realm })
 const oauthMetadata: OAuthMetadata = {
-  ...oauthURLs!,
+  ...oauthURLs,
   response_types_supported: ['code'],
 }
 
-const mcpServerUrl = process.env.MCP_SERVER_URL
-const authServerUrl = process.env.AUTH_SERVER_URL // e.g. https://auth.subtype.space
-const realm = process.env.AUTH_REALM // e.g. subspace
-const clientId = process.env.API_CLIENT_ID
-const clientSecret = process.env.API_CLIENT_SECRET
-
 export const oauthMetadataRouter = mcpAuthMetadataRouter({
   oauthMetadata,
-  resourceServerUrl: new URL(mcpServerUrl!),
+  resourceServerUrl: new URL(mcpServerUrl),
   scopesSupported: ['mcp:tools'],
   resourceName: 'subspace-api',
 })
@@ -56,21 +52,11 @@ export const authMiddleware = requireBearerAuth({
       return authInfo
     },
   },
-  requiredScopes: [],
-  resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(new URL(mcpServerUrl!)),
+  requiredScopes: ['mcp:tools'],
+  resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(new URL(mcpServerUrl)),
 })
 
 async function verifyToken(token: string) {
-  if (!mcpServerUrl || !authServerUrl || !realm || !clientId) {
-    logger.error('[AUTH] missing env', {
-      mcpServerUrl: !!mcpServerUrl,
-      authServerUrl: !!authServerUrl,
-      realm: !!realm,
-      clientId: !!clientId,
-    })
-    throw new ServerError('Auth not configured')
-  }
-
   const endpoint = oauthMetadata.introspection_endpoint
   logger.debug(`[AUTH] introspection endpoint: ${endpoint}`)
 
@@ -136,34 +122,30 @@ async function verifyToken(token: string) {
     throw new InvalidTokenError('Token is inactive')
   }
 
-  try {
-    const audRaw = data.aud
-    const audiences = Array.isArray(audRaw) ? audRaw : typeof audRaw === 'string' ? [audRaw] : []
+  const audRaw = data.aud
+  const audiences = Array.isArray(audRaw) ? audRaw : typeof audRaw === 'string' ? [audRaw] : []
 
-    const configured = mcpServerUrl!
-    // After looking at the SDK code, checkResourceAllowed may freak out if you pass in non-URL audiences
-    // To be honest, I'm not sure what the 'correct' method is, but my gut feeling is telling me that the
-    // MCP sdk only supports URLs returned in the claim
-    const allowed = audiences.some((a) => {
-      // Only run URL-based matching if `a` is a URL
-      try {
-        new URL(a)
-      } catch {
-        return false // ignore non-URL audiences
-      }
-
-      return checkResourceAllowed({
-        requestedResource: a,
-        configuredResource: configured,
-      })
-    })
-
-    if (!allowed) {
-      logger.warn(`[AUTH] Audience not allowed. Expected ${configured} but got ${audiences.join(',')}`)
-      throw new InsufficientScopeError('Audience not allowed')
+  const configured = mcpServerUrl
+  // After looking at the SDK code, checkResourceAllowed may freak out if you pass in non-URL audiences
+  // To be honest, I'm not sure what the 'correct' method is, but my gut feeling is telling me that the
+  // MCP sdk only supports URLs returned in the claim
+  const allowed = audiences.some((a) => {
+    // Only run URL-based matching if `a` is a URL
+    try {
+      new URL(a)
+    } catch {
+      return false // ignore non-URL audiences
     }
-  } catch (e) {
-    logger.error(`[AUTH] Error checking audiences ${e}`)
+
+    return checkResourceAllowed({
+      requestedResource: a,
+      configuredResource: configured,
+    })
+  })
+
+  if (!allowed) {
+    logger.warn(`[AUTH] Audience not allowed. Expected ${configured} but got ${audiences.join(',')}`)
+    throw new InsufficientScopeError('Audience not allowed')
   }
 
   const exp = data.exp
@@ -172,16 +154,17 @@ async function verifyToken(token: string) {
     throw new InvalidTokenError('Token has no expiration time')
   }
 
-  const scopes = typeof data.scope === 'string' ? data.scope.split(' ') : []
+  const scopes = typeof data.scope === 'string' ? data.scope.split(/\s+/).filter(Boolean) : []
+
   logger.info('[AUTH] Authenticating user with following info:', {
     clientId: data.client_id,
-    scopes: scopes, 
+    scopes: scopes,
     expiresAt: exp,
     extra: {
       sub: data.sub,
       azp: data.azp,
       preferred_username: data.preferred_username,
-    }
+    },
   })
 
   return {
