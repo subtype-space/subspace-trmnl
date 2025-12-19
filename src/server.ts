@@ -1,6 +1,7 @@
 import './utils/env.js' // I hate how I have to do this but whatever. Stupid shim.
 import { logger } from './utils/logger.js'
 import express, { Request, NextFunction, Response, RequestHandler } from 'express'
+import { initTrmnlDB } from './utils/dbConnector.js'
 import trmnlRouter from './v1/routers/trmnlRouter.js'
 import statusRouter from './v1/routers/statusRouter.js'
 import helmet from 'helmet'
@@ -45,6 +46,10 @@ try {
   logger.error('There was an error connecting the MCP server to transport', err)
 }
 
+// TODO: switch to PG connection vs flat file
+logger.info('Initializing DB...')
+initTrmnlDB()
+
 // Express setup
 const server = express()
 const PORT = process.env.PORT || 9595
@@ -60,9 +65,10 @@ server.use(express.json())
 // Declare regular REST API routing
 logger.info('Initializing routes...')
 
-//server.use('/v1/trmnl', express.json(), trmnlRouter) disable this route because it's just not active right now
 server.use('/', statusRouter)
 server.use('/health', express.json(), statusRouter)
+server.use('/v1/trmnl', trmnlRouter)
+
 
 // Wrapper around the handleRequest - I don't know if this is actually needed but it was suggested to me
 const safe = (fn: RequestHandler): RequestHandler => {

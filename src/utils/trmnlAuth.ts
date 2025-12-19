@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 import { Request, Response, NextFunction, RequestHandler } from 'express'
-import { isKnownTrmnlToken, touchTrmnlToken } from '../utils/trmnlStore.js'
+import { isKnownTrmnlToken, touchTrmnlToken } from './dbConnector.js'
 import { logger } from './logger.js'
 
 const sha256 = (v: string) =>
@@ -11,10 +11,12 @@ export const requireTrmnlAuth: RequestHandler = async (
   res: Response,
   next: NextFunction
 ) => {
+  logger.info('[AUTH] Checking TRMNL authentication')
   const auth = req.header('authorization') ?? ''
   const match = auth.match(/^Bearer\s+(.+)$/i)
 
   if (!match) {
+    logger.warn('[AUTH] - TRMNL No auth header detected')
     res.status(401).send('Unauthorized')
     return
   }
@@ -22,10 +24,13 @@ export const requireTrmnlAuth: RequestHandler = async (
   const tokenHash = sha256(match[1])
 
   if (!(await isKnownTrmnlToken(tokenHash))) {
+    logger.info('[AUTH] Unrecognized TRMNL token hash')
+    logger.debug(tokenHash)
     res.status(401).send('Unauthorized')
     return
   }
 
+  // Attach token hash to request
   await touchTrmnlToken(tokenHash)
   ;(req as any).trmnl = { tokenHash }
 

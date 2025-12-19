@@ -2,12 +2,15 @@ import express from 'express'
 import { requireTrmnlAuth } from '../../utils/trmnlAuth.js'
 import trmnlInstallController from '../controllers/trmnlInstallController.js'
 import trmnlMarkupController from '../controllers/trmnlMarkupController.js'
+import { trmnlInstallSuccessController } from '../controllers/trmnlInstallSuccessController.js'
+import { trmnlUninstallController } from '../controllers/trmnlUninstallController.js'
 
 const router = express.Router()
 
+// Should be mounted at /trmnl, so <api endpoint>/v1/trmnl/install and etc.
 router.get('/install', trmnlInstallController)
-
-// 🔒 Protected screen generation endpoint
-router.post('/markup', requireTrmnlAuth, trmnlMarkupController)
+router.post('/install_success', requireTrmnlAuth, trmnlInstallSuccessController)
+router.post('/markup', express.urlencoded({ extended: false }), requireTrmnlAuth, trmnlMarkupController)
+router.post('/uninstall', requireTrmnlAuth, trmnlUninstallController)
 
 export default router
