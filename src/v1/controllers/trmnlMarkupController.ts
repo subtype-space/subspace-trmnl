@@ -50,7 +50,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     .filter(Boolean)
     .filter((s) => VALID_LINES.has(s))
 
-  const displayLine = (settings?.primaryLine ?? 'RD')
+  const displayLine = (settings?.primary_line ?? 'RD')
 
   // fetch WMATA incidents
   const apiKey = process.env.WMATA_PRIMARY_KEY
