@@ -18,7 +18,6 @@ export type TrmnlSettings = {
   plugin_setting_id?: number | null
 }
 
-
 // Let this file manage the lifecycle of the db
 let db: Database.Database | null = null
 function getDb(): Database.Database {
@@ -130,19 +129,25 @@ export async function revokeByUserUuid(userUuid: string) {
   ).run(Date.now(), userUuid)
 }
 
-// Read settings for one plugin instance (uuid)
 export async function getSettingsByUuid(userUuid: string): Promise<TrmnlSettings | null> {
   const db = getDb()
   const row = db
     .prepare(
       `
-      select user_uuid, metro_station, lines, updated_at
+      select user_uuid, metro_station, lines, plugin_setting_id, crass_level, updated_at
       from trmnl_settings
       where user_uuid = ?
     `
     )
     .get(userUuid) as
-    | { user_uuid: string; metro_station: string | null; lines: string | null; updated_at: number }
+    | {
+        user_uuid: string
+        metro_station: string | null
+        lines: string | null
+        plugin_setting_id: number | null
+        crass_level: number | null
+        updated_at: number
+      }
     | undefined
 
   if (!row) return null
@@ -151,6 +156,8 @@ export async function getSettingsByUuid(userUuid: string): Promise<TrmnlSettings
     user_uuid: row.user_uuid,
     metro_station: row.metro_station,
     lines: row.lines,
+    plugin_setting_id: row.plugin_setting_id,
+    crass_level: row.crass_level,
   }
 }
 
@@ -161,15 +168,19 @@ export async function upsertSettings(input: TrmnlSettings) {
   const userUuid = input.user_uuid
   const metroStation = input.metro_station ?? null
   const lines = input.lines ?? null
+  const pluginSettingId = input.plugin_setting_id ?? null
+  const crassLevel = input.crass_level ?? 0
 
   db.prepare(
     `
-    insert into trmnl_settings (user_uuid, metro_station, lines, updated_at)
-    values (?, ?, ?, ?)
+    insert into trmnl_settings (user_uuid, metro_station, lines, plugin_setting_id, crass_level, updated_at)
+    values (?, ?, ?, ?, ?, ?)
     on conflict(user_uuid) do update set
       metro_station = excluded.metro_station,
       lines = excluded.lines,
+      plugin_setting_id = excluded.plugin_setting_id,
+      crass_level = excluded.crass_level,
       updated_at = excluded.updated_at
   `
-  ).run(userUuid, metroStation, lines, Date.now())
+  ).run(userUuid, metroStation, lines, pluginSettingId, crassLevel, Date.now())
 }

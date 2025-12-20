@@ -2,8 +2,6 @@ import { logger } from '../../utils/logger.js'
 const PRIMARY_API_KEY = process.env.WMATA_PRIMARY_KEY
 if (!PRIMARY_API_KEY) {
   logger.error('API key is missing!')
-} else {
-  logger.debug('WMATA API key loaded successfully')
 }
 
 type MetroIncidentResponse = {
