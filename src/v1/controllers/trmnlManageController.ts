@@ -24,7 +24,7 @@ export const trmnlManageGetController: RequestHandler = async (req, res) => {
   const settings = await getSettingsByUuid(uuid)
   const primary = (settings as any)?.primary_line ?? 'RD'
   const lines = new Set((settings?.lines ?? '').split(',').filter(Boolean))
-  const crass = (settings?.crass_level ?? 0) === 1
+  const crass = settings?.crass_level !== 0
 
   res.type('text/html').send(`
     <html><body style="font-family: system-ui; max-width: 520px; margin: 24px auto;">

@@ -49,7 +49,7 @@ export function initTrmnlDB() {
     primary_line text,
     lines text,
     plugin_setting_id integer,
-    crass_level integer,
+    crass_level integer default 1,
     updated_at integer not null
   );
 `)
