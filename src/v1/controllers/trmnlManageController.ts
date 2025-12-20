@@ -58,9 +58,9 @@ export const trmnlManageGetController: RequestHandler = async (req, res) => {
       ${
         settings?.plugin_setting_id
           ? `<p style="margin-top:16px;">
-               <a href="https://usetrmnl.com/plugin_settings/${settings.plugin_setting_id}?force_refresh=true">
-                 Back to TRMNL
-               </a>
+                <a href="https://usetrmnl.com/plugin_settings/${settings.plugin_setting_id}/edit?force_refresh=true">
+                Back to TRMNL
+                </a>
              </p>`
           : ''
       }
@@ -90,7 +90,7 @@ export const trmnlManagePostController: RequestHandler = async (req, res) => {
   const pluginSettingId = settings?.plugin_setting_id
 
   if (pluginSettingId) {
-    res.redirect(`https://usetrmnl.com/plugin_settings/${pluginSettingId}?force_refresh=true`)
+    res.redirect(`https://usetrmnl.com/plugin_settings/${pluginSettingId}/edit?force_refresh=true`)
     return
   }
 

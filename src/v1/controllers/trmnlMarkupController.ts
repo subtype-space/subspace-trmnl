@@ -86,7 +86,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   let status: string
   let subtitle: string
   if (hasEmergency) {
-    status = crass ? 'YOU’RE F***ED' : 'YOU’RE SCREWED'
+    status = crass ? "YOU'RE SO F***ED." : "YOU'RE SO SCREWED."
     subtitle = 'Emergency on the line'
   } else {
     const s = statusFromCount(badCount, crass)
@@ -94,7 +94,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     subtitle = s.subtitle
   }
 
-  const subtitleFinal = headsUpCount > 0 ? `${subtitle} • ${headsUpCount} alert(s)` : subtitle
+  const subtitleFinal = headsUpCount > 0 && !hasEmergency ? `${subtitle} • ${headsUpCount} alert(s)` : subtitle
 
   const full = `
     <div class="view view--full">
@@ -242,8 +242,8 @@ async function fetchWmataIncidents(apiKey: string): Promise<WmataIncident[]> {
 }
 
 async function fetchWmataIncidentsCached(apiKey: string): Promise<WmataIncident[]> {
+  logger.debug('[TRMNL] Using cached info!')
   const now = Date.now()
-
   if (cachedIncidents && now - cachedAtMs < WMATA_TTL_MS) {
     return cachedIncidents
   }
@@ -269,5 +269,5 @@ function statusFromCount(count: number, crass: boolean) {
   if (count === 0) return { status: "YOU'RE FINE. ", subtitle: 'No active delays' }
   if (count === 1) return { status: 'EH. MAYBE.', subtitle: 'Minor delays' }
   if (count === 2) return { status: crass ? 'MILDLY F***ED' : 'MILDLY SCREWED', subtitle: 'Multiple delays' }
-  return { status: crass ? "YOU'RE F***ED" : "YOU'RE SCREWED", subtitle: `${count} active delays` }
+  return { status: crass ? "YOU'RE SO F***ED" : "YOU'RE SO SCREWED", subtitle: `${count} active delays` }
 }
