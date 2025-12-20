@@ -36,28 +36,35 @@ export const trmnlManageGetController: RequestHandler = async (req, res) => {
         <div style="margin: 12px 0;">
           <strong>Line to monitor</strong><br/>
           ${['RD', 'BL', 'OR', 'SV', 'GR', 'YL']
-            .map(
-              (l) =>
-                `<label style="display:block; margin-top:6px;">
-                <input type="radio" name="primaryLine" value="${l}" ${primary === l ? 'checked' : ''}/>
-            </label>`
+            .map((l) =>
+              `
+                <label style="display:block; margin-top:6px;">
+                  <input type="radio" name="primaryLine" value="${l}" ${primary === l ? 'checked' : ''}/>
+                  ${l}
+                </label>
+              `.trim()
             )
             .join('')}
         </div>
 
         <div style="margin: 12px 0;">
           <strong>Show status for other lines</strong><br/>
-          ${['RD', 'BL', 'OR', 'SV', 'GR', 'YL']
-            .map(
-              (l) =>
-                `<label style="display:block; margin-top:6px;">
-                <input type="checkbox" name="lines" value="${l}"
-                    ${l === primary ? 'disabled' : ''}
-                    ${l !== primary && lines.has(l) ? 'checked' : ''}
-                  />
-            </label>`
-            )
-            .join('')}
+${['RD', 'BL', 'OR', 'SV', 'GR', 'YL']
+  .map((l) =>
+    `
+      <label style="display:block; margin-top:6px;">
+        <input
+          type="checkbox"
+          name="lines"
+          value="${l}"
+          ${l === primary ? 'disabled' : ''}
+          ${l !== primary && lines.has(l) ? 'checked' : ''}
+        />
+        ${l}${l === primary ? ' (primary)' : ''}
+      </label>
+    `.trim()
+  )
+  .join('')}
         </div>
 
         <div style="margin: 12px 0;">
@@ -103,7 +110,7 @@ export const trmnlManagePostController: RequestHandler = async (req, res) => {
   const crassLevel = req.body?.crass === '1' ? 1 : 0
   logger.debug(`[TRMNL] ${uuid} updated user settings to ${lines} - ${crassLevel ? 'enabled' : 'disabled'}`)
 
-  await upsertSettings({ user_uuid: uuid, lines, crass_level: crassLevel })
+  await upsertSettings({ user_uuid: uuid, primary_line: primaryLine, lines, crass_level: crassLevel })
 
   const settings = await getSettingsByUuid(uuid)
   const pluginSettingId = settings?.plugin_setting_id
