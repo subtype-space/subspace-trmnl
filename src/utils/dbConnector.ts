@@ -10,9 +10,11 @@ import { mkdirSync } from 'fs'
 import { dirname } from 'path'
 const DB_PATH = process.env.TRMNL_DB_PATH || './trmnl.sqlite'
 
+// to do - i dont like this in this file
 export type TrmnlSettings = {
   user_uuid: string
   metro_station?: string | null
+  primary_line?: string | null
   lines?: string | null
   crass_level?: number | null
   plugin_setting_id?: number | null
@@ -44,6 +46,7 @@ export function initTrmnlDB() {
   create table if not exists trmnl_settings (
     user_uuid text primary key,
     metro_station text,
+    primary_line text,
     lines text,
     plugin_setting_id integer,
     crass_level integer,
@@ -134,7 +137,7 @@ export async function getSettingsByUuid(userUuid: string): Promise<TrmnlSettings
   const row = db
     .prepare(
       `
-      select user_uuid, metro_station, lines, plugin_setting_id, crass_level, updated_at
+      select user_uuid, metro_station, primary_line, lines, plugin_setting_id, crass_level, updated_at
       from trmnl_settings
       where user_uuid = ?
     `
@@ -143,6 +146,7 @@ export async function getSettingsByUuid(userUuid: string): Promise<TrmnlSettings
     | {
         user_uuid: string
         metro_station: string | null
+        primary_line: string | null
         lines: string | null
         plugin_setting_id: number | null
         crass_level: number | null
@@ -155,6 +159,7 @@ export async function getSettingsByUuid(userUuid: string): Promise<TrmnlSettings
   return {
     user_uuid: row.user_uuid,
     metro_station: row.metro_station,
+    primary_line: row.primary_line,
     lines: row.lines,
     plugin_setting_id: row.plugin_setting_id,
     crass_level: row.crass_level,
@@ -167,6 +172,7 @@ export async function upsertSettings(input: TrmnlSettings) {
 
   const userUuid = input.user_uuid
   const metroStation = input.metro_station ?? null
+  const primaryLine = input.primary_line ?? null
   const lines = input.lines ?? null
   const pluginSettingId = input.plugin_setting_id ?? null
   const crassLevel = input.crass_level ?? 0
@@ -174,15 +180,16 @@ export async function upsertSettings(input: TrmnlSettings) {
   db.prepare(
     `
     insert into trmnl_settings (
-      user_uuid, metro_station, lines, plugin_setting_id, crass_level, updated_at
+      user_uuid, metro_station, primary_line, lines, plugin_setting_id, crass_level, updated_at
     )
-    values (?, ?, ?, ?, ?, ?)
+    values (?, ?, ?, ?, ?, ?, ?)
     on conflict(user_uuid) do update set
       metro_station = coalesce(excluded.metro_station, trmnl_settings.metro_station),
+      primary_line = coalesce(excluded.primary_line, trmnl_settings.primary_line),
       lines = coalesce(excluded.lines, trmnl_settings.lines),
       plugin_setting_id = coalesce(excluded.plugin_setting_id, trmnl_settings.plugin_setting_id),
       crass_level = excluded.crass_level,
       updated_at = excluded.updated_at
   `
-  ).run(userUuid, metroStation, lines, pluginSettingId, crassLevel, Date.now())
+  ).run(userUuid, metroStation, primaryLine, lines, pluginSettingId, crassLevel, Date.now())
 }

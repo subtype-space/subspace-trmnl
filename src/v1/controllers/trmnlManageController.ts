@@ -22,6 +22,7 @@ export const trmnlManageGetController: RequestHandler = async (req, res) => {
 
   logger.info('[TRMNL] Displaying plugin settings page')
   const settings = await getSettingsByUuid(uuid)
+  const primary = (settings as any)?.primary_line ?? 'RD'
   const lines = new Set((settings?.lines ?? '').split(',').filter(Boolean))
   const crass = (settings?.crass_level ?? 0) === 1
 
@@ -33,13 +34,27 @@ export const trmnlManageGetController: RequestHandler = async (req, res) => {
         <input type="hidden" name="uuid" value="${safeUuid}"/>
 
         <div style="margin: 12px 0;">
-          <strong>Lines to monitor</strong><br/>
+          <strong>Line to monitor</strong><br/>
           ${['RD', 'BL', 'OR', 'SV', 'GR', 'YL']
             .map(
               (l) =>
                 `<label style="display:block; margin-top:6px;">
-              <input type="checkbox" name="lines" value="${l}" ${lines.has(l) ? 'checked' : ''}/>
-              ${l}
+                <input type="radio" name="primaryLine" value="${l}" ${primary === l ? 'checked' : ''}/>
+            </label>`
+            )
+            .join('')}
+        </div>
+
+        <div style="margin: 12px 0;">
+          <strong>Show status for other lines</strong><br/>
+          ${['RD', 'BL', 'OR', 'SV', 'GR', 'YL']
+            .map(
+              (l) =>
+                `<label style="display:block; margin-top:6px;">
+                <input type="checkbox" name="lines" value="${l}"
+                    ${l === primary ? 'disabled' : ''}
+                    ${l !== primary && lines.has(l) ? 'checked' : ''}
+                  />
             </label>`
             )
             .join('')}
@@ -76,11 +91,15 @@ export const trmnlManagePostController: RequestHandler = async (req, res) => {
   }
 
   logger.info('[TRMNL] Saving user settings')
-  // If only one checkbox checked, express gives string; if multiple, it’s string[]
   const rawLines = req.body?.lines
+  const primaryLine = req.body?.primaryLine
+  if (typeof primaryLine !== 'string' || !['RD', 'BL', 'OR', 'SV', 'GR', 'YL'].includes(primaryLine)) {
+    res.status(400).send('missing/invalid primaryLine')
+    return
+  }
   const linesArr = Array.isArray(rawLines) ? rawLines : typeof rawLines === 'string' ? [rawLines] : []
-
-  const lines = linesArr.join(',')
+  const filtered = linesArr.map((s) => s.trim().toUpperCase()).filter((l) => l && l !== primaryLine)
+  const lines = filtered.join(',')
   const crassLevel = req.body?.crass === '1' ? 1 : 0
   logger.debug(`[TRMNL] ${uuid} updated user settings to ${lines} - ${crassLevel ? 'enabled' : 'disabled'}`)
 

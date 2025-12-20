@@ -50,12 +50,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     .filter(Boolean)
     .filter((s) => VALID_LINES.has(s))
 
-  // pick line to display (rotate if multiple)
-  let displayLine = selected[0] ?? 'GR'
-  if (selected.length > 1) {
-    const ts = meta?.system?.timestamp_utc ?? Math.floor(Date.now() / 1000)
-    displayLine = selected[ts % selected.length]
-  }
+  const displayLine = (settings?.primaryLine ?? 'RD')
 
   // fetch WMATA incidents
   const apiKey = process.env.WMATA_PRIMARY_KEY
@@ -74,9 +69,9 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   }
 
   const totalIncidents = incidents.length
-  const { bad, headsUp } = countCommuteIssuesByLine(incidents)
-  const badCount = bad[displayLine] ?? 0
-  const headsUpCount = headsUp[displayLine] ?? 0
+  const { disruption, alert } = countCommuteIssuesByLine(incidents)
+  const disruptionCount = disruption[displayLine] ?? 0
+  const alertCount = alert[displayLine] ?? 0
 
   // If there's ANY emergency, PANIK
   // I love this .some() function so much
@@ -89,20 +84,20 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     status = crass ? "YOU'RE SO F***ED." : "YOU'RE SO SCREWED."
     subtitle = 'Emergency on the line'
   } else {
-    const s = statusFromCount(badCount, crass)
+    const s = statusFromCount(disruptionCount, crass)
     status = s.status
     subtitle = s.subtitle
   }
 
   // This "subtitle" is for the active line being shown
-  const subtitleFinal = headsUpCount > 0 && !hasEmergency ? `${subtitle} • ${headsUpCount} alert(s)` : subtitle
+  const subtitleFinal = alertCount > 0 && !hasEmergency ? `${subtitle} • ${alertCount} alert(s)` : subtitle
 
   // based on user preference, display the other lines (but not the current 'hero' line)
   const dots = selected
     .filter((l) => l !== displayLine)
     .map((l) => {
-      const b = bad[l] ?? 0
-      const h = headsUp[l] ?? 0
+      const b = disruption[l] ?? 0
+      const h = alert[l] ?? 0
       if (b === 0 && h === 0) return ''
 
       const isBad = b > 0
@@ -192,7 +187,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
                 ${dots}
             </div>
           <div class="mt-4" style="display:flex; justify-content:space-between;">
-            <span class="label">${escapeHtml(String(totalIncidents))} total incident(s)</span>
+            <span class="label">${escapeHtml(String(totalIncidents))} total incident(s) across WMATA</span>
           </div>
         </div>
       </div>
@@ -274,12 +269,12 @@ function dedupeIncidents(incidents: WmataIncident[]) {
   return out
 }
 
-function classifyImpact(inc: WmataIncident): 'bad' | 'headsUp' {
+function classifyImpact(inc: WmataIncident): 'disruption' | 'alert' {
   const t = (inc.IncidentType ?? '').toUpperCase()
 
-  if (t === 'EMERGENCY' || t === 'DELAY') return 'bad'
-  if (t === 'ALERT') return isBadAlert(inc) ? 'bad' : 'headsUp'
-  return 'headsUp'
+  if (t === 'EMERGENCY' || t === 'DELAY') return 'disruption'
+  if (t === 'ALERT') return isBadAlert(inc) ? 'disruption' : 'alert'
+  return 'alert'
 }
 
 function isBadAlert(inc: WmataIncident): boolean {
@@ -290,21 +285,21 @@ function isBadAlert(inc: WmataIncident): boolean {
 // Ignore duped incidents by ID
 // For every incident, classify it, and for each applicable line, increment the counter of a FUCKED or heads up! by 1
 function countCommuteIssuesByLine(incidents: WmataIncident[]) {
-  const bad: Record<string, number> = { RD: 0, OR: 0, SV: 0, BL: 0, YL: 0, GR: 0 }
-  const headsUp: Record<string, number> = { RD: 0, OR: 0, SV: 0, BL: 0, YL: 0, GR: 0 }
+  const disruption: Record<string, number> = { RD: 0, OR: 0, SV: 0, BL: 0, YL: 0, GR: 0 }
+  const alert: Record<string, number> = { RD: 0, OR: 0, SV: 0, BL: 0, YL: 0, GR: 0 }
 
   // For every incident, determine severity via classifyImpact
   //   determine the line affected
-  //   Using the bad/headsUp map, based on the parsed line affected, increment the fucked/headsup counter by 1
+  //   Using the disruption/alert map, based on the parsed line affected, increment the fucked/alert counter by 1
   for (const inc of dedupeIncidents(incidents)) {
     const impact = classifyImpact(inc)
     const lines = parseLinesAffected(inc.LinesAffected ?? '')
     for (const line of lines) {
-      impact === 'bad' ? bad[line]++ : headsUp[line]++
+      impact === 'disruption' ? disruption[line]++ : alert[line]++
     }
   }
 
-  return { bad, headsUp }
+  return { disruption, alert }
 }
 
 async function fetchWmataIncidents(apiKey: string): Promise<WmataIncident[]> {
