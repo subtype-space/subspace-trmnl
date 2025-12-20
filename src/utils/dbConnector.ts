@@ -173,12 +173,14 @@ export async function upsertSettings(input: TrmnlSettings) {
 
   db.prepare(
     `
-    insert into trmnl_settings (user_uuid, metro_station, lines, plugin_setting_id, crass_level, updated_at)
+    insert into trmnl_settings (
+      user_uuid, metro_station, lines, plugin_setting_id, crass_level, updated_at
+    )
     values (?, ?, ?, ?, ?, ?)
     on conflict(user_uuid) do update set
-      metro_station = excluded.metro_station,
-      lines = excluded.lines,
-      plugin_setting_id = excluded.plugin_setting_id,
+      metro_station = coalesce(excluded.metro_station, trmnl_settings.metro_station),
+      lines = coalesce(excluded.lines, trmnl_settings.lines),
+      plugin_setting_id = coalesce(excluded.plugin_setting_id, trmnl_settings.plugin_setting_id),
       crass_level = excluded.crass_level,
       updated_at = excluded.updated_at
   `

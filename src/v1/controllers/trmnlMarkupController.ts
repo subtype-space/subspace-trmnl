@@ -42,7 +42,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   // load settings for this plugin instance
   const settings = await getSettingsByUuid(userUuid)
   const crass = (settings?.crass_level ?? 0) === 1
-  const instanceName = `Is my metro commute ${crass ? "fucked" : "screwed"}?`
+  const instanceName = `Is my metro commute ${crass ? 'fucked' : 'screwed'}?`
 
   const selected = (settings?.lines ?? '')
     .split(',')
@@ -76,7 +76,24 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   const { bad, headsUp } = countCommuteIssuesByLine(incidents)
   const badCount = bad[displayLine] ?? 0
   const headsUpCount = headsUp[displayLine] ?? 0
-  const { status, subtitle } = statusFromCount(badCount, crass)
+
+  // If there's ANY emergency, PANIK
+  const hasEmergency = dedupeIncidents(incidents).some(
+    (inc) =>
+      inc.IncidentType?.toString().trim().toUpperCase() === 'EMERGENCY' &&
+      parseLinesAffected(inc.LinesAffected ?? '').includes(displayLine)
+  )
+  let status: string
+  let subtitle: string
+  if (hasEmergency) {
+    status = crass ? 'YOU’RE F***ED' : 'YOU’RE SCREWED'
+    subtitle = 'Emergency on the line'
+  } else {
+    const s = statusFromCount(badCount, crass)
+    status = s.status
+    subtitle = s.subtitle
+  }
+
   const subtitleFinal = headsUpCount > 0 ? `${subtitle} • ${headsUpCount} alert(s)` : subtitle
 
   const full = `
@@ -194,9 +211,13 @@ function countCommuteIssuesByLine(incidents: WmataIncident[]) {
     if (lines.length === 0) continue
 
     let bucket: 'bad' | 'headsUp' | null = null
-    if (t === 'DELAY') bucket = 'bad'
-    else if (t === 'ALERT') bucket = isBadAlert(inc) ? 'bad' : 'headsUp'
-    else bucket = 'headsUp' // “subject to change”; don’t ignore new types
+    if (t === 'EMERGENCY') {
+      bucket = 'bad'
+    } else if (t === 'DELAY') {
+      bucket = 'bad'
+    } else if (t === 'ALERT') {
+      bucket = isBadAlert(inc) ? 'bad' : 'headsUp'
+    } else bucket = 'headsUp' // “subject to change”; don’t ignore new types
 
     for (const line of lines) {
       if (bucket === 'bad') bad[line]++
@@ -245,8 +266,8 @@ async function fetchWmataIncidentsCached(apiKey: string): Promise<WmataIncident[
 }
 
 function statusFromCount(count: number, crass: boolean) {
-  if (count === 0) return { status: 'GOOD', subtitle: 'No active delays' }
-  if (count === 1) return { status: 'EH.', subtitle: 'Minor delays' }
+  if (count === 0) return { status: "YOU'RE FINE. ", subtitle: 'No active delays' }
+  if (count === 1) return { status: 'EH. MAYBE.', subtitle: 'Minor delays' }
   if (count === 2) return { status: crass ? 'MILDLY F***ED' : 'MILDLY SCREWED', subtitle: 'Multiple delays' }
-  return { status: crass ? 'YOU’RE F***ED' : 'YOU’RE SCREWED', subtitle: `${count} active delays` }
+  return { status: crass ? "YOU'RE F***ED" : "YOU'RE SCREWED", subtitle: `${count} active delays` }
 }
