@@ -2,6 +2,14 @@ import { RequestHandler } from 'express'
 import { logger } from '../../utils/logger.js'
 import { attachUserUuid, getSettingsByUuid } from '../../utils/dbConnector.js'
 
+// Set up cache so we dont needlessly call to WMATA all the time
+// rough TTL of about 10 minutes, can change. Minimum at TRMNL is ~15 but can change based on device and dev
+let cachedIncidents: WmataIncident[] | null = null
+let cachedAtMs = 0
+let inFlight: Promise<WmataIncident[]> | null = null
+
+const WMATA_TTL_MS = 10 * 60 * 1000 // 10 minute cache
+
 // Main logic builder
 export const trmnlMarkupController: RequestHandler = async (req, res) => {
   const tokenHash = (req as any).trmnl?.tokenHash as string | undefined
@@ -17,7 +25,6 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     res.status(400).json({ error: 'missing user_uuid' })
     return
   }
-  const safeUuid = escapeHtml(userUuid)
 
   // keep link between token and uuid fresh
   await attachUserUuid(tokenHash, userUuid)
@@ -31,11 +38,12 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
       logger.warn('[TRMNL] Failed to parse trmnl metadata JSON')
     }
   }
-  const instanceName = meta?.plugin_settings?.instance_name ?? 'Metro Commute'
 
   // load settings for this plugin instance
   const settings = await getSettingsByUuid(userUuid)
   const crass = (settings?.crass_level ?? 0) === 1
+  const instanceName = `Is my metro commute ${crass ? "fucked" : "screwed"}?`
+
   const selected = (settings?.lines ?? '')
     .split(',')
     .map((s) => s.trim().toUpperCase())
@@ -211,12 +219,6 @@ async function fetchWmataIncidents(apiKey: string): Promise<WmataIncident[]> {
   const data = (await resp.json()) as { Incidents?: WmataIncident[] }
   return Array.isArray(data.Incidents) ? data.Incidents : []
 }
-
-let cachedIncidents: WmataIncident[] | null = null
-let cachedAtMs = 0
-let inFlight: Promise<WmataIncident[]> | null = null
-
-const WMATA_TTL_MS = 10 * 60 * 1000 // 10 minute cache
 
 async function fetchWmataIncidentsCached(apiKey: string): Promise<WmataIncident[]> {
   const now = Date.now()
