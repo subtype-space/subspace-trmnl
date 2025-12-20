@@ -48,7 +48,7 @@ export const trmnlManageGetController: RequestHandler = async (req, res) => {
         <div style="margin: 12px 0;">
           <label>
             <input type="checkbox" name="crass" value="1" ${crass ? 'checked' : ''}/>
-            Crass mode (\"you’re f***ed\" vs \"you’re screwed\")
+            Crass mode (\"you\'re f***ed\" vs \"you\'re screwed\")
           </label>
         </div>
 
