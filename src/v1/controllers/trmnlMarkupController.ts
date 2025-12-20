@@ -97,6 +97,56 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   const subtitleFinal = headsUpCount > 0 && !hasEmergency ? `${subtitle} • ${headsUpCount} alert(s)` : subtitle
 
   const full = `
+  <style>
+.line-indicators {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.line-dot {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  color: white;
+}
+
+/* line colors */
+.line-GR { background: #2E8B57; }
+.line-RD { background: #B22222; }
+.line-BL { background: #1E3A8A; }
+.line-OR { background: #D97706; }
+.line-YL { background: #CA8A04; }
+.line-SV { background: #6B7280; }
+
+/* alert overlay */
+.alert {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: white;
+  color: black;
+  font-size: 14px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alert-bad {
+  background: black;
+  color: white;
+}
+</style>
     <div class="view view--full">
       <div class="layout">
         <div class="columns">
@@ -110,6 +160,19 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
                 </div>
                 <div class="label mt-2">${escapeHtml(subtitleFinal)}</div>
               </div>
+
+              <div class="line-indicators">
+                <!-- testing -->
+                <div class="line-dot line-GR">
+                    GR
+                    <span class="alert alert-warn">!</span>
+                </div>
+
+                <div class="line-dot line-RD">
+                    RD
+                    <span class="alert alert-bad">‼</span>
+                </div>
+                </div>
 
               <div class="mt-4" style="display:flex; justify-content:space-between;">
                 <span class="label label--underline">WMATA</span>
