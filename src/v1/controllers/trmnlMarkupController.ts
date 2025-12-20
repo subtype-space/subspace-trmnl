@@ -50,10 +50,10 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   }
 
   // fetch WMATA incidents
-  const apiKey = process.env.WMATA_API_KEY
+  const apiKey = process.env.WMATA_PRIMARY_KEY
   if (!apiKey) {
-    logger.error('[TRMNL] missing WMATA_API_KEY')
-    res.status(500).json({ error: 'missing WMATA_API_KEY' })
+    logger.error('[TRMNL] missing WMATA_PRIMAY_KEY')
+    res.status(500).json({ error: 'Internal Server Error' })
     return
   }
 
