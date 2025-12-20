@@ -107,6 +107,14 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
         margin-top: 16px;
     }
 
+    /* line colors */
+    .line-GR { background: #2E8B57; }
+    .line-RD { background: #B22222; }
+    .line-BL { background: #1E3A8A; }
+    .line-OR { background: #D97706; }
+    .line-YL { background: #CA8A04; }
+    .line-SV { background: #6B7280; }
+
     .line-dot {
         position: relative;
         width: 48px;
