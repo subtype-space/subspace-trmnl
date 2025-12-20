@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express'
 import { logger } from '../../utils/logger.js'
-import { attachUserUuid } from '../../utils/dbConnector.js'
+import { attachUserUuid, upsertSettings } from '../../utils/dbConnector.js'
 
 export const trmnlInstallSuccessController: RequestHandler = async (req, res) => {
   // requireTrmnlAuth should already have run and set req.trmnl.tokenHash
@@ -19,6 +19,14 @@ export const trmnlInstallSuccessController: RequestHandler = async (req, res) =>
 
   await attachUserUuid(tokenHash, userUuid)
   logger.info('[TRMNL] install success for uuid', { userUuid })
+  const pluginSettingId = req.body?.user?.plugin_setting_id
+
+  if (typeof pluginSettingId === 'number') {
+    await upsertSettings({
+      user_uuid: userUuid,
+      plugin_setting_id: pluginSettingId,
+    })
+  }
 
   res.status(200).json({ ok: true })
 }

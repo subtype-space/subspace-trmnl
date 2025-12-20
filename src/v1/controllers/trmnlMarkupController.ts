@@ -17,6 +17,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     res.status(400).json({ error: 'missing user_uuid' })
     return
   }
+  const safeUuid = escapeHtml(userUuid)
 
   // keep link between token and uuid fresh
   await attachUserUuid(tokenHash, userUuid)
@@ -93,6 +94,11 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
           </div>
         </div>
       </div>
+    </div>
+    <div class="title_bar">
+        <img class="image" src="https://upload.wikimedia.org/wikipedia/commons/0/0a/WMATA_Metro_Logo_small.svg" />
+        <span class="title">${escapeHtml(instanceName)} • ${escapeHtml(displayLine)}</span>
+        <span class="instance">Refreshed at {{ 'now' | date: '%s' | plus: trmnl.user.utc_offset | date: '%H:%M' }}</span>
     </div>
   `.trim()
 
