@@ -66,12 +66,14 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   }
 
   let incidents: WmataIncident[] = []
+  let totalIncidents: number | null
   try {
     incidents = await fetchWmataIncidentsCached(apiKey)
     logger.debug('[TRMNL] WMATA incidents fetched', { count: incidents.length })
   } catch (e) {
     logger.warn('[WMATA] incidents fetch failed', String(e))
   }
+  totalIncidents = incidents.length
 
   const { bad, headsUp } = countCommuteIssuesByLine(incidents)
   const badCount = bad[displayLine] ?? 0
@@ -94,59 +96,52 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     subtitle = s.subtitle
   }
 
+  // This "subtitle" is for the active line being shown
   const subtitleFinal = headsUpCount > 0 && !hasEmergency ? `${subtitle} • ${headsUpCount} alert(s)` : subtitle
 
   const full = `
   <style>
-.line-indicators {
-  display: flex;
-  gap: 12px;
-  margin-top: 16px;
-}
+    .line-indicators {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+    }
 
-.line-dot {
-  position: relative;
-  width: 48px;
-  height: 48px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 16px;
-  color: white;
-}
+    .line-dot {
+        position: relative;
+        width: 48px;
+        height: 48px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 16px;
+        color: white;
+    }
 
-/* line colors */
-.line-GR { background: #2E8B57; }
-.line-RD { background: #B22222; }
-.line-BL { background: #1E3A8A; }
-.line-OR { background: #D97706; }
-.line-YL { background: #CA8A04; }
-.line-SV { background: #6B7280; }
+    /* alert overlay */
+    .alert {
+        position: absolute;
+        bottom: -4px;
+        right: -4px;
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        background: white;
+        color: black;
+        font-size: 14px;
+        font-weight: 900;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-/* alert overlay */
-.alert {
-  position: absolute;
-  bottom: -4px;
-  right: -4px;
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  background: white;
-  color: black;
-  font-size: 14px;
-  font-weight: 900;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.alert-bad {
-  background: black;
-  color: white;
-}
-</style>
+    .alert-bad {
+        background: black;
+        color: white;
+    }
+    </style>
     <div class="view view--full">
       <div class="layout">
         <div class="columns">
@@ -175,8 +170,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
                 </div>
 
               <div class="mt-4" style="display:flex; justify-content:space-between;">
-                <span class="label label--underline">WMATA</span>
-                <span class="label">${escapeHtml(String(badCount))} incident(s)</span>
+                <span class="label">${escapeHtml(String(totalIncidents))} total incident(s)</span>
               </div>
             </div>
           </div>
@@ -185,7 +179,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     </div>
     <div class="title_bar">
         <img class="image" src="https://upload.wikimedia.org/wikipedia/commons/0/0a/WMATA_Metro_Logo_small.svg" />
-        <span class="title">${escapeHtml(instanceName)} • ${escapeHtml(displayLine)}</span>
+        <span class="title">${escapeHtml(instanceName)}</span>
         <span class="instance">Refreshed at {{ 'now' | date: '%s' | plus: trmnl.user.utc_offset | date: '%H:%M' }}</span>
     </div>
   `.trim()
@@ -219,7 +213,6 @@ function escapeHtml(s: string) {
 }
 
 const VALID_LINES = new Set(['RD', 'OR', 'SV', 'BL', 'YL', 'GR'])
-const COUNTED_TYPES = new Set(['DELAY', 'EMERGENCY'])
 const ALERT_BAD_PATTERNS = [
   /single\s*track/i,
   /\bevery\s+\d+\s*(min|mins|minutes)\b/i,
@@ -259,32 +252,33 @@ function dedupeIncidents(incidents: WmataIncident[]) {
   return out
 }
 
+function classifyImpact(inc: WmataIncident): 'bad' | 'headsUp' {
+  const t = (inc.IncidentType ?? '').toUpperCase()
+
+  if (t === 'EMERGENCY' || t === 'DELAY') return 'bad'
+  if (t === 'ALERT') return isBadAlert(inc) ? 'bad' : 'headsUp'
+  return 'headsUp'
+}
+
 function isBadAlert(inc: WmataIncident): boolean {
   const desc = (inc.Description ?? '').toString()
   return ALERT_BAD_PATTERNS.some((re) => re.test(desc))
 }
 
+// Ignore duped incidents by ID
+// For every incident, classify it, and for each applicable line, increment the counter of a FUCKED or heads up! by 1
 function countCommuteIssuesByLine(incidents: WmataIncident[]) {
   const bad: Record<string, number> = { RD: 0, OR: 0, SV: 0, BL: 0, YL: 0, GR: 0 }
   const headsUp: Record<string, number> = { RD: 0, OR: 0, SV: 0, BL: 0, YL: 0, GR: 0 }
 
+  // For every incident, determine severity via classifyImpact
+  //   determine the line affected
+  //   Using the bad/headsUp map, based on the parsed line affected, increment the fucked/headsup counter by 1
   for (const inc of dedupeIncidents(incidents)) {
-    const t = (inc.IncidentType ?? '').toString().trim().toUpperCase()
+    const impact = classifyImpact(inc)
     const lines = parseLinesAffected(inc.LinesAffected ?? '')
-    if (lines.length === 0) continue
-
-    let bucket: 'bad' | 'headsUp' | null = null
-    if (t === 'EMERGENCY') {
-      bucket = 'bad'
-    } else if (t === 'DELAY') {
-      bucket = 'bad'
-    } else if (t === 'ALERT') {
-      bucket = isBadAlert(inc) ? 'bad' : 'headsUp'
-    } else bucket = 'headsUp' // “subject to change”; don’t ignore new types
-
     for (const line of lines) {
-      if (bucket === 'bad') bad[line]++
-      else headsUp[line]++
+      impact === 'bad' ? bad[line]++ : headsUp[line]++
     }
   }
 
@@ -321,6 +315,7 @@ async function fetchWmataIncidentsCached(apiKey: string): Promise<WmataIncident[
     inFlight = null
     return fresh
   })().catch((err) => {
+    logger.error('[TRMNL] Error updating in-memory cache for WMATA call')
     inFlight = null
     throw err
   })
