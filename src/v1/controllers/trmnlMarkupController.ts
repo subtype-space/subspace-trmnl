@@ -50,7 +50,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     .filter(Boolean)
     .filter((s) => VALID_LINES.has(s))
 
-  const displayLine = (settings?.primary_line ?? 'RD')
+  const displayLine = settings?.primary_line ?? 'RD'
 
   // fetch WMATA incidents
   const apiKey = process.env.WMATA_PRIMARY_KEY
@@ -344,5 +344,5 @@ function statusFromCount(count: number, crass: boolean) {
   if (count === 0) return { status: "YOU'RE FINE. ", subtitle: 'No active delays' }
   if (count === 1) return { status: 'EH. MAYBE.', subtitle: 'Minor delays' }
   if (count === 2) return { status: crass ? 'F***ED.' : 'SCREWED.', subtitle: 'Multiple delays' }
-  return { status: crass ? "YOU'RE SO F***ED" : "YOU'RE SO SCREWED", subtitle: `${count} active delays` }
+  return { status: crass ? 'SO F***ED' : 'SO SCREWED', subtitle: `${count} active delays` }
 }

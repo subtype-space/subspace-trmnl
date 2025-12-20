@@ -70,7 +70,7 @@ ${['RD', 'BL', 'OR', 'SV', 'GR', 'YL']
         <div style="margin: 12px 0;">
           <label>
             <input type="checkbox" name="crass" value="1" ${crass ? 'checked' : ''}/>
-            Crass mode (\"you\'re f***ed\" vs \"you\'re screwed\")
+            Crass mode ("you're f***ed" vs "you're screwed")
           </label>
         </div>
 
@@ -86,6 +86,28 @@ ${['RD', 'BL', 'OR', 'SV', 'GR', 'YL']
              </p>`
           : ''
       }
+<script>
+  (function () {
+    function sync() {
+      const primary = document.querySelector('input[name="primaryLine"]:checked')?.value;
+      document.querySelectorAll('input[name="lines"]').forEach(cb => {
+        if (cb.value === primary) {
+          cb.checked = false;
+          cb.disabled = true;
+        } else {
+          cb.disabled = false;
+        }
+      });
+    }
+
+    document.querySelectorAll('input[name="primaryLine"]').forEach(r => {
+      r.addEventListener('change', sync);
+    });
+
+    // initial sync on page load
+    sync();
+  })();
+</script>
     </body></html>
   `)
 }
@@ -108,7 +130,7 @@ export const trmnlManagePostController: RequestHandler = async (req, res) => {
   const filtered = linesArr.map((s) => s.trim().toUpperCase()).filter((l) => l && l !== primaryLine)
   const lines = filtered.join(',')
   const crassLevel = req.body?.crass === '1' ? 1 : 0
-  logger.debug(`[TRMNL] ${uuid} updated user settings to ${lines} - ${crassLevel ? 'enabled' : 'disabled'}`)
+  logger.debug(`[TRMNL] ${uuid} updated user settings to ${primaryLine} - ${lines} - ${crassLevel ? 'enabled' : 'disabled'}`)
 
   await upsertSettings({ user_uuid: uuid, primary_line: primaryLine, lines, crass_level: crassLevel })
 
