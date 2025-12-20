@@ -2,7 +2,6 @@ import { RequestHandler } from 'express'
 import { logger } from '../../utils/logger.js'
 import { attachUserUuid, getSettingsByUuid } from '../../utils/dbConnector.js'
 
-
 // Main logic builder
 export const trmnlMarkupController: RequestHandler = async (req, res) => {
   const tokenHash = (req as any).trmnl?.tokenHash as string | undefined
@@ -52,7 +51,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   // fetch WMATA incidents
   const apiKey = process.env.WMATA_PRIMARY_KEY
   if (!apiKey) {
-    logger.error('[TRMNL] missing WMATA_PRIMAY_KEY')
+    logger.error('[TRMNL] missing WMATA_PRIMARY_KEY')
     res.status(500).json({ error: 'Internal Server Error' })
     return
   }
@@ -60,13 +59,16 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   let incidents: WmataIncident[] = []
   try {
     incidents = await fetchWmataIncidentsCached(apiKey)
+    logger.debug('[TRMNL] WMATA incidents fetched', { count: incidents.length })
   } catch (e) {
     logger.warn('[WMATA] incidents fetch failed', String(e))
   }
 
-  const counts = countBadIncidentsByLine(incidents)
-  const count = counts[displayLine] ?? 0
-  const { status, subtitle } = statusFromCount(count, crass)
+  const { bad, headsUp } = countCommuteIssuesByLine(incidents)
+  const badCount = bad[displayLine] ?? 0
+  const headsUpCount = headsUp[displayLine] ?? 0
+  const { status, subtitle } = statusFromCount(badCount, crass)
+  const subtitleFinal = headsUpCount > 0 ? `${subtitle} • ${headsUpCount} alert(s)` : subtitle
 
   const full = `
     <div class="view view--full">
@@ -80,12 +82,12 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
                 <div style="font-size: 72px; font-weight: 700; letter-spacing: 2px;">
                   ${escapeHtml(status)}
                 </div>
-                <div class="label mt-2">${escapeHtml(subtitle)}</div>
+                <div class="label mt-2">${escapeHtml(subtitleFinal)}</div>
               </div>
 
               <div class="mt-4" style="display:flex; justify-content:space-between;">
                 <span class="label label--underline">WMATA</span>
-                <span class="label">${escapeHtml(String(count))} incident(s)</span>
+                <span class="label">${escapeHtml(String(badCount))} incident(s)</span>
               </div>
             </div>
           </div>
@@ -124,6 +126,17 @@ function escapeHtml(s: string) {
 
 const VALID_LINES = new Set(['RD', 'OR', 'SV', 'BL', 'YL', 'GR'])
 const COUNTED_TYPES = new Set(['DELAY', 'EMERGENCY'])
+const ALERT_BAD_PATTERNS = [
+  /single\s*track/i,
+  /\bevery\s+\d+\s*(min|mins|minutes)\b/i,
+  /\bheadway/i,
+  /\bshuttle\b/i,
+  /\bbypass\b/i,
+  /\bdelay(s)?\b/i,
+  /\bmajor\s+construction\b/i,
+  /\bconstruction\b/i,
+  /\btrack work\b/i,
+]
 
 function parseLinesAffected(v: unknown): string[] {
   if (typeof v !== 'string') return []
@@ -152,18 +165,32 @@ function dedupeIncidents(incidents: WmataIncident[]) {
   return out
 }
 
-function countBadIncidentsByLine(incidents: WmataIncident[]) {
-  const counts: Record<string, number> = { RD: 0, OR: 0, SV: 0, BL: 0, YL: 0, GR: 0 }
+function isBadAlert(inc: WmataIncident): boolean {
+  const desc = (inc.Description ?? '').toString()
+  return ALERT_BAD_PATTERNS.some((re) => re.test(desc))
+}
+
+function countCommuteIssuesByLine(incidents: WmataIncident[]) {
+  const bad: Record<string, number> = { RD: 0, OR: 0, SV: 0, BL: 0, YL: 0, GR: 0 }
+  const headsUp: Record<string, number> = { RD: 0, OR: 0, SV: 0, BL: 0, YL: 0, GR: 0 }
 
   for (const inc of dedupeIncidents(incidents)) {
     const t = (inc.IncidentType ?? '').toString().trim().toUpperCase()
-    if (!COUNTED_TYPES.has(t)) continue
-
     const lines = parseLinesAffected(inc.LinesAffected ?? '')
-    for (const line of lines) counts[line]++
+    if (lines.length === 0) continue
+
+    let bucket: 'bad' | 'headsUp' | null = null
+    if (t === 'DELAY') bucket = 'bad'
+    else if (t === 'ALERT') bucket = isBadAlert(inc) ? 'bad' : 'headsUp'
+    else bucket = 'headsUp' // “subject to change”; don’t ignore new types
+
+    for (const line of lines) {
+      if (bucket === 'bad') bad[line]++
+      else headsUp[line]++
+    }
   }
 
-  return counts
+  return { bad, headsUp }
 }
 
 async function fetchWmataIncidents(apiKey: string): Promise<WmataIncident[]> {
