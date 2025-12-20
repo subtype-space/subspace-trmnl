@@ -23,7 +23,11 @@ export const trmnlManageGetController: RequestHandler = async (req, res) => {
   logger.info('[TRMNL] Displaying plugin settings page')
   const settings = await getSettingsByUuid(uuid)
   const primary = (settings as any)?.primary_line ?? 'RD'
-  const lines = new Set((settings?.lines ?? '').split(',').filter(Boolean))
+
+  // By default, get all lines unless the user specifies otherwise
+  const ALL_LINES = ['RD', 'BL', 'OR', 'SV', 'GR', 'YL']
+  const lines = new Set(settings?.lines ? settings.lines.split(',').filter(Boolean) : ALL_LINES)
+
   const crass = settings?.crass_level !== 0
 
   res.type('text/html').send(`
