@@ -54,8 +54,8 @@ export const trmnlManageGetController: RequestHandler = async (req, res) => {
         <div style="margin: 12px 0;">
           <strong>Show status for other lines</strong><br/>
 ${['RD', 'BL', 'OR', 'SV', 'GR', 'YL']
-  .map((l) =>
-    `
+  .map(
+    (l) => `
       <label style="display:block; margin-top:6px;">
         <input
           type="checkbox"
@@ -64,7 +64,7 @@ ${['RD', 'BL', 'OR', 'SV', 'GR', 'YL']
           ${l === primary ? 'disabled' : ''}
           ${l !== primary && lines.has(l) ? 'checked' : ''}
         />
-        ${l}${l === primary ? ' (primary)' : ''}
+        <span data-line-label="${l}">${l}${l === primary ? ' (primary)' : ''}</span>
       </label>
     `.trim()
   )
@@ -94,6 +94,8 @@ ${['RD', 'BL', 'OR', 'SV', 'GR', 'YL']
   (function () {
     function sync() {
       const primary = document.querySelector('input[name="primaryLine"]:checked')?.value;
+
+      // update checkboxes enabled/disabled + checked
       document.querySelectorAll('input[name="lines"]').forEach(cb => {
         if (cb.value === primary) {
           cb.checked = false;
@@ -102,13 +104,18 @@ ${['RD', 'BL', 'OR', 'SV', 'GR', 'YL']
           cb.disabled = false;
         }
       });
+
+      // update "(primary)" label text
+      document.querySelectorAll('[data-line-label]').forEach(span => {
+        const line = span.getAttribute('data-line-label');
+        span.textContent = line + (line === primary ? ' (primary)' : '');
+      });
     }
 
     document.querySelectorAll('input[name="primaryLine"]').forEach(r => {
       r.addEventListener('change', sync);
     });
 
-    // initial sync on page load
     sync();
   })();
 </script>

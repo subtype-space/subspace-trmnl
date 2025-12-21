@@ -42,7 +42,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   // load settings for this plugin instance
   const settings = await getSettingsByUuid(userUuid)
   const crass = (settings?.crass_level ?? 0) === 1
-  const instanceName = `Is my metro commute ${crass ? 'fucked' : 'screwed'}?`
+  const instanceName = `Is my metro commute ${crass ? 'f***ed' : 'screwed'}?`
 
   const selected = (settings?.lines ?? '')
     .split(',')
