@@ -134,6 +134,7 @@ export async function revokeByUserUuid(userUuid: string) {
 
 export async function getSettingsByUuid(userUuid: string): Promise<TrmnlSettings | null> {
   const db = getDb()
+  logger.info(`[ DB ] Getting settings for ${userUuid}`)
   const row = db
     .prepare(
       `

@@ -175,15 +175,15 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   <div class="layout">
     <div class="columns">
       <div class="column">
-        <div class="markdown gap--large">
+        <div class="markdown gap--large" style="text-align:center;">
           <span class="title">${escapeHtml(instanceName)} • ${escapeHtml(displayLine)}</span>
-          <div class="content-element content content--center">
-            <div style="font-size: 72px; font-weight: 700; letter-spacing: 2px;">
+<div class="content-element" style="display: flex;flex-direction: column;align-items: center;justify-content: center;gap: 12px;">
+              <div style="font-size: 72px; font-weight: 700; letter-spacing: 2px;">
               ${escapeHtml(status)}
             </div>
             <div class="label mt-2">${escapeHtml(subtitleFinal)}</div>
           </div>
-            <div class="line-indicators">
+            <div class="line-indicators" style="margin-top: 24px; margin-bottom: 20px;">
                 ${dots}
             </div>
           <div class="mt-4" style="display:flex; justify-content:space-between;">

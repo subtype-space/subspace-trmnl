@@ -32,7 +32,7 @@ export const trmnlManageGetController: RequestHandler = async (req, res) => {
 
   res.type('text/html').send(`
     <html><body style="font-family: system-ui; max-width: 520px; margin: 24px auto;">
-      <h2>Metro settings</h2>
+      <h2>Settings</h2>
 
       <form method="POST" action="/v1/trmnl/manage">
         <input type="hidden" name="uuid" value="${safeUuid}"/>
