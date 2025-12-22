@@ -21,12 +21,24 @@ export const trmnlInstallSuccessController: RequestHandler = async (req, res) =>
   logger.info('[TRMNL] install success for uuid', { userUuid })
   const pluginSettingId = req.body?.user?.plugin_setting_id
 
+  // Set defaults
+  const primary = 'RD'
   if (typeof pluginSettingId === 'number') {
     await upsertSettings({
       user_uuid: userUuid,
       plugin_setting_id: pluginSettingId,
+      primary_line: primary,
+      lines: defaultWatchLines(primary),
+      crass_level: 1,
+
     })
   }
 
   res.status(200).json({ ok: true })
+}
+
+const ALL_LINES = ['RD','BL','OR','SV','GR','YL'] as const
+
+function defaultWatchLines(primary: string) {
+  return ALL_LINES.filter((l) => l !== primary).join(',')
 }
