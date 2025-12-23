@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express'
 import { logger } from '../../utils/logger.js'
-import { attachUserUuid, getSettingsByUuid } from '../../utils/dbConnector.js'
+import { getSettingsByUuid } from '../../utils/dbConnector.js'
 
 // Set up cache so we dont needlessly call to WMATA all the time
 // rough TTL of about 10 minutes, can change. Minimum at TRMNL is ~15 but can change based on device and dev
@@ -13,7 +13,7 @@ const WMATA_TTL_MS = 10 * 60 * 1000 // 10 minute cache
 // Main logic builder
 export const trmnlMarkupController: RequestHandler = async (req, res) => {
   const tokenHash = (req as any).trmnl?.tokenHash as string | undefined
-  const userUuid = req.body?.user_uuid
+  const userUuid = (req as any).trmnl?.user_uuid
   const trmnlRaw = req.body?.trmnl
 
   if (!tokenHash) {
@@ -26,8 +26,6 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     return
   }
 
-  // keep link between token and uuid fresh
-  await attachUserUuid(tokenHash, userUuid)
 
   // parse TRMNL meta (optional)
   let meta: TrmnlMeta | null = null

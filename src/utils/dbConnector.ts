@@ -13,7 +13,6 @@ const DB_PATH = process.env.TRMNL_DB_PATH || './trmnl.sqlite'
 // to do - i dont like this in this file
 export type TrmnlSettings = {
   user_uuid: string
-  metro_station?: string | null
   primary_line?: string | null
   lines?: string | null
   crass_level?: number | null
@@ -45,11 +44,10 @@ export function initTrmnlDB() {
   );
   create table if not exists trmnl_settings (
     user_uuid text primary key,
-    metro_station text,
     primary_line text,
     lines text,
     plugin_setting_id integer,
-    crass_level integer default 1,
+    crass_level integer default 0,
     updated_at integer not null
   );
 `)
@@ -68,9 +66,9 @@ export async function storeTrmnlToken(tokenHash: string) {
   ).run(tokenHash, Date.now())
 }
 
-export async function isKnownTrmnlToken(tokenHash: string): Promise<boolean> {
+export async function isValidAccessToken(tokenHash: string): Promise<boolean> {
   const db = getDb()
-  logger.debug('[ DB ] Check if token is known')
+  logger.debug('[ DB ] Check if access token is valid')
   const row = db
     .prepare(
       `
@@ -96,14 +94,30 @@ export async function touchTrmnlToken(tokenHash: string) {
   ).run(Date.now(), tokenHash)
 }
 
-export async function attachUserUuid(tokenHash: string, userUuid: string) {
+export function getUserUuidByTokenHash(tokenHash: string): string | null {
   const db = getDb()
-  logger.debug('[ DB ] Associating user UUID to token')
+  const row = db
+    .prepare(
+      `
+      select user_uuid
+      from trmnl_connections
+      where access_token_hash = ?
+    `
+    )
+    .get(tokenHash) as { user_uuid: string | null } | undefined
+
+  return row?.user_uuid ?? null
+}
+
+// bind once: only set if currently null/empty
+export function bindUserUuidToToken(tokenHash: string, userUuid: string) {
+  const db = getDb()
   db.prepare(
     `
     update trmnl_connections
     set user_uuid = ?
     where access_token_hash = ?
+      and (user_uuid is null or user_uuid = '')
   `
   ).run(userUuid, tokenHash)
 }
@@ -138,7 +152,7 @@ export async function getSettingsByUuid(userUuid: string): Promise<TrmnlSettings
   const row = db
     .prepare(
       `
-      select user_uuid, metro_station, primary_line, lines, plugin_setting_id, crass_level, updated_at
+      select user_uuid, primary_line, lines, plugin_setting_id, crass_level, updated_at
       from trmnl_settings
       where user_uuid = ?
     `
@@ -146,7 +160,6 @@ export async function getSettingsByUuid(userUuid: string): Promise<TrmnlSettings
     .get(userUuid) as
     | {
         user_uuid: string
-        metro_station: string | null
         primary_line: string | null
         lines: string | null
         plugin_setting_id: number | null
@@ -159,7 +172,6 @@ export async function getSettingsByUuid(userUuid: string): Promise<TrmnlSettings
 
   return {
     user_uuid: row.user_uuid,
-    metro_station: row.metro_station,
     primary_line: row.primary_line,
     lines: row.lines,
     plugin_setting_id: row.plugin_setting_id,
@@ -172,7 +184,6 @@ export async function upsertSettings(input: TrmnlSettings) {
   const db = getDb()
 
   const userUuid = input.user_uuid
-  const metroStation = input.metro_station ?? null
   const primaryLine = input.primary_line ?? null
   const lines = input.lines ?? null
   const pluginSettingId = input.plugin_setting_id ?? null
@@ -181,16 +192,15 @@ export async function upsertSettings(input: TrmnlSettings) {
   db.prepare(
     `
     insert into trmnl_settings (
-      user_uuid, metro_station, primary_line, lines, plugin_setting_id, crass_level, updated_at
+      user_uuid, primary_line, lines, plugin_setting_id, crass_level, updated_at
     )
-    values (?, ?, ?, ?, ?, ?, ?)
+    values (?, ?, ?, ?, ?, ?)
     on conflict(user_uuid) do update set
-      metro_station = coalesce(excluded.metro_station, trmnl_settings.metro_station),
       primary_line = coalesce(excluded.primary_line, trmnl_settings.primary_line),
       lines = coalesce(excluded.lines, trmnl_settings.lines),
       plugin_setting_id = coalesce(excluded.plugin_setting_id, trmnl_settings.plugin_setting_id),
       crass_level = excluded.crass_level,
       updated_at = excluded.updated_at
   `
-  ).run(userUuid, metroStation, primaryLine, lines, pluginSettingId, crassLevel, Date.now())
+  ).run(userUuid, primaryLine, lines, pluginSettingId, crassLevel, Date.now())
 }
