@@ -73,6 +73,8 @@ export const requireTrmnlUuidMatch: RequestHandler = async (req: Request, res: R
     return
   }
 
+  logger.debug('[AUTH] found binding', {bound, uuid})
+
   ;(req as any).trmnl = { ...(req as any).trmnl, userUuid: bound }
   next()
 }

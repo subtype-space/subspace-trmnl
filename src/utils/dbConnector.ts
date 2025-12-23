@@ -112,7 +112,7 @@ export function getUserUuidByTokenHash(tokenHash: string): string | null {
 // bind once: only set if currently null/empty
 export function bindUserUuidToToken(tokenHash: string, userUuid: string) {
   const db = getDb()
-  logger.debug(`[ DB ] Attaching ${userUuid} to ${tokenHash}`)
+  logger.debug(`[ DB ] Binding ${userUuid} to ${tokenHash}`)
   db.prepare(
     `
     update trmnl_connections
