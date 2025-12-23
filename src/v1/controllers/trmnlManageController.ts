@@ -14,6 +14,7 @@ function escapeHtml(s: string) {
 export const trmnlManageGetController: RequestHandler = async (req, res) => {
   const uuid = req.query.uuid as string | undefined
   if (!uuid) {
+    logger.warn('[TRMNL] Missing UUID in request for settings page')
     res.status(400).send('missing uuid')
     return
   }

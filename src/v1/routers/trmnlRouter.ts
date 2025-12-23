@@ -9,7 +9,7 @@ const router = express.Router()
 
 // Should be mounted at /trmnl, so <api endpoint>/v1/trmnl/install and etc.
 router.get('/install', trmnlInstallController)
-router.post('/install_success', requireTrmnlAuth, requireTrmnlUuidMatch, trmnlInstallSuccessController)
+router.post('/install_success', requireTrmnlAuth, trmnlInstallSuccessController)
 router.post('/markup', express.urlencoded({ extended: false }), requireTrmnlAuth, requireTrmnlUuidMatch, trmnlMarkupController)
 router.post('/uninstall', requireTrmnlAuth, requireTrmnlUuidMatch, trmnlUninstallController)
 router.get('/manage', trmnlManageGetController)

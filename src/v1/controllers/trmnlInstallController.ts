@@ -36,9 +36,6 @@ const trmnlInstallController: RequestHandler = async (req, res): Promise<void> =
     res.status(502).json({ error: 'trmnl_exchange_failed' })
     return
   }
-
-  logger.debug(`[TRMNL] TRMNL exchange response: ${raw}`)
-
   // dont log raw access tokens, even in debug
   // dont do it andrew
   let data: any
@@ -57,6 +54,7 @@ const trmnlInstallController: RequestHandler = async (req, res): Promise<void> =
 
   const hash = sha256(access_token)
   logger.info('[TRMNL] Storing hashed access token...')
+  logger.debug(hash)
   await storeTrmnlToken(hash)
 
   logger.debug('[TRMNL] Redirecting user back to', callback)
