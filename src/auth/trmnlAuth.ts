@@ -44,6 +44,7 @@ function readUuid(req: any): string | undefined {
 }
 
 export const requireTrmnlUuidMatch: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+  logger.debug('Checking if UUID is bound')
   const tokenHash = (req as any).trmnl?.tokenHash as string | undefined
   if (!tokenHash) {
     logger.warn('[AUTH] No token provided')
