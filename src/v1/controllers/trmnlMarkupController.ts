@@ -60,7 +60,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
 
   const displayLine = settings?.primary_line ?? 'RD'
 
-  let incidents: WmataIncident[] = []
+  let incidents: MetroIncident[] = []
   try {
     incidents = await fetchWmataIncidentsCached()
     logger.debug('[TRMNL] WMATA incidents fetched', { count: incidents.length })
