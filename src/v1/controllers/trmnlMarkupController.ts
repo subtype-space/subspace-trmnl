@@ -1,14 +1,18 @@
 import { RequestHandler } from 'express'
 import { logger } from '../../utils/logger.js'
 import { getSettingsByUuid } from '../../utils/dbConnector.js'
+import { WmataClient } from '../../integrations/wmata/wmataClient.js'
+import { MetroIncident } from '../../integrations/wmata/types.js'
 
 // Set up cache so we dont needlessly call to WMATA all the time
 // rough TTL of about 10 minutes, can change. Minimum at TRMNL is ~15 but can change based on device and dev
-let cachedIncidents: WmataIncident[] | null = null
+let cachedIncidents: MetroIncident[] | null = null
 let cachedAtMs = 0
 let inFlight: Promise<WmataIncident[]> | null = null
 
 const WMATA_TTL_MS = 10 * 60 * 1000 // 10 minute cache
+
+const client = new WmataClient({ apiKey: process.env.WMATA_PRIMARY_KEY ?? '' })
 
 // Main logic builder
 export const trmnlMarkupController: RequestHandler = async (req, res) => {
@@ -19,7 +23,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   const userUuid = req.body?.user_uuid as string | undefined
   const trmnlRaw = req.body?.trmnl
 
-  logger.debug('[TRMNL] Incoming request: ', {tokenHash, userUuid, trmnlRaw})
+  logger.debug('[TRMNL] Incoming request: ', { tokenHash, userUuid, trmnlRaw })
 
   if (!tokenHash) {
     res.status(500).json({ error: 'missing trmnl auth context' })
@@ -56,17 +60,9 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
 
   const displayLine = settings?.primary_line ?? 'RD'
 
-  // fetch WMATA incidents
-  const apiKey = process.env.WMATA_PRIMARY_KEY
-  if (!apiKey) {
-    logger.error('[TRMNL] missing WMATA_PRIMARY_KEY')
-    res.status(500).json({ error: 'Internal Server Error' })
-    return
-  }
-
   let incidents: WmataIncident[] = []
   try {
-    incidents = await fetchWmataIncidentsCached(apiKey)
+    incidents = await fetchWmataIncidentsCached()
     logger.debug('[TRMNL] WMATA incidents fetched', { count: incidents.length })
   } catch (e) {
     logger.warn('[WMATA] incidents fetch failed', String(e))
@@ -254,16 +250,9 @@ function parseLinesAffected(v: unknown): string[] {
     .filter((s) => VALID_LINES.has(s))
 }
 
-type WmataIncident = {
-  IncidentID: string
-  IncidentType?: string | null
-  LinesAffected?: string | null
-  Description?: string | null
-}
-
-function dedupeIncidents(incidents: WmataIncident[]) {
+function dedupeIncidents(incidents: MetroIncident[]) {
   const seen = new Set<string>()
-  const out: WmataIncident[] = []
+  const out: MetroIncident[] = []
   for (const inc of incidents) {
     if (!inc?.IncidentID) continue
     if (seen.has(inc.IncidentID)) continue
@@ -273,7 +262,7 @@ function dedupeIncidents(incidents: WmataIncident[]) {
   return out
 }
 
-function classifyImpact(inc: WmataIncident): 'disruption' | 'alert' {
+function classifyImpact(inc: MetroIncident): 'disruption' | 'alert' {
   const t = (inc.IncidentType ?? '').toUpperCase()
 
   if (t === 'EMERGENCY' || t === 'DELAY') return 'disruption'
@@ -281,14 +270,14 @@ function classifyImpact(inc: WmataIncident): 'disruption' | 'alert' {
   return 'alert'
 }
 
-function isBadAlert(inc: WmataIncident): boolean {
+function isBadAlert(inc: MetroIncident): boolean {
   const desc = (inc.Description ?? '').toString()
   return ALERT_BAD_PATTERNS.some((re) => re.test(desc))
 }
 
 // Ignore duped incidents by ID
 // For every incident, classify it, and for each applicable line, increment the counter of a FUCKED or heads up! by 1
-function countCommuteIssuesByLine(incidents: WmataIncident[]) {
+function countCommuteIssuesByLine(incidents: MetroIncident[]) {
   const disruption: Record<string, number> = { RD: 0, OR: 0, SV: 0, BL: 0, YL: 0, GR: 0 }
   const alert: Record<string, number> = { RD: 0, OR: 0, SV: 0, BL: 0, YL: 0, GR: 0 }
 
@@ -306,20 +295,19 @@ function countCommuteIssuesByLine(incidents: WmataIncident[]) {
   return { disruption, alert }
 }
 
-async function fetchWmataIncidents(apiKey: string): Promise<WmataIncident[]> {
+async function fetchWmataIncidents(): Promise<MetroIncident[]> {
   logger.info('[TRMNL] Attempting WMATA API call')
-  const resp = await fetch('https://api.wmata.com/Incidents.svc/json/Incidents', {
-    headers: { api_key: apiKey },
-  })
-  if (!resp.ok) {
-    logger.warn(`[TRMNL] Failed to fetch WMATA status - got ${resp.status}`)
-    throw new Error(`WMATA incidents fetch failed: ${resp.status}`)
+
+  try {
+    const response = await client.getIncidents()
+    return Array.isArray(response) ? response : []
+  } catch (e) {
+    logger.warn(`[TRMNL] Failed to fetch WMATA incidents`)
+    throw new Error('WMATA incidents fetch failed')
   }
-  const data = (await resp.json()) as { Incidents?: WmataIncident[] }
-  return Array.isArray(data.Incidents) ? data.Incidents : []
 }
 
-async function fetchWmataIncidentsCached(apiKey: string): Promise<WmataIncident[]> {
+async function fetchWmataIncidentsCached(): Promise<MetroIncident[]> {
   logger.debug('[TRMNL] Using cached info!')
   const now = Date.now()
   if (cachedIncidents && now - cachedAtMs < WMATA_TTL_MS) {
@@ -330,7 +318,7 @@ async function fetchWmataIncidentsCached(apiKey: string): Promise<WmataIncident[
   if (inFlight) return inFlight
 
   inFlight = (async () => {
-    const fresh = await fetchWmataIncidents(apiKey)
+    const fresh = await fetchWmataIncidents()
     cachedIncidents = fresh
     cachedAtMs = Date.now()
     inFlight = null

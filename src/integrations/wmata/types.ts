@@ -1,6 +1,7 @@
 // src/integrations/wmata/types.ts
 export type MetroIncidentResponse = { Incidents: MetroIncident[] }
 export type MetroIncident = {
+  IncidentID: string
   DateUpdated: string
   Description: string
   IncidentType: string
@@ -10,15 +11,13 @@ export type MetroIncident = {
 export type RailPredictionResponse = { Trains: RailPrediction[] }
 export type RailPrediction = {
   Car: string
+  Destination: string
+  DestinationCode: string
   DestinationName: string
+  Group: string
   Line: string
+  LocationCode: string
+  LocationName: string
   Min: string
 }
 
-export type BusPredictionResponse = { Predictions: BusPrediction[] }
-export type BusPrediction = {
-  DirectionText: string
-  VehicleID: string
-  Minutes: number
-  RouteID: string
-}

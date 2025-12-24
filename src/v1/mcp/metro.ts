@@ -2,39 +2,6 @@ import { logger } from '../../utils/logger.js'
 import { WmataClient } from '../../integrations/wmata/wmataClient.js'
 import { formatIncidents, formatRailPredictionData } from '../../integrations/wmata/formatters.js'
 
-type MetroIncidentResponse = {
-  Incidents: MetroIncident[]
-}
-
-type MetroIncident = {
-  DateUpdated: string
-  Description: string
-  IncidentType: string
-  LinesAffected: string
-}
-
-type RailPredictionResponse = {
-  Trains: RailPrediction[]
-}
-
-type RailPrediction = {
-  Car: string
-  DestinationName: string
-  Line: string
-  Min: string
-}
-
-type BusPredictionResponse = {
-  Predictions: BusPrediction[]
-}
-
-type BusPrediction = {
-  DirectionText: string
-  VehicleID: string
-  Minutes: number
-  RouteID: string
-}
-
 const client = new WmataClient({ apiKey: process.env.WMATA_PRIMARY_KEY ?? ''})
 
 

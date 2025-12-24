@@ -19,6 +19,7 @@ export class WmataClient {
   }
 
   private async getJson<T>(url: string): Promise<T> {
+    logger.debug('Performing WMATA integration API call')
     const res = await fetch(url, {
       method: 'GET',
       headers: { api_key: this.apiKey },
@@ -30,13 +31,6 @@ export class WmataClient {
     }
 
     return (await res.json()) as T
-  }
-
-  async getBusPredictions(stopID: string): Promise<BusPrediction[]> {
-    const data = await this.getJson<BusPredictionResponse>(
-      `https://api.wmata.com/NextBusService.svc/json/jPredictions?StopID=${encodeURIComponent(stopID)}`
-    )
-    return data.Predictions
   }
 
   async getRailPredictions(stationCodes: string[]): Promise<RailPrediction[]> {
