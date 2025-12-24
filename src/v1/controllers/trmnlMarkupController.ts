@@ -120,8 +120,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     .filter(Boolean)
     .join('')
 
-
-  const model: MetroMarkup = { instanceName, displayLine, status, subtitleFinal, dots, totalIncidents, utcOffset}
+  const model: MetroMarkup = { instanceName, displayLine, status, subtitleFinal, dots, totalIncidents, utcOffset }
   res.json({
     markup: renderMarkup(model, 'full'),
     markup_half_horizontal: renderMarkup(model, 'half_horizontal'),
@@ -134,11 +133,17 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
 function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
   const showDots = variant !== 'quadrant'
   const bigText = variant === 'quadrant' ? '48px' : '72px'
+  let showSubtitle = true
+
+  if (variant === 'quadrant' || variant === 'half_horizontal' || variant === 'half_vertical') {
+    showSubtitle = false
+  }
+
+  const showTotalIncidents = variant === 'full'
 
   return `
 <style>
   .big-status { font-size: ${bigText}; font-weight: 700; letter-spacing: 2px; }
-  ${variant === 'quadrant' ? `.line-indicators{display:none}` : ``}
 
   .line-indicators {
       display: flex;
@@ -202,12 +207,10 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
         <div class="markdown gap--large" style="text-align:center;">
           <span class="title">${escapeHtml(m.instanceName)} • ${escapeHtml(m.displayLine)}</span>
           <div class="content-element" style="display: flex;flex-direction: column;align-items: center;justify-content: center;gap: 12px;">
-          <div style="big-status">${escapeHtml(m.status)}</div>
-          <div class="label mt-2" style="font-size: 24px;">${escapeHtml(m.subtitleFinal)}</div>
+          <div class="big-status">${escapeHtml(m.status)}</div>
+          ${showSubtitle ? `<div class="label mt-2" style="font-size: 24px;">${escapeHtml(m.subtitleFinal)}</div>` : ``}
           ${showDots ? `<div class="line-indicators" style="margin-top: 24px; margin-bottom: 20px;">${m.dots}</div>` : ``}
-          <div class="mt-4" style="display:flex; justify-content:space-between;">
-            <span class="label">${escapeHtml(String(m.totalIncidents))} total incident(s) across WMATA</span>
-          </div>
+          ${showTotalIncidents ? `<div class="mt-4" style="display:flex; justify-content:space-between;"><span class="label">${escapeHtml(String(m.totalIncidents))} total incident(s) across WMATA</span></div>` : ``}
         </div>
       </div>
     </div>
