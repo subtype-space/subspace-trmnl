@@ -66,9 +66,9 @@ export async function storeTrmnlToken(tokenHash: string) {
   ).run(tokenHash, Date.now())
 }
 
-export async function isValidAccessToken(tokenHash: string): Promise<boolean> {
+export async function isKnownTokenHash(tokenHash: string): Promise<boolean> {
   const db = getDb()
-  logger.debug('[ DB ] Check if access token is valid')
+  logger.debug('[ DB ] Check if we know this incoming token hash')
   const row = db
     .prepare(
       `

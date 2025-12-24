@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 import { Request, Response, NextFunction, RequestHandler } from 'express'
-import { isValidAccessToken, touchTrmnlToken } from '../utils/dbConnector.js'
+import { isKnownTokenHash, touchTrmnlToken } from '../utils/dbConnector.js'
 import { logger } from '../utils/logger.js'
 import { getUserUuidByTokenHash } from '../utils/dbConnector.js'
 
@@ -21,7 +21,7 @@ export const requireTrmnlAuth: RequestHandler = async (req: Request, res: Respon
 
   const tokenHash = sha256(match[1])
 
-  if (!(await isValidAccessToken(tokenHash))) {
+  if (!(await isKnownTokenHash(tokenHash))) {
     logger.info('[AUTH] Unrecognized TRMNL token hash')
     logger.debug(tokenHash)
     res.status(401).send('Unauthorized')

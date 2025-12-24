@@ -13,6 +13,8 @@ const WMATA_TTL_MS = 10 * 60 * 1000 // 10 minute cache
 // Main logic builder
 export const trmnlMarkupController: RequestHandler = async (req, res) => {
   logger.debug('[TRMNL] Got markup request')
+  logger.debug(`[TRMNL] markup header req: ${req}`)
+
   const tokenHash = (req as any).trmnl?.tokenHash as string | undefined
   const userUuid = (req as any).trmnl?.user_uuid
   const trmnlRaw = req.body?.trmnl
@@ -25,6 +27,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   }
 
   if (typeof userUuid !== 'string' || !userUuid) {
+    logger.debug('[TRMNL] UUID was not provided. Will not render.')
     res.status(400).json({ error: 'missing user_uuid' })
     return
   }
