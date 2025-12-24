@@ -29,7 +29,7 @@ export const trmnlManageGetController: RequestHandler = async (req, res) => {
   const ALL_LINES = ['RD', 'BL', 'OR', 'SV', 'GR', 'YL']
   const lines = new Set(settings?.lines ? settings.lines.split(',').filter(Boolean) : ALL_LINES)
 
-  const crass = settings?.crass_level !== 0
+  const crass = (settings?.crass_level ?? 0) === 1 // Default back to no crass just in case
 
   res.type('text/html').send(`
     <html><body style="font-family: system-ui; max-width: 520px; margin: 24px auto;">

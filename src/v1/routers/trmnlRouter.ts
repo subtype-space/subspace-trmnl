@@ -13,7 +13,7 @@ router.post('/install_success', requireTrmnlAuth, trmnlInstallSuccessController)
 router.post('/markup', express.urlencoded({ extended: true }), requireTrmnlAuth, requireTrmnlUuidMatch, trmnlMarkupController)
 router.post('/uninstall', requireTrmnlAuth, requireTrmnlUuidMatch, trmnlUninstallController)
 router.get('/manage', trmnlManageGetController)
-router.post('/manage', express.urlencoded({ extended: false }), trmnlManagePostController)
+router.post('/manage', express.urlencoded({ extended: true }), trmnlManagePostController)
 
 
 export default router
