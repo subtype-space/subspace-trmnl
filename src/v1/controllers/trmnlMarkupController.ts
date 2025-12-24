@@ -25,7 +25,10 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   const trmnlRaw = req.body?.trmnl
 
   logger.debug('[TRMNL] Incoming request: ', { tokenHash, userUuid, trmnlRaw })
-
+  logger.info('[markup] content-type:', req.headers['content-type'])
+  logger.info('[markup] rawBody:', (req as any).rawBody?.slice(0, 500))
+  logger.info('[markup] bodyKeys:', Object.keys(req.body ?? {}))
+  logger.info('[markup] trmnl typeof:', typeof (req.body as any)?.trmnl)
   if (!tokenHash) {
     res.status(500).json({ error: 'missing trmnl auth context' })
     return
@@ -85,7 +88,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     status = crass ? "YOU'RE SO F***ED." : "YOU'RE SO SCREWED."
     subtitle = 'Emergency on the line'
   } else if (totalIncidents > 4) {
-    status = "EH. MAYBE."
+    status = 'EH. MAYBE.'
     subtitle = 'Delays may impact transfers'
   } else {
     const s = statusFromCount(disruptionCount, crass)
@@ -215,7 +218,6 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
 
 ////////////////////////
 // Helper methods below
-
 
 function escapeHtml(s: string) {
   return s
