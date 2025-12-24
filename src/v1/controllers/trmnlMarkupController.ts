@@ -122,8 +122,24 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
 
 
   const model: MetroMarkup = { instanceName, displayLine, status, subtitleFinal, dots, totalIncidents, utcOffset}
+  res.json({
+    markup: renderMarkup(model, 'full'),
+    markup_half_horizontal: renderMarkup(model, 'half_horizontal'),
+    markup_half_vertical: renderMarkup(model, 'half_vertical'),
+    markup_quadrant: renderMarkup(model, 'quadrant'),
+    shared: '',
+  })
+}
 
-  const shared = `
+function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
+  const showDots = variant !== 'quadrant'
+  const bigText = variant === 'quadrant' ? '48px' : '72px'
+
+  return `
+<style>
+  .big-status { font-size: ${bigText}; font-weight: 700; letter-spacing: 2px; }
+  ${variant === 'quadrant' ? `.line-indicators{display:none}` : ``}
+
   .line-indicators {
       display: flex;
       gap: 12px;
@@ -177,27 +193,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   .alert-bad {
       background: black;
       color: white;
-  }  
-`
-
-
-  res.json({
-    markup: renderMarkup(model, 'full'),
-    markup_half_horizontal: renderMarkup(model, 'half_horizontal'),
-    markup_half_vertical: renderMarkup(model, 'half_vertical'),
-    markup_quadrant: renderMarkup(model, 'quadrant'),
-    shared: shared,
-  })
-}
-
-function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
-  const showDots = variant !== 'quadrant'
-  const bigText = variant === 'quadrant' ? '48px' : '72px'
-
-  return `
-<style>
-  .big-status { font-size: ${bigText}; font-weight: 700; letter-spacing: 2px; }
-  ${variant === 'quadrant' ? `.line-indicators{display:none}` : ``}
+  }
 </style>
 <div class="view view--${variant}">
   <div class="layout">
