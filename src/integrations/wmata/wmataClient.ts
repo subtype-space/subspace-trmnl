@@ -6,8 +6,11 @@ export class WmataClient {
   private readonly apiKey: string
 
   constructor(opts: { apiKey: string }) {
-    if (!opts.apiKey) throw new Error('WMATA apiKey is required')
-    logger.error('Unable to start subspace-api - missing WMATA API KEY')
+    if (!opts.apiKey) {
+      logger.error('Unable to start subspace-api - missing WMATA API KEY')
+      throw new Error('WMATA apiKey is required')
+    }
+    
     this.apiKey = opts.apiKey
   }
 
