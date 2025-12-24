@@ -205,7 +205,10 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
           <div class="big-status">${escapeHtml(m.status)}</div>
           ${showSubtitle ? `<div class="label mt-2" style="font-size: ${subtitleSize};">${escapeHtml(m.subtitleFinal)}</div>` : ``}
           ${showDots ? `<div class="line-indicators" style="margin-top: 24px; margin-bottom: 20px;">${m.dots}</div>` : ``}
-          ${showTotalIncidents ? `<div class="mt-4" style="display:flex; justify-content:space-between;"><span class="label" style="font-size:18px>${escapeHtml(String(m.totalIncidents))} total alerts(s) across WMATA</span></div>` : ``}
+          ${showTotalIncidents ? `
+            <div class="mt-4" style="display:flex; justify-content:center; width:100%;">
+            <span class="label" style="font-size:18px;">${escapeHtml(String(m.totalIncidents))} total alerts(s) across WMATA</span>
+            </div>` : ``}
         </div>
       </div>
     </div>

@@ -5,7 +5,7 @@ WORKDIR /opt/api
 RUN mkdir subspace-db
 RUN chown -R node:node /opt/api
 
-RUN npm install typescript
+#RUN npm install typescript
 COPY --chown=node:node package.json .
 COPY --chown=node:node package-lock.json .
 COPY --chown=node:node tsconfig.json .
