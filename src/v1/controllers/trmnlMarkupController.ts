@@ -187,7 +187,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
           <div style="font-size: 72px; font-weight: 700; letter-spacing: 2px;">
             ${escapeHtml(status)}
           </div>
-          <div class="label mt-2" style="font-size: 36px;">${escapeHtml(subtitleFinal)}</div>
+          <div class="label mt-2" style="font-size: 18px;">${escapeHtml(subtitleFinal)}</div>
           <div class="line-indicators" style="margin-top: 24px; margin-bottom: 20px;">
             ${dots}
           </div>
