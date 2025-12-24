@@ -12,9 +12,12 @@ const WMATA_TTL_MS = 10 * 60 * 1000 // 10 minute cache
 
 // Main logic builder
 export const trmnlMarkupController: RequestHandler = async (req, res) => {
+  logger.debug('[TRMNL] Got markup request')
   const tokenHash = (req as any).trmnl?.tokenHash as string | undefined
   const userUuid = (req as any).trmnl?.user_uuid
   const trmnlRaw = req.body?.trmnl
+
+  logger.debug('[TRMNL] Incoming request: ', {tokenHash, userUuid, trmnlRaw})
 
   if (!tokenHash) {
     res.status(500).json({ error: 'missing trmnl auth context' })
@@ -38,6 +41,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   }
 
   // load settings for this plugin instance
+  // getSettingsByUuid comes from dbConnector
   const settings = await getSettingsByUuid(userUuid)
   const crass = (settings?.crass_level ?? 0) === 1
   const instanceName = `Is my metro commute ${crass ? 'f***ed' : 'screwed'}?`

@@ -6,6 +6,8 @@ import { getUserUuidByTokenHash } from '../utils/dbConnector.js'
 
 const sha256 = (v: string) => crypto.createHash('sha256').update(v).digest('hex')
 
+// This is all middleware
+// Do not apply the same type of oauth here
 export const requireTrmnlAuth: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
   logger.info('[AUTH] Checking TRMNL authentication')
   const auth = req.header('authorization') ?? ''
@@ -44,7 +46,7 @@ function readUuid(req: any): string | undefined {
 }
 
 export const requireTrmnlUuidMatch: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
-  logger.debug('Checking if UUID is bound')
+  logger.debug('[AUTH] Checking if UUID is bound')
   const tokenHash = (req as any).trmnl?.tokenHash as string | undefined
   if (!tokenHash) {
     logger.warn('[AUTH] No token provided')
@@ -73,7 +75,7 @@ export const requireTrmnlUuidMatch: RequestHandler = async (req: Request, res: R
     return
   }
 
-  logger.debug('[AUTH] found binding', {bound, uuid})
+  logger.debug('[AUTH] Successfully found binding', {bound, uuid})
 
   ;(req as any).trmnl = { ...(req as any).trmnl, userUuid: bound }
   next()

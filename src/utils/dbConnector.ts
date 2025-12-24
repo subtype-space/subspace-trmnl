@@ -96,6 +96,7 @@ export async function touchTrmnlToken(tokenHash: string) {
 
 export function getUserUuidByTokenHash(tokenHash: string): string | null {
   const db = getDb()
+  logger.debug('[ DB ] Retrieving UUID')
   const row = db
     .prepare(
       `

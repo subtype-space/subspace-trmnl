@@ -18,8 +18,8 @@ export const trmnlInstallSuccessController: RequestHandler = async (req, res) =>
   }
 
   // Do not call bindUserUuIdToToken more than once
+  // bindUserUuidToToken is from DB
   bindUserUuidToToken(tokenHash, userUuid)
-  logger.info('[TRMNL] install success for uuid', { userUuid })
   const pluginSettingId = req.body?.user?.plugin_setting_id
 
   // Set defaults
@@ -34,7 +34,7 @@ export const trmnlInstallSuccessController: RequestHandler = async (req, res) =>
 
     })
   }
-
+  logger.info('[TRMNL] install success for uuid', { userUuid })
   res.status(200).json({ ok: true })
 }
 
