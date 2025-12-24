@@ -12,10 +12,7 @@ export const trmnlUninstallController: RequestHandler = async (req, res) => {
   }
   logger.info('[TRMNL] Received uninstall request for ', { userUuid })
 
-  // Mark revoked (or delete) everything tied to this install
-  await revokeByUserUuid(userUuid)
-  // await deleteSettingsByUserUuid(userUuid)
-
+  revokeByUserUuid(userUuid)
   logger.info('[TRMNL] uninstalled', { userUuid })
   res.status(200).json({ ok: true })
 }

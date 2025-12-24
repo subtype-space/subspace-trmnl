@@ -78,7 +78,7 @@ export async function isKnownTokenHash(tokenHash: string): Promise<boolean> {
     )
     .get(tokenHash) as { revoked_at?: number | null } | undefined
 
-  // Basically, if we know this person coming in, we return null because revoked_at shouldn't exist
+  // Basically, if we know this person, the row should exist and revoked_at field shouldn't exist
   return !!row && row.revoked_at == null
 }
 
@@ -123,18 +123,6 @@ export function bindUserUuidToToken(tokenHash: string, userUuid: string) {
       and (user_uuid is null or user_uuid = '')
   `
   ).run(userUuid, tokenHash)
-}
-
-export async function revokeTrmnlToken(tokenHash: string) {
-  const db = getDb()
-  logger.debug('[ DB ] Revoking token...')
-  db.prepare(
-    `
-    update trmnl_connections
-    set revoked_at = ?
-    where access_token_hash = ?
-  `
-  ).run(Date.now(), tokenHash)
 }
 
 export async function revokeByUserUuid(userUuid: string) {

@@ -13,9 +13,9 @@ const WMATA_TTL_MS = 10 * 60 * 1000 // 10 minute cache
 // Main logic builder
 export const trmnlMarkupController: RequestHandler = async (req, res) => {
   logger.debug('[TRMNL] Got markup request')
-  logger.debug(`[TRMNL] markup header req: ${req}`)
-
+  // Token hash should be coming in from trmnlAuth - we modify the request there
   const tokenHash = (req as any).trmnl?.tokenHash as string | undefined
+  // These should be coming from TRMNL directly
   const userUuid = req.body?.user_uuid as string | undefined
   const trmnlRaw = req.body?.trmnl
 
@@ -31,7 +31,6 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     res.status(400).json({ error: 'missing user_uuid' })
     return
   }
-
 
   // parse TRMNL meta (optional)
   let meta: TrmnlMeta | null = null
