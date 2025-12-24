@@ -1,12 +1,5 @@
 // src/integrations/wmata/wmataClient.ts
-import type {
-  BusPrediction,
-  BusPredictionResponse,
-  RailPrediction,
-  RailPredictionResponse,
-  MetroIncident,
-  MetroIncidentResponse,
-} from './types.js'
+import type { RailPrediction, RailPredictionResponse, MetroIncident, MetroIncidentResponse } from './types.js'
 import { logger } from '../../utils/logger.js'
 
 export class WmataClient {
@@ -44,9 +37,7 @@ export class WmataClient {
   }
 
   async getIncidents(): Promise<MetroIncident[]> {
-    const data = await this.getJson<MetroIncidentResponse>(
-      'https://api.wmata.com/Incidents.svc/json/Incidents'
-    )
+    const data = await this.getJson<MetroIncidentResponse>('https://api.wmata.com/Incidents.svc/json/Incidents')
     return data.Incidents
   }
 }

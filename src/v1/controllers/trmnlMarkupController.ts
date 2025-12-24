@@ -8,7 +8,7 @@ import { MetroIncident } from '../../integrations/wmata/types.js'
 // rough TTL of about 10 minutes, can change. Minimum at TRMNL is ~15 but can change based on device and dev
 let cachedIncidents: MetroIncident[] | null = null
 let cachedAtMs = 0
-let inFlight: Promise<WmataIncident[]> | null = null
+let inFlight: Promise<MetroIncident[]> | null = null
 
 const WMATA_TTL_MS = 10 * 60 * 1000 // 10 minute cache
 
