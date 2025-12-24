@@ -133,14 +133,9 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
 function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
   const showDots = variant !== 'quadrant'
   const bigText = variant === 'quadrant' ? '48px' : '72px'
-  let showSubtitle = true
-
-  if (variant === 'quadrant' || variant === 'half_horizontal' || variant === 'half_vertical') {
-    showSubtitle = false
-  }
-
-  const showTotalIncidents = variant === 'full'
-
+  const showSubtitle = variant === 'full' || variant === 'half_vertical'
+  const showTotalIncidents = variant === 'full' || variant ==='half_vertical'
+  const showTitle = variant === 'full' || variant === 'half_horizontal'
   return `
 <style>
   .big-status { font-size: ${bigText}; font-weight: 700; letter-spacing: 2px; }
@@ -148,7 +143,6 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
   .line-indicators {
       display: flex;
       gap: 12px;
-      margin-top: 16px;
   }
 
   /* line colors */
@@ -216,11 +210,12 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
     </div>
   </div>
 </div>
+${showTitle ? `
 <div class="title_bar">
   <img class="image" src="https://upload.wikimedia.org/wikipedia/commons/0/0a/WMATA_Metro_Logo_small.svg" />
   <span class="title">${escapeHtml(m.instanceName)}</span>
   <span class="instance">Refreshed at {{ 'now' | date: '%s' | plus: ${m.utcOffset} | date: '%H:%M' }}</span>
-</div>
+</div>` : ``}
 `.trim()
 }
 
