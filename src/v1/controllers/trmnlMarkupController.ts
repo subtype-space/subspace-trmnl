@@ -16,7 +16,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   logger.debug(`[TRMNL] markup header req: ${req}`)
 
   const tokenHash = (req as any).trmnl?.tokenHash as string | undefined
-  const userUuid = (req as any).trmnl?.user_uuid
+  const userUuid = req.body?.user_uuid as string | undefined
   const trmnlRaw = req.body?.trmnl
 
   logger.debug('[TRMNL] Incoming request: ', {tokenHash, userUuid, trmnlRaw})
