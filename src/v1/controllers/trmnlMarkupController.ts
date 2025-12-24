@@ -3,7 +3,7 @@ import { logger } from '../../utils/logger.js'
 import { getSettingsByUuid } from '../../utils/dbConnector.js'
 import { WmataClient } from '../../integrations/wmata/wmataClient.js'
 import { MetroIncident } from '../../types/wmata/types.js'
-import { TrmnlMeta } from '../../types/trmnl/types.js'
+import { TrmnlMeta, MetroMarkup, MarkupVariant } from '../../types/trmnl/types.js'
 
 // Set up cache so we dont needlessly call to WMATA all the time
 // rough TTL of about 10 minutes, can change. Minimum at TRMNL is ~15 but can change based on device and dev
@@ -120,8 +120,10 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     .filter(Boolean)
     .join('')
 
-  const full = `
-<style>
+
+  const model: MetroMarkup = { instanceName, displayLine, status, subtitleFinal, dots, totalIncidents, utcOffset}
+
+  const shared = `
   .line-indicators {
       display: flex;
       gap: 12px;
@@ -175,24 +177,40 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   .alert-bad {
       background: black;
       color: white;
-  }
+  }  
+`
+
+
+  res.json({
+    markup: renderMarkup(model, 'full'),
+    markup_half_horizontal: renderMarkup(model, 'half_horizontal'),
+    markup_half_vertical: renderMarkup(model, 'half_vertical'),
+    markup_quadrant: renderMarkup(model, 'quadrant'),
+    shared: shared,
+  })
+}
+
+function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
+  const showDots = variant !== 'quadrant'
+  const bigText = variant === 'quadrant' ? '48px' : '72px'
+
+  return `
+<style>
+  .big-status { font-size: ${bigText}; font-weight: 700; letter-spacing: 2px; }
+  ${variant === 'quadrant' ? `.line-indicators{display:none}` : ``}
 </style>
-<div class="view view--full">
+<div class="view view--${variant}">
   <div class="layout">
     <div class="columns">
       <div class="column">
         <div class="markdown gap--large" style="text-align:center;">
-          <span class="title">${escapeHtml(instanceName)} • ${escapeHtml(displayLine)}</span>
+          <span class="title">${escapeHtml(m.instanceName)} • ${escapeHtml(m.displayLine)}</span>
           <div class="content-element" style="display: flex;flex-direction: column;align-items: center;justify-content: center;gap: 12px;">
-          <div style="font-size: 72px; font-weight: 700; letter-spacing: 2px;">
-            ${escapeHtml(status)}
-          </div>
-          <div class="label mt-2" style="font-size: 24px;">${escapeHtml(subtitleFinal)}</div>
-          <div class="line-indicators" style="margin-top: 24px; margin-bottom: 20px;">
-            ${dots}
-          </div>
+          <div style="big-status">${escapeHtml(m.status)}</div>
+          <div class="label mt-2" style="font-size: 24px;">${escapeHtml(m.subtitleFinal)}</div>
+          ${showDots ? `<div class="line-indicators" style="margin-top: 24px; margin-bottom: 20px;">${m.dots}</div>` : ``}
           <div class="mt-4" style="display:flex; justify-content:space-between;">
-            <span class="label">${escapeHtml(String(totalIncidents))} total incident(s) across WMATA</span>
+            <span class="label">${escapeHtml(String(m.totalIncidents))} total incident(s) across WMATA</span>
           </div>
         </div>
       </div>
@@ -201,18 +219,10 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
 </div>
 <div class="title_bar">
   <img class="image" src="https://upload.wikimedia.org/wikipedia/commons/0/0a/WMATA_Metro_Logo_small.svg" />
-  <span class="title">${escapeHtml(instanceName)}</span>
-  <span class="instance">Refreshed at {{ 'now' | date: '%s' | plus: ${utcOffset} | date: '%H:%M' }}</span>
+  <span class="title">${escapeHtml(m.instanceName)}</span>
+  <span class="instance">Refreshed at {{ 'now' | date: '%s' | plus: ${m.utcOffset} | date: '%H:%M' }}</span>
 </div>
-  `.trim()
-
-  res.json({
-    markup: full,
-    markup_half_horizontal: full.replace('view--full', 'view--half_horizontal'),
-    markup_half_vertical: full.replace('view--full', 'view--half_vertical'),
-    markup_quadrant: full.replace('view--full', 'view--quadrant'),
-    shared: '',
-  })
+`.trim()
 }
 
 ////////////////////////
