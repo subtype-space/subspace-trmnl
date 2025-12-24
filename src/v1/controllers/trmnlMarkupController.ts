@@ -17,18 +17,13 @@ const client = new WmataClient({ apiKey: process.env.WMATA_PRIMARY_KEY ?? '' })
 
 // Main logic builder
 export const trmnlMarkupController: RequestHandler = async (req, res) => {
-  logger.debug('[TRMNL] Got markup request')
   // Token hash should be coming in from trmnlAuth - we modify the request there
   const tokenHash = (req as any).trmnl?.tokenHash as string | undefined
   // These should be coming from TRMNL directly
   const userUuid = req.body?.user_uuid as string | undefined
   const trmnlRaw = req.body?.trmnl
 
-  logger.debug('[TRMNL] Incoming request: ', { tokenHash, userUuid, trmnlRaw })
-  logger.info('[markup] content-type:', req.headers['content-type'])
-  logger.info('[markup] rawBody:', (req as any).rawBody?.slice(0, 500))
-  logger.info('[markup] bodyKeys:', Object.keys(req.body ?? {}))
-  logger.info('[markup] trmnl typeof:', typeof (req.body as any)?.trmnl)
+  logger.debug('[TRMNL] Incoming markup request: ', { tokenHash, userUuid, trmnlRaw })
   if (!tokenHash) {
     res.status(500).json({ error: 'missing trmnl auth context' })
     return
@@ -49,6 +44,8 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
       logger.warn('[TRMNL] Failed to parse trmnl metadata JSON')
     }
   }
+
+  const utcOffset = Number(meta?.user?.utc_offset ?? 0)
 
   // load settings for this plugin instance
   // getSettingsByUuid comes from dbConnector
@@ -76,6 +73,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   const { disruption, alert } = countCommuteIssuesByLine(incidents)
   const disruptionCount = disruption[displayLine] ?? 0
   const alertCount = alert[displayLine] ?? 0
+
 
   // If there's ANY emergency, PANIK
   // I love this .some() function so much
@@ -203,7 +201,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
 <div class="title_bar">
   <img class="image" src="https://upload.wikimedia.org/wikipedia/commons/0/0a/WMATA_Metro_Logo_small.svg" />
   <span class="title">${escapeHtml(instanceName)}</span>
-  <span class="instance">Refreshed at {{ 'now' | date: '%s' | plus: ${meta?.user?.utc_offset} | date: '%H:%M' }}</span>
+  <span class="instance">Refreshed at {{ 'now' | date: '%s' | plus: ${utcOffset} | date: '%H:%M' }}</span>
 </div>
   `.trim()
 
@@ -307,15 +305,16 @@ async function fetchWmataIncidents(): Promise<MetroIncident[]> {
 }
 
 async function fetchWmataIncidentsCached(): Promise<MetroIncident[]> {
-  logger.debug('[TRMNL] Using cached info!')
   const now = Date.now()
   if (cachedIncidents && now - cachedAtMs < WMATA_TTL_MS) {
+    logger.debug('[TRMNL] Using cached info!')
     return cachedIncidents
   }
 
   // de-dupe concurrent refreshes
   if (inFlight) return inFlight
 
+  logger.debug('[TRMNL] Cache stale - using API call')
   inFlight = (async () => {
     const fresh = await fetchWmataIncidents()
     cachedIncidents = fresh
