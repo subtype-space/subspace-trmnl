@@ -1,17 +1,5 @@
 // src/integrations/wmata/formatters.ts
-import type { BusPrediction, RailPrediction, MetroIncident } from './types.js'
-
-export function formatBusPredictionData(busPredictionData: BusPrediction[]): string {
-  if (busPredictionData.length === 0) {
-    return 'No information for the bus stop is available at this time.'
-  }
-
-  const predictionText = busPredictionData
-    .map((bus) => `Route: ${bus.RouteID} | Bus: ${bus.VehicleID}\nDirection: ${bus.DirectionText}\nNext bus in: ${bus.Minutes}`)
-    .join('\n\n')
-
-  return predictionText
-}
+import type { RailPrediction, MetroIncident } from '../../types/wmata/types.js'
 
 export function formatRailPredictionData(predicitonData: RailPrediction[]): string {
   if (predicitonData.length === 0) {

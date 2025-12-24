@@ -2,7 +2,8 @@ import { RequestHandler } from 'express'
 import { logger } from '../../utils/logger.js'
 import { getSettingsByUuid } from '../../utils/dbConnector.js'
 import { WmataClient } from '../../integrations/wmata/wmataClient.js'
-import { MetroIncident } from '../../integrations/wmata/types.js'
+import { MetroIncident } from '../../types/wmata/types.js'
+import { TrmnlMeta } from '../../types/trmnl/types.js'
 
 // Set up cache so we dont needlessly call to WMATA all the time
 // rough TTL of about 10 minutes, can change. Minimum at TRMNL is ~15 but can change based on device and dev
@@ -213,12 +214,6 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
 ////////////////////////
 // Helper methods below
 
-type TrmnlMeta = {
-  user?: { name?: string; time_zone_iana?: string; utc_offset?: number }
-  device?: { friendly_id?: string; percent_charged?: number; wifi_strength?: number; height?: number; width?: number }
-  system?: { timestamp_utc?: number }
-  plugin_settings?: { instance_name?: string }
-}
 
 function escapeHtml(s: string) {
   return s

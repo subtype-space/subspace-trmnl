@@ -1,5 +1,5 @@
 // src/integrations/wmata/wmataClient.ts
-import type { RailPrediction, RailPredictionResponse, MetroIncident, MetroIncidentResponse } from './types.js'
+import type { RailPrediction, RailPredictionResponse, MetroIncident, MetroIncidentResponse } from '../../types/wmata/types.js'
 import { logger } from '../../utils/logger.js'
 
 export class WmataClient {
