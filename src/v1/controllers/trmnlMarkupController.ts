@@ -131,8 +131,8 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
 }
 
 function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
-  const showDots = variant !== 'quadrant'
-  const bigText = (variant === 'quadrant' || variant === 'half_horizontal') ? '48px' : '92px'
+  const showDots = true // placeholder
+  const bigText = (variant !== 'full') ? '48px' : '92px'
   const showSubtitle = variant === 'full' || variant === 'half_vertical'
   const subtitleSize = variant === 'half_vertical' ? '24px' : '28px' // subtitle size needs to be modified on half vertical, not shown on hori or quad
   const showTotalIncidents = variant === 'full' || variant ==='half_vertical'
