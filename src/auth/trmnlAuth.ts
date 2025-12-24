@@ -61,7 +61,7 @@ export const requireTrmnlUuidMatch: RequestHandler = async (req: Request, res: R
     return
   }
 
-  const bound = getUserUuidByTokenHash(tokenHash)
+  const bound = await getUserUuidByTokenHash(tokenHash)
   if (!bound) {
     // IMPORTANT: do not bind here; install_success is the place to bind.
     logger.warn('[AUTH] UUID not bound')
