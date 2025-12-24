@@ -107,7 +107,6 @@ export function getUserUuidByTokenHash(tokenHash: string): string | null {
     )
     .get(tokenHash) as { user_uuid: string | null } | undefined
 
-  logger.debug(`[ DB ] Retrieved ${row}`)
   return row?.user_uuid ?? null
 }
 

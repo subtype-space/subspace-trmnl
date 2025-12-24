@@ -37,7 +37,9 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
 
   // parse TRMNL meta (optional)
   let meta: TrmnlMeta | null = null
-  if (typeof trmnlRaw === 'string' && trmnlRaw) {
+  if (trmnlRaw && typeof trmnlRaw === 'object') {
+    meta = trmnlRaw as TrmnlMeta
+  } else if (typeof trmnlRaw === 'string' && trmnlRaw.trim()) {
     try {
       meta = JSON.parse(trmnlRaw)
     } catch {
@@ -73,7 +75,6 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   const { disruption, alert } = countCommuteIssuesByLine(incidents)
   const disruptionCount = disruption[displayLine] ?? 0
   const alertCount = alert[displayLine] ?? 0
-
 
   // If there's ANY emergency, PANIK
   // I love this .some() function so much
