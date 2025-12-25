@@ -224,7 +224,7 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
         <div class="markdown gap--large" style="text-align:center;">
           ${variant !== 'quadrant' ? `<span class="title">${escapeHtml(m.instanceName)} • ${escapeHtml(m.displayLine)}</span>` : ``}
           <div class="content-element" style="display: flex;flex-direction: column;align-items: center;justify-content: center;${variant === 'full' || variant === 'half_vertical' ? `gap: 12px;` : ``}">
-          ${variant !== 'quadrant' ? `<div class="big-status">${escapeHtml(m.status)}</div>` : ``}
+          <div class="big-status">${escapeHtml(m.status)}</div>
           ${showSubtitle ? `<div class="label mt-2" style="font-size: ${subtitleSize};">${escapeHtml(m.subtitleFinal)}</div>` : ``}
           <div class="line-indicators" style="margin-top: 24px; margin-bottom: 20px;">${m.dots}</div>
           ${totals}
