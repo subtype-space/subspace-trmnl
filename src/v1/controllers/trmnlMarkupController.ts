@@ -4,6 +4,7 @@ import { getSettingsByUuid } from '../../utils/dbConnector.js'
 import { WmataClient } from '../../integrations/wmata/wmataClient.js'
 import { MetroIncident } from '../../types/wmata/types.js'
 import { TrmnlMeta, MetroMarkup, MarkupVariant } from '../../types/trmnl/types.js'
+import { escape } from 'querystring'
 
 // Set up cache so we dont needlessly call to WMATA all the time
 // rough TTL of about 10 minutes, can change. Minimum at TRMNL is ~15 but can change based on device and dev
@@ -86,11 +87,12 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   if (hasEmergency) {
     status = crass ? "YOU'RE SO F***ED." : "YOU'RE SO SCREWED."
     subtitle = 'Emergency on the line'
-  } else if (totalIncidents > 4) {
+  } else if (totalIncidents >= 4) {
+    // If there are 4 or more alerts on the system as a whole, just upgrade to maybe
     status = 'EH. MAYBE.'
     subtitle = 'Delays may impact transfers'
   } else {
-    const s = statusFromCount(disruptionCount, crass)
+    const s = statusFromCount(disruptionCount, crass) // otherwise, just check for delays on the targeted line only
     status = s.status
     subtitle = s.subtitle
   }
@@ -98,9 +100,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   // This "subtitle" is for the active line being shown
   const subtitleFinal = alertCount > 0 && !hasEmergency ? `${subtitle} • ${alertCount} alert(s)` : subtitle
 
-  // based on user preference, display the other lines (but not the current 'hero' line)
   const dots = selected
-    .filter((l) => l !== displayLine)
     .map((l) => {
       const b = disruption[l] ?? 0
       const h = alert[l] ?? 0
@@ -134,9 +134,9 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
   const bigText = variant === 'full' ? '92px' : variant === 'quadrant' ? '36px' : '48px'
   const showSubtitle = variant === 'full' || variant === 'half_vertical'
   const subtitleSize = variant === 'half_vertical' ? '24px' : '28px' // subtitle size needs to be modified on half vertical, not shown on hori or quad
-  const showTotalIncidents = variant !== 'half_horizontal'
+  const showTotalIncidents = variant !== 'half_horizontal' && variant !== 'quadrant' // Do not display this text
   const offset = Number(m.utcOffset) || 0
-  const showTotals = variant !== 'full'
+  const showTotals = variant !== 'full' //Normally set this in title bar
   const totals = showTotalIncidents
     ? `
       <div class="mt-4" style="display:flex; justify-content:center; width:100%;">
@@ -147,16 +147,16 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
 
   // Only for half vert set the title to refresh time, otherwise set total amount of alerts across the system
   const bottomTitleBarTitle =
-    (variant === 'half_vertical' || variant === 'quadrant')
-      ? `Refreshed at {{ 'now' | date: '%s' | plus: ${offset} | date: '%H:%M' }}`
+    variant === 'half_vertical' || variant === 'quadrant'
+      ? `${m.totalIncidents} alerts`
       : m.totalIncidents === 0
         ? escapeHtml(m.instanceName)
         : `${escapeHtml(String(m.totalIncidents))} total alerts(s) across WMATA`
 
   // Dont set this for half vert
   const bottomTitleBarInstance =
-    (variant === 'half_vertical' || variant === 'quadrant')
-      ? ''
+    variant === 'half_vertical' || variant === 'quadrant'
+      ? `<span class="instance">{{ 'now' | date: '%s' | plus: ${offset} | date: '%H:%M' }}</span>`
       : `<span class="instance">Refreshed at {{ 'now' | date: '%s' | plus: ${offset} | date: '%H:%M' }}</span>`
 
   return `
@@ -227,7 +227,7 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
           <div class="big-status">${escapeHtml(m.status)}</div>
           ${showSubtitle ? `<div class="label mt-2" style="font-size: ${subtitleSize};">${escapeHtml(m.subtitleFinal)}</div>` : ``}
           ${m.dots ? `<div class="line-indicators" style="margin-top:24px;margin-bottom:20px;">${m.dots}</div>` : ``}
-          ${showTotals ? `${totals}` : ``}
+          ${false ? `${totals}` : ``}
           </div>
         </div>
       </div>
