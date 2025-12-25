@@ -131,13 +131,34 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
 }
 
 function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
-  const showDots = true // placeholder - for now we want dots on all variants just because
-  const bigText = variant === 'full' ? '92px' :
-    variant === 'quadrant' ? '36px' : '48px'
-  const showSubtitle = (variant === 'full' || variant === 'half_vertical')
+  const bigText = variant === 'full' ? '92px' : variant === 'quadrant' ? '36px' : '48px'
+  const showSubtitle = variant === 'full' || variant === 'half_vertical'
   const subtitleSize = variant === 'half_vertical' ? '24px' : '28px' // subtitle size needs to be modified on half vertical, not shown on hori or quad
-  const showTotalIncidents = (variant !== 'half_horizontal')
-  const showTitle = (variant === 'full' || variant === 'half_horizontal') // only show bottom title on full or half hori variant
+  const showTotalIncidents = variant !== 'half_horizontal'
+  const offset = Number(m.utcOffset) || 0
+
+  const totals = showTotalIncidents
+    ? `
+      <div class="mt-4" style="display:flex; justify-content:center; width:100%;">
+        <span class="label" style="font-size:18px;">${escapeHtml(String(m.totalIncidents))} total alerts(s) across WMATA</span>
+      </div>
+    `.trim()
+    : ''
+
+  // Only for half vert set the title to refresh time, otherwise set total amount of alerts across the system
+  const titleBarTitle =
+    variant === 'half_vertical'
+      ? `Refreshed at {{ 'now' | date: '%s' | plus: ${offset} | date: '%H:%M' }}`
+      : m.totalIncidents === 0
+        ? escapeHtml(m.instanceName)
+        : `${escapeHtml(String(m.totalIncidents))} total alerts(s) across WMATA`
+
+  // Dont set this for half vert
+  const titleBarInstance =
+    variant === 'half_vertical'
+      ? ''
+      : `<span class="instance">Refreshed at {{ 'now' | date: '%s' | plus: ${offset} | date: '%H:%M' }}</span>`
+
   return `
 <style>
   .big-status { font-size: ${bigText}; font-weight: 700; letter-spacing: 2px; }
@@ -201,26 +222,24 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
     <div class="columns">
       <div class="column">
         <div class="markdown gap--large" style="text-align:center;">
-          ${ (variant !== 'quadrant') ? `<span class="title">${escapeHtml(m.instanceName)} • ${escapeHtml(m.displayLine)}</span>` : ``}
-          <div class="content-element" style="display: flex;flex-direction: column;align-items: center;justify-content: center;${ (variant === 'full' || variant === 'half_vertical') ? `gap: 12px;` : ``}">
-          ${ (variant !== 'quadrant') ? `<div class="big-status">${escapeHtml(m.status)}</div>` : `` }
+          ${variant !== 'quadrant' ? `<span class="title">${escapeHtml(m.instanceName)} • ${escapeHtml(m.displayLine)}</span>` : ``}
+          <div class="content-element" style="display: flex;flex-direction: column;align-items: center;justify-content: center;${variant === 'full' || variant === 'half_vertical' ? `gap: 12px;` : ``}">
+          ${variant !== 'quadrant' ? `<div class="big-status">${escapeHtml(m.status)}</div>` : ``}
           ${showSubtitle ? `<div class="label mt-2" style="font-size: ${subtitleSize};">${escapeHtml(m.subtitleFinal)}</div>` : ``}
-          ${showDots ? `<div class="line-indicators" style="margin-top: 24px; margin-bottom: 20px;">${m.dots}</div>` : ``}
-          ${showTotalIncidents ? `
-            <div class="mt-4" style="display:flex; justify-content:center; width:100%;">
-            <span class="label" style="font-size:18px;">${escapeHtml(String(m.totalIncidents))} total alerts(s) across WMATA</span>
-            </div>` : ``}
+          <div class="line-indicators" style="margin-top: 24px; margin-bottom: 20px;">${m.dots}</div>
+          ${totals}
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
-${showTitle ? `
+
 <div class="title_bar">
   <img class="image" src="https://upload.wikimedia.org/wikipedia/commons/0/0a/WMATA_Metro_Logo_small.svg" />
-  <span class="title">${escapeHtml(m.instanceName)}</span>
-  <span class="instance">Refreshed at {{ 'now' | date: '%s' | plus: ${m.utcOffset} | date: '%H:%M' }}</span>
-</div>` : ``}
+  <span class="title">${titleBarTitle}</span>
+  ${titleBarInstance}
+</div>
 `.trim()
 }
 
