@@ -131,15 +131,13 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
 }
 
 function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
-  const showDots = true // placeholder
-const bigText =
-  variant === 'full' ? '92px' :
-  variant === 'half_vertical' ? '56px' :
-  '48px'  
-  const showSubtitle = variant === 'full' || variant === 'half_vertical'
+  const showDots = true // placeholder - for now we want dots on all variants just because
+  const bigText = variant === 'full' ? '92px' :
+    variant === 'quadrant' ? '36px' : '48px'
+  const showSubtitle = (variant === 'full' || variant === 'half_vertical')
   const subtitleSize = variant === 'half_vertical' ? '24px' : '28px' // subtitle size needs to be modified on half vertical, not shown on hori or quad
-  const showTotalIncidents = variant === 'full' || variant ==='half_vertical'
-  const showTitle = variant === 'full' || variant === 'half_horizontal'
+  const showTotalIncidents = (variant === 'full' || variant ==='half_vertical') // only show on full or half vertical variant
+  const showTitle = (variant === 'full' || variant === 'half_horizontal') // only show bottom title on full or half hori variant
   return `
 <style>
   .big-status { font-size: ${bigText}; font-weight: 700; letter-spacing: 2px; }
@@ -204,7 +202,7 @@ const bigText =
       <div class="column">
         <div class="markdown gap--large" style="text-align:center;">
           <span class="title">${escapeHtml(m.instanceName)} • ${escapeHtml(m.displayLine)}</span>
-          <div class="content-element" style="display: flex;flex-direction: column;align-items: center;justify-content: center;${ (variant !=='half_horizontal' && variant !=='quadrant') ? `gap: 12px;` : ``}">
+          <div class="content-element" style="display: flex;flex-direction: column;align-items: center;justify-content: center;${ (variant === 'full' || variant === 'half_vertical') ? `gap: 12px;` : ``}">
           <div class="big-status">${escapeHtml(m.status)}</div>
           ${showSubtitle ? `<div class="label mt-2" style="font-size: ${subtitleSize};">${escapeHtml(m.subtitleFinal)}</div>` : ``}
           ${showDots ? `<div class="line-indicators" style="margin-top: 24px; margin-bottom: 20px;">${m.dots}</div>` : ``}
