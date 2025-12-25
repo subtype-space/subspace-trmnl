@@ -147,7 +147,7 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
 
   // Only for half vert set the title to refresh time, otherwise set total amount of alerts across the system
   const titleBarTitle =
-    variant === 'half_vertical'
+    (variant === 'half_vertical' || variant === 'quadrant')
       ? `Refreshed at {{ 'now' | date: '%s' | plus: ${offset} | date: '%H:%M' }}`
       : m.totalIncidents === 0
         ? escapeHtml(m.instanceName)
@@ -155,7 +155,7 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
 
   // Dont set this for half vert
   const titleBarInstance =
-    variant === 'half_vertical'
+    (variant === 'half_vertical' || variant === 'quadrant')
       ? ''
       : `<span class="instance">Refreshed at {{ 'now' | date: '%s' | plus: ${offset} | date: '%H:%M' }}</span>`
 
