@@ -136,7 +136,7 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
   const subtitleSize = variant === 'half_vertical' ? '24px' : '28px' // subtitle size needs to be modified on half vertical, not shown on hori or quad
   const showTotalIncidents = variant !== 'half_horizontal'
   const offset = Number(m.utcOffset) || 0
-
+  const showTotals = variant !== 'full'
   const totals = showTotalIncidents
     ? `
       <div class="mt-4" style="display:flex; justify-content:center; width:100%;">
@@ -146,7 +146,7 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
     : ''
 
   // Only for half vert set the title to refresh time, otherwise set total amount of alerts across the system
-  const titleBarTitle =
+  const bottomTitleBarTitle =
     (variant === 'half_vertical' || variant === 'quadrant')
       ? `Refreshed at {{ 'now' | date: '%s' | plus: ${offset} | date: '%H:%M' }}`
       : m.totalIncidents === 0
@@ -154,7 +154,7 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
         : `${escapeHtml(String(m.totalIncidents))} total alerts(s) across WMATA`
 
   // Dont set this for half vert
-  const titleBarInstance =
+  const bottomTitleBarInstance =
     (variant === 'half_vertical' || variant === 'quadrant')
       ? ''
       : `<span class="instance">Refreshed at {{ 'now' | date: '%s' | plus: ${offset} | date: '%H:%M' }}</span>`
@@ -226,8 +226,8 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
           <div class="content-element" style="display: flex;flex-direction: column;align-items: center;justify-content: center;${variant === 'full' || variant === 'half_vertical' ? `gap: 12px;` : ``}">
           <div class="big-status">${escapeHtml(m.status)}</div>
           ${showSubtitle ? `<div class="label mt-2" style="font-size: ${subtitleSize};">${escapeHtml(m.subtitleFinal)}</div>` : ``}
-          <div class="line-indicators" style="margin-top: 24px; margin-bottom: 20px;">${m.dots}</div>
-          ${totals}
+          ${m.dots ? `<div class="line-indicators" style="margin-top:24px;margin-bottom:20px;">${m.dots}</div>` : ``}
+          ${showTotals ? `${totals}` : ``}
           </div>
         </div>
       </div>
@@ -237,8 +237,8 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
 
 <div class="title_bar">
   <img class="image" src="https://upload.wikimedia.org/wikipedia/commons/0/0a/WMATA_Metro_Logo_small.svg" />
-  <span class="title">${titleBarTitle}</span>
-  ${titleBarInstance}
+  <span class="title">${bottomTitleBarTitle}</span>
+  ${bottomTitleBarInstance}
 </div>
 `.trim()
 }
