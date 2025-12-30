@@ -1,10 +1,11 @@
 import express from 'express'
-import { requireTrmnlAuth, requireTrmnlUuidMatch } from '../../auth/trmnlAuth.js'
+import { requireTrmnlAuth, requireTrmnlUuidMatch, trmnlAuthByIP } from '../../auth/trmnlAuth.js'
 import trmnlInstallController from '../controllers/trmnlInstallController.js'
 import { trmnlMarkupController } from '../controllers/trmnlMarkupController.js'
 import { trmnlInstallSuccessController } from '../controllers/trmnlInstallSuccessController.js'
 import { trmnlUninstallController } from '../controllers/trmnlUninstallController.js'
 import { trmnlManageGetController, trmnlManagePostController } from '../controllers/trmnlManageController.js'
+import { trmnlStationPrediction } from '../controllers/trmnlStationPrediction.js'
 const router = express.Router()
 
 // Should be mounted at /trmnl, so <api endpoint>/v1/trmnl/install and etc.
@@ -14,6 +15,6 @@ router.post('/markup', express.urlencoded({ extended: true }), requireTrmnlAuth,
 router.post('/uninstall', requireTrmnlAuth, requireTrmnlUuidMatch, trmnlUninstallController)
 router.get('/manage', trmnlManageGetController)
 router.post('/manage', express.urlencoded({ extended: true }), trmnlManagePostController)
-
+router.get('/rail-prediction', trmnlAuthByIP, trmnlStationPrediction)
 
 export default router

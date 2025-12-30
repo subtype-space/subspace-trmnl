@@ -4,7 +4,6 @@ import { getSettingsByUuid } from '../../utils/dbConnector.js'
 import { WmataClient } from '../../integrations/wmata/wmataClient.js'
 import { MetroIncident } from '../../types/wmata/types.js'
 import { TrmnlMeta, MetroMarkup, MarkupVariant } from '../../types/trmnl/types.js'
-import { escape } from 'querystring'
 
 // Set up cache so we dont needlessly call to WMATA all the time
 // rough TTL of about 10 minutes, can change. Minimum at TRMNL is ~15 but can change based on device and dev
@@ -134,21 +133,12 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
   const bigText = variant === 'full' ? '92px' : variant === 'quadrant' ? '36px' : '48px'
   const showSubtitle = variant === 'full' || variant === 'half_vertical'
   const subtitleSize = variant === 'half_vertical' ? '24px' : '28px' // subtitle size needs to be modified on half vertical, not shown on hori or quad
-  const showTotalIncidents = variant !== 'half_horizontal' && variant !== 'quadrant' // Do not display this text
   const offset = Number(m.utcOffset) || 0
-  const showTotals = variant !== 'full' //Normally set this in title bar
-  const totals = showTotalIncidents
-    ? `
-      <div class="mt-4" style="display:flex; justify-content:center; width:100%;">
-        <span class="label" style="font-size:18px;">${escapeHtml(String(m.totalIncidents))} total alerts(s) across WMATA</span>
-      </div>
-    `.trim()
-    : ''
 
   // Only for half vert set the title to refresh time, otherwise set total amount of alerts across the system
   const bottomTitleBarTitle =
     variant === 'half_vertical' || variant === 'quadrant'
-      ? `${m.totalIncidents} alerts`
+      ? `${escapeHtml(String(m.totalIncidents))} alert(s)`
       : m.totalIncidents === 0
         ? escapeHtml(m.instanceName)
         : `${escapeHtml(String(m.totalIncidents))} total alerts(s) across WMATA`
@@ -227,7 +217,6 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
           <div class="big-status">${escapeHtml(m.status)}</div>
           ${showSubtitle ? `<div class="label mt-2" style="font-size: ${subtitleSize};">${escapeHtml(m.subtitleFinal)}</div>` : ``}
           ${m.dots ? `<div class="line-indicators" style="margin-top:24px;margin-bottom:20px;">${m.dots}</div>` : ``}
-          ${false ? `${totals}` : ``}
           </div>
         </div>
       </div>
