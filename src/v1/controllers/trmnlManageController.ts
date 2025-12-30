@@ -1,15 +1,7 @@
 import { RequestHandler } from 'express'
 import { getSettingsByUuid, upsertSettings } from '../../utils/dbConnector.js'
 import { logger } from '../../utils/logger.js'
-
-function escapeHtml(s: string) {
-  return s
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;')
-}
+import escapeHtml from 'escape-html'
 
 export const trmnlManageGetController: RequestHandler = async (req, res) => {
   const uuid = req.query.uuid as string | undefined
