@@ -30,6 +30,7 @@ const oauthMetadata: OAuthMetadata = {
   response_types_supported: ['code'],
 }
 
+// Use the SDK to generate the OAuth routes...handy!
 export const oauthMetadataRouter = mcpAuthMetadataRouter({
   oauthMetadata,
   resourceServerUrl: new URL(mcpServerUrl),
@@ -37,6 +38,8 @@ export const oauthMetadataRouter = mcpAuthMetadataRouter({
   resourceName: 'subspace-api',
 })
 
+// This Middleware is still technically MCP SDK based, but could be extensible
+// If wanting to protect non-mcp endpoints, gotta fix the requiredScopes stuff
 export const authMiddleware = requireBearerAuth({
   verifier: {
     verifyAccessToken: async (token: string) => {

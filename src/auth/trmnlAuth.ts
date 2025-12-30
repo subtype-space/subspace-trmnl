@@ -19,16 +19,16 @@ const sha256 = (v: string) => crypto.createHash('sha256').update(v).digest('hex'
 // Do not apply the same type of oauth here
 export const requireTrmnlAuth: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
   logger.info('[AUTH] Checking TRMNL authentication')
-  const auth = req.header('authorization') ?? ''
-  const match = auth.match(/^Bearer\s+(.+)$/i)
 
-  if (!match) {
-    logger.warn('[AUTH] - TRMNL No auth header detected')
+  const auth = req.headers.authorization
+  if (!auth || typeof auth !== 'string' || !auth.toLowerCase().startsWith('bearer ')) {
+    logger.warn('[AUTH] - TRMNL No auth header detected or is invalid')
     res.status(401).send('Unauthorized')
     return
   }
 
-  const tokenHash = sha256(match[1])
+  // Strip 'Bearer ' and only hash token
+  const tokenHash = sha256(auth.slice(7).trim())
 
   if (!(await isKnownTokenHash(tokenHash))) {
     logger.info('[AUTH] Unrecognized TRMNL token hash')
