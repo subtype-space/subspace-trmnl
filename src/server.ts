@@ -1,16 +1,13 @@
 import './utils/env.js' // I hate how I have to do this but whatever. Stupid shim.
 import { logger } from './utils/logger.js'
 import express, { Request, NextFunction, Response, RequestHandler } from 'express'
+import { initTrmnlDB } from './utils/dbConnector.js'
 import trmnlRouter from './v1/routers/trmnlRouter.js'
 import statusRouter from './v1/routers/statusRouter.js'
 import helmet from 'helmet'
-import session from 'express-session'
-
-import KeycloakConnect from 'keycloak-connect'
-import { keycloakConfig } from './configs/keycloakConfig.js'
 
 // OAuth implementation
-import { oauthMetadataRouter, authMiddleware } from './utils/oauth.js'
+import { oauthMetadataRouter, authMiddleware } from './auth/oauth.js'
 
 // MCP import shenanigans
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
@@ -48,13 +45,15 @@ try {
 } catch (err) {
   logger.error('There was an error connecting the MCP server to transport', err)
 }
-logger.debug(mcpServer)
+
+// TODO: switch to PG connection vs flat file
+logger.info('Initializing DB...')
+initTrmnlDB()
 
 // Express setup
 const server = express()
 const PORT = process.env.PORT || 9595
 const ACTIVE_VERSION = process.env.API_VERSION || 'v1'
-const memoryStore = new session.MemoryStore()
 
 // reverse proxy -- removing this will cause issues with secure cookies
 server.set('trust proxy', 1)
@@ -66,9 +65,10 @@ server.use(express.json())
 // Declare regular REST API routing
 logger.info('Initializing routes...')
 
-//server.use('/v1/trmnl', express.json(), trmnlRouter) disable this route because it's just not active right now
 server.use('/', statusRouter)
 server.use('/health', express.json(), statusRouter)
+server.use('/v1/trmnl', trmnlRouter)
+
 
 // Wrapper around the handleRequest - I don't know if this is actually needed but it was suggested to me
 const safe = (fn: RequestHandler): RequestHandler => {
@@ -91,7 +91,7 @@ server.get('/mcp/health', async (_: Request, res: Response) => {
   if (!mcpReady) {
     res.status(503).json({
       status: 'unhealthy',
-      reason: 'MCP server not connected to transport',
+      reason: 'MCP server not ready',
     })
   }
   res.status(200).json({ status: 'ok' })

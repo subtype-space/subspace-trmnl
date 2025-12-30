@@ -22,6 +22,7 @@
   "license": "ISC",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.24.0",
+    "better-sqlite3": "^12.5.0",
     "express-rate-limit": "^7.5.0",
     "express-session": "^1.18.2",
     "jose": "^6.0.10",
@@ -32,12 +33,15 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/escape-html": "^1.0.4",
     "@types/express": "^5.0.1",
     "@types/express-jwt": "^6.0.4",
     "@types/express-session": "^1.18.1",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.14.1",
     "dotenv": "^16.5.0",
+    "escape-html": "^1.0.3",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",

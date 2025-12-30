@@ -7,6 +7,9 @@ services:
     ports:
       - 9595:9595
     env_file: .env
+    # This is NOT persisted between reboots!
+    environment:
+      TRMNL_DB_PATH: /opt/api/dev.sqlite
     networks:
       - proxy
       - api
@@ -18,7 +21,6 @@ services:
       - 'traefik.http.routers.subspace-api.tls.certresolver=cloudflare'
       - 'traefik.docker.network=proxy'
       - 'traefik.http.routers.subspace-api.middlewares=secureHeaders@file, generic-csp@file'
-
 
 networks:
   proxy:

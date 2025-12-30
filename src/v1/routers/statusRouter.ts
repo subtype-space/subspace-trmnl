@@ -1,4 +1,4 @@
-import express, { Router } from 'express'
+import express from 'express'
 import statusController from '../controllers/statusController.js'
 
 const statusRouter = express.Router()

@@ -18,7 +18,7 @@ export async function getStockDetails({ stocks }: { stocks: string[] }) {
   const stockData: StockQuoteDetailed[] = []
 
   for (const ticker of stocks) {
-    console.debug('Attempting to search stock info on', ticker)
+    logger.debug('Attempting to search stock info on', ticker)
 
     const detailedQuote = await yahooFinance.search(ticker)
     const { news } = detailedQuote

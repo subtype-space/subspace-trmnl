@@ -1,9 +1,7 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { CallToolRequest, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import { getAlerts, getForecast } from './weather.js'
 import { getStockDetails } from './stocks.js'
-import { getIncidents, getStationInfo, getBusInfo } from './metro.js'
+import { getIncidents, getStationInfo } from './metro.js'
 import { logger } from '../../utils/logger.js'
 
 
@@ -116,26 +114,6 @@ export function registerTools(mcpServer: SimpleToolRegistrar) {
     async ({ stationCodes }) => {
       const predictionText = await getStationInfo({ stationCodes })
       logger.debug('STATION INFO RESPONSE:', predictionText)
-      return {
-        content: [
-          {
-            type: 'text',
-            text: predictionText,
-          },
-        ],
-      }
-    }
-  )
-
-  mcpServer.tool(
-    'get-bus-info',
-    'Returns the next bus arrival times at a given stop. The stopID must be a 7-digit regional stop ID.',
-    {
-      stopID: z.string().min(1).max(7).describe('7-digit regional stop ID, e.g. 1001195'),
-    },
-    async ({ stopID }) => {
-      const predictionText = await getBusInfo({ stopID })
-      logger.debug('BUS PREDICTION RESPONSE:', predictionText)
       return {
         content: [
           {

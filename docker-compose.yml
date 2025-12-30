@@ -7,6 +7,12 @@ services:
     ports:
       - 9595:9595
     env_file: .env
+    # For Prod, do not modify this env var unless you REALLLY need to
+    environment:
+      TRMNL_DB_PATH: /opt/api/subspace-db/trmnl.sqlite
+    # Ensure ./data exists 
+    volumes:
+      - ./data:/opt/api/subspace-db
     networks:
       - proxy
       - api
@@ -18,6 +24,9 @@ services:
       - 'traefik.http.routers.subspace-api.tls.certresolver=cloudflare'
       - 'traefik.docker.network=proxy'
       - 'traefik.http.routers.subspace-api.middlewares=secureHeaders@file, generic-csp@file'
+
+volumes:
+  subspace_api_data:
 
 networks:
   proxy:

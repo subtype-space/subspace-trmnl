@@ -1,0 +1,154 @@
+import crypto from 'crypto'
+import { Request, Response, NextFunction, RequestHandler } from 'express'
+import { isKnownTokenHash, touchTrmnlToken } from '../utils/dbConnector.js'
+import { logger } from '../utils/logger.js'
+import { getUserUuidByTokenHash } from '../utils/dbConnector.js'
+
+let cachedIPs: Set<string> | null = null
+let cachedAtMs = 0
+let inFlight: Promise<Set<string>> | null = null
+
+const TRMNL_TTL_IPS_MS = 10 * 60 * 1000 // 10 minute cache
+
+// Disallow TRMNL worker IP bypass by default
+const TRMNL_IP_ALLOW_BYPASS: boolean = (process.env.TRMNL_IP_AUTH_ALLOW_PRIVATE === 'true')
+
+const sha256 = (v: string) => crypto.createHash('sha256').update(v).digest('hex')
+
+// This is all middleware
+// Do not apply the same type of oauth here
+export const requireTrmnlAuth: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+  logger.info('[AUTH] Checking TRMNL authentication')
+
+  const auth = req.headers.authorization
+  if (!auth || typeof auth !== 'string' || !auth.toLowerCase().startsWith('bearer ')) {
+    logger.warn('[AUTH] - TRMNL No auth header detected or is invalid')
+    res.status(401).send('Unauthorized')
+    return
+  }
+
+  // Strip 'Bearer ' and only hash token
+  const tokenHash = sha256(auth.slice(7).trim())
+
+  if (!(await isKnownTokenHash(tokenHash))) {
+    logger.info('[AUTH] Unrecognized TRMNL token hash')
+    logger.debug(tokenHash)
+    res.status(401).send('Unauthorized')
+    return
+  }
+
+  // Attach token hash to request
+  await touchTrmnlToken(tokenHash)
+  ;(req as any).trmnl = { tokenHash }
+
+  next()
+}
+
+function readUuid(req: any): string | undefined {
+  // /markup + /uninstall (form or json)
+  if (typeof req.body?.user_uuid === 'string' && req.body.user_uuid) return req.body.user_uuid
+
+  // install_success (json)
+  if (typeof req.body?.user?.uuid === 'string' && req.body.user.uuid) return req.body.user.uuid
+
+  return undefined
+}
+
+export const requireTrmnlUuidMatch: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+  logger.debug('[AUTH] Checking if UUID is bound')
+  // tokenHash "should" be the access token we get from TRMNL that gets hashed - it gets binded to a UUID
+  const tokenHash = (req as any).trmnl?.tokenHash as string | undefined
+  if (!tokenHash) {
+    logger.warn('[AUTH] No token provided')
+    res.status(401).json({ error: 'missing trmnl auth context' })
+    return
+  }
+
+  const uuid = readUuid(req)
+  if (!uuid) {
+    logger.warn('[AUTH] Missing UUID')
+    res.status(400).json({ error: 'missing uuid' })
+    return
+  }
+
+  const bound = await getUserUuidByTokenHash(tokenHash)
+  if (!bound) {
+    // IMPORTANT: do not bind here; install_success is the place to bind.
+    logger.warn('[AUTH] UUID not bound')
+    res.status(401).json({ error: 'uuid_not_bound' })
+    return
+  }
+
+  if (bound !== uuid) {
+    logger.warn('[AUTH] token/uuid mismatch for ', tokenHash)
+    res.status(401).json({ error: 'uuid_mismatch' })
+    return
+  }
+
+  logger.debug('[AUTH] Successfully found binding for ', { tokenHash, bound })
+
+  ;(req as any).trmnl = { ...(req as any).trmnl, userUuid: bound }
+  next()
+}
+
+export const trmnlAuthByIP: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+  logger.info('[AUTH] Check TRMNL authentication')
+
+  try {
+    if (TRMNL_IP_ALLOW_BYPASS) {
+      logger.warn('[AUTH] Bypassing TRMNL worker IP check')
+      next()
+    }
+
+    // NOTE: Some worker IPs can be ipv6 based. No normalization is done here.
+    // that's a risk I'm willing (and hoping) doesn't break anything major.
+    const ips = await getTRMNLIPs()
+    const ip = (req.headers["cf-connecting-ip"] as string) ?? req.ip
+
+   if (!ips.has(ip)) {
+      logger.warn(`[AUTH] Connection from ${ip} not permitted. Non-TRMNL worker IP address.`)
+      res.status(403).send('Forbidden')
+      return
+    }
+    next()
+  } catch (e) {
+    logger.warn(e)
+    res.status(503).send('Auth temporarily unavailable')
+    return
+  }
+}
+
+async function getTRMNLIPs(): Promise<Set<string>> {
+  const now = Date.now()
+
+  if (cachedIPs && now - cachedAtMs < TRMNL_TTL_IPS_MS) {
+    return cachedIPs
+  }
+
+  if (inFlight) return inFlight
+
+  inFlight = (async () => {
+    logger.info('[AUTH] Refreshing list of TRMNL worker IPs')
+
+    const res = await fetch('https://usetrmnl.com/api/ips')
+    if (!res.ok) {
+      inFlight = null
+      throw new Error('Failed to fetch TRMNL IP list')
+    }
+
+    const json = await res.json()
+
+    const ips = new Set<string>([
+      ...(json.data?.ipv4 ?? []),
+      ...(json.data?.ipv6 ?? []),
+    ])
+
+    cachedIPs = ips
+    cachedAtMs = Date.now()
+    inFlight = null
+
+    return ips
+  })()
+
+  return inFlight
+}
