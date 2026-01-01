@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import { RequestHandler } from 'express'
-import { logger } from '../../utils/logger.js'
-import { storeTrmnlToken } from '../../utils/dbConnector.js'
+import { logger } from '../../../utils/logger.js'
+import { storeTrmnlToken } from '../../../utils/dbConnector.js'
 
 const sha256 = (v: string) => crypto.createHash('sha256').update(v).digest('hex')
 

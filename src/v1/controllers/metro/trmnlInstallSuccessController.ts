@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express'
-import { logger } from '../../utils/logger.js'
-import { bindUserUuidToToken, upsertSettings } from '../../utils/dbConnector.js'
+import { logger } from '../../../utils/logger.js'
+import { bindUserUuidToToken, upsertSettings } from '../../../utils/dbConnector.js'
 
 export const trmnlInstallSuccessController: RequestHandler = async (req, res) => {
   // requireTrmnlAuth should already have run and set req.trmnl.tokenHash

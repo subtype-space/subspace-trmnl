@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express'
-import { logger } from '../../utils/logger.js'
-import { revokeByUserUuid } from '../../utils/dbConnector.js'
+import { logger } from '../../../utils/logger.js'
+import { revokeByUserUuid } from '../../../utils/dbConnector.js'
 
 // Reminder - endpoint protected by trmnlAuth
 export const trmnlUninstallController: RequestHandler = async (req, res) => {

@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express'
-import { getSettingsByUuid, upsertSettings } from '../../utils/dbConnector.js'
-import { logger } from '../../utils/logger.js'
+import { getSettingsByUuid, upsertSettings } from '../../../utils/dbConnector.js'
+import { logger } from '../../../utils/logger.js'
 import escapeHtml from 'escape-html'
 
 export const trmnlManageGetController: RequestHandler = async (req, res) => {
