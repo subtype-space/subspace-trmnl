@@ -1,4 +1,4 @@
-import type { RequestHandler } from 'express'
+import { RequestHandler } from 'express'
 import { logger } from '../../utils/logger.js'
 import { WmataClient } from '../../integrations/wmata/wmataClient.js'
 
