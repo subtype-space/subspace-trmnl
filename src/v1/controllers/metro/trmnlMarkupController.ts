@@ -159,11 +159,11 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
   }
 
   /* line colors */
-  .line-GR { background: #2E8B57; }
-  .line-RD { background: #B22222; }
-  .line-BL { background: #1E3A8A; }
-  .line-OR { background: #D97706; }
-  .line-YL { background: #CA8A04; }
+  .line-GR { background: #6B7280; }
+  .line-RD { background: #6B7280; }
+  .line-BL { background: #6B7280; }
+  .line-OR { background: #6B7280; }
+  .line-YL { background: #6B7280; }
   .line-SV { background: #6B7280; }
 
   .line-dot {
