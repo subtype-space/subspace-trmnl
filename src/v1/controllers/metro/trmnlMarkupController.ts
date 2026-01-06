@@ -141,7 +141,7 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
       ? `{{ "alert" | pluralize: ${escapeHtml(String(m.totalIncidents))}  }} • ${escapeHtml(m.displayLine)}`
       : m.totalIncidents === 0
         ? escapeHtml(m.instanceName)
-        : `{{ "alert" | pluralize: ${escapeHtml(String(m.totalIncidents))}  }} across WMATA • ${escapeHtml(m.displayLine)}`
+        : `{{ "alert" | pluralize: ${escapeHtml(String(m.totalIncidents))}  }} across WMATA`
 
   // Dont set this for half vert
   const bottomTitleBarInstance =
