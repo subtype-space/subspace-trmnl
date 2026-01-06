@@ -8,12 +8,12 @@ export const trmnlInstallSuccessController: RequestHandler = async (req, res) =>
   const userUuid = req.body?.user?.uuid
 
   if (!tokenHash) {
-    res.status(500).json({ error: 'missing trmnl auth context' })
+    res.status(500).json({ error: 'Internal Server Error', message: 'missing trmnl auth context' })
     return
   }
 
   if (typeof userUuid !== 'string' || !userUuid) {
-    res.status(400).json({ error: 'missing user.uuid' })
+    res.status(400).json({ error: 'Bad Request', message: 'missing user.uuid' })
     return
   }
 

@@ -60,7 +60,7 @@ export const trmnlStationPrediction: RequestHandler = async (req, res) => {
     const raw = req.query.stations
     const stationsStr = Array.isArray(raw) ? raw.join(',') : (raw as string | undefined)
     if (stationsStr?.length === 0) {
-      res.status(400).send('Cannot pass in no station codes')
+      res.status(400).json({ error: 'Bad Request', message: 'Cannot pass in no station codes'})
       return
     }
 

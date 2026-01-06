@@ -3,11 +3,14 @@ import { getSettingsByUuid, upsertSettings } from '../../../utils/dbConnector.js
 import { logger } from '../../../utils/logger.js'
 import escapeHtml from 'escape-html'
 
+
+// This controller is integrated with html markup - use send() over json()
+
 export const trmnlManageGetController: RequestHandler = async (req, res) => {
   const uuid = req.query.uuid as string | undefined
   if (!uuid) {
     logger.warn('[TRMNL] Missing UUID in request for settings page')
-    res.status(400).send('missing uuid')
+    res.status(400).send('Bad Request - missing UUID')
     return
   }
 
@@ -27,7 +30,7 @@ export const trmnlManageGetController: RequestHandler = async (req, res) => {
     <html><body style="font-family: system-ui; max-width: 520px; margin: 24px auto;">
       <h2>Settings</h2>
 
-      <form method="POST" action="/v1/trmnl/manage">
+      <form method="POST" action="/v1/trmnl/metro/manage">
         <input type="hidden" name="uuid" value="${safeUuid}"/>
 
         <div style="margin: 12px 0;">
@@ -116,10 +119,11 @@ ${['RD', 'BL', 'OR', 'SV', 'GR', 'YL']
   `)
 }
 
+// Post is internal
 export const trmnlManagePostController: RequestHandler = async (req, res) => {
   const uuid = req.body?.uuid
   if (typeof uuid !== 'string' || !uuid) {
-    res.status(400).send('missing uuid')
+    res.status(400).json({error: 'Bad Request', message: 'missing uuid'})
     return
   }
 
@@ -127,7 +131,7 @@ export const trmnlManagePostController: RequestHandler = async (req, res) => {
   const rawLines = req.body?.lines
   const primaryLine = req.body?.primaryLine
   if (typeof primaryLine !== 'string' || !['RD', 'BL', 'OR', 'SV', 'GR', 'YL'].includes(primaryLine)) {
-    res.status(400).send('missing/invalid primaryLine')
+    res.status(400).json({ error: 'Bad Request', message: 'missing/invalid primaryLine'})
     return
   }
   const linesArr = Array.isArray(rawLines) ? rawLines : typeof rawLines === 'string' ? [rawLines] : []
@@ -146,5 +150,5 @@ export const trmnlManagePostController: RequestHandler = async (req, res) => {
     return
   }
 
-  res.redirect(`/v1/trmnl/manage?uuid=${encodeURIComponent(uuid)}`)
+  res.redirect(`/v1/trmnl/metro/manage?uuid=${encodeURIComponent(uuid)}`)
 }

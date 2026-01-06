@@ -12,7 +12,7 @@ const trmnlInstallController: RequestHandler = async (req, res): Promise<void> =
   const callback = req.query.installation_callback_url as string | undefined
 
   if (!token || !callback) {
-    res.status(400).json({ error: 'missing token or callback' })
+    res.status(400).json({ error: 'Bad Request', message: 'missing token or callback' })
     return
   }
 
@@ -33,7 +33,7 @@ const trmnlInstallController: RequestHandler = async (req, res): Promise<void> =
 
   if (!trmnlResp.ok) {
     logger.warn('[TRMNL] token exchange failed', raw)
-    res.status(502).json({ error: 'trmnl_exchange_failed' })
+    res.status(502).json({ error: 'Bad Gateway', message: 'trmnl_exchange_failed' })
     return
   }
   // dont log raw access tokens, even in debug
@@ -42,13 +42,13 @@ const trmnlInstallController: RequestHandler = async (req, res): Promise<void> =
   try {
     data = JSON.parse(raw)
   } catch {
-    res.status(502).json({ error: 'trmnl_invalid_response' })
+    res.status(502).json({ error: 'Bad Gateway', message: 'trmnl_invalid_response' })
     return
   }
 
   const access_token = data?.access_token
   if (typeof access_token !== 'string') {
-    res.status(502).json({ error: 'missing_access_token' })
+    res.status(502).json({ error: 'Bad Gateway', message: 'missing_access_token' })
     return
   }
 
