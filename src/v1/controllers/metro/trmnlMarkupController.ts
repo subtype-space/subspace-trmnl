@@ -138,10 +138,10 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
   // Only for half vert set the title to refresh time, otherwise set total amount of alerts across the system
   const bottomTitleBarTitle =
     variant === 'half_vertical' || variant === 'quadrant'
-      ? `${escapeHtml(String(m.totalIncidents))} {{ "alert" | pluralize: 2 }} • ${escapeHtml(m.displayLine)}`
+      ? `{{ "alert" | pluralize: ${escapeHtml(String(m.totalIncidents))}  }} • ${escapeHtml(m.displayLine)}`
       : m.totalIncidents === 0
         ? escapeHtml(m.instanceName)
-        : `${escapeHtml(String(m.totalIncidents))} total {{ "alert" | pluralize: 2 }} across WMATA • ${escapeHtml(m.displayLine)}`
+        : `{{ "alert" | pluralize: ${escapeHtml(String(m.totalIncidents))}  }} across WMATA • ${escapeHtml(m.displayLine)}`
 
   // Dont set this for half vert
   const bottomTitleBarInstance =
