@@ -9,10 +9,26 @@ const sha256 = (v: string) => crypto.createHash('sha256').update(v).digest('hex'
 // retrieve the access token from TRMNL (step 1ish and 2ish in auth flow)
 const trmnlInstallController: RequestHandler = async (req, res): Promise<void> => {
   const token = req.query.code as string | undefined
-  const callback = req.query.installation_callback_url as string | undefined
+  const callback = req.query.installation_callback_url as string
 
   if (!token || !callback) {
     res.status(400).json({ error: 'Bad Request', message: 'missing token or callback' })
+    return
+  }
+
+  let url: URL
+  try {
+    url = new URL(callback)
+  } catch {
+    res.status(400).json({ error: 'Bad Request', message: 'Invalid callback URL' })
+    return
+  }
+
+  // Just in case, make sure we only permit callback urls set to usetrmnl.com domain
+  const allowedHosts = new Set(['usetrmnl.com', 'www.usetrmnl.com'])
+
+  if (!allowedHosts.has(url.hostname)) {
+    res.status(400).json({ error: 'Bad Request', message: 'Invalid callback URL' })
     return
   }
 

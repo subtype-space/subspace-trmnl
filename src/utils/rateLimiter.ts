@@ -18,7 +18,10 @@ function getAuthSub(req: Request): string | undefined {
 export const rateLimiter: RateLimitRequestHandler = rateLimit({
   windowMs: 60 * 1000,
   limit: (req: Request): number => {
-    return getAuthSub(req) ? 60 : 5
+    const ip = getClientIp(req)
+    const sub = getAuthSub(req)
+    logger.info(`Rate limit check for ${sub ? 'authenticated' : 'anon'} - ${ip}`)
+    return sub ? 60 : 5
   },
   keyGenerator: (req: Request) => {
     const sub = getAuthSub(req)
