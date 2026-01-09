@@ -45,7 +45,7 @@ export const authMiddleware: RequestHandler = (req, res, next) => {
     verifier: {
       verifyAccessToken: async (token: string) => {
         const authInfo = await verifyToken(token)
-        ;(req as any).authInfo = authInfo
+        ;(req as any).authInfo = authInfo //attach?
         return authInfo
       },
     },
