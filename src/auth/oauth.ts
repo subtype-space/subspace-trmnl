@@ -11,7 +11,7 @@
  *
  * OAuth hard.
  */
-
+import { RequestHandler, Request, Response, NextFunction } from 'express'
 import { getOAuthEnv } from '../utils/oauthEnv.js'
 import { createOAuthURLs } from '../utils/generateOAuthURL.js'
 import { OAuthMetadata } from '@modelcontextprotocol/sdk/shared/auth.js'
@@ -40,26 +40,21 @@ export const oauthMetadataRouter = mcpAuthMetadataRouter({
 
 // This Middleware is still technically MCP SDK based, but could be extensible
 // If wanting to protect non-mcp endpoints, gotta fix the requiredScopes stuff
-export const authMiddleware = requireBearerAuth({
-  verifier: {
-    verifyAccessToken: async (token: string) => {
-      logger.info('[AUTH] running token validation')
-      const authInfo = await verifyToken(token)
-
-      logger.debug('[AUTH] pre-sdk-check authInfo', {
-        hasScopes: Array.isArray((authInfo as any).scopes),
-        scopesType: typeof (authInfo as any).scopes,
-        expiresAt: (authInfo as any).expiresAt,
-        expiresAtType: typeof (authInfo as any).expiresAt,
-        keys: Object.keys(authInfo as any),
-      })
-
-      return authInfo
+export const authMiddleware: RequestHandler = (req, res, next) => {
+  const bearer = requireBearerAuth({
+    verifier: {
+      verifyAccessToken: async (token: string) => {
+        const authInfo = await verifyToken(token)
+        ;(req as any).authInfo = authInfo
+        return authInfo
+      },
     },
-  },
-  requiredScopes: ['mcp:tools'],
-  resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(new URL(mcpServerUrl)),
-})
+    requiredScopes: ['mcp:tools'],
+    resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(new URL(mcpServerUrl)),
+  })
+
+  return bearer(req, res, next)
+}
 
 async function verifyToken(token: string) {
   const endpoint = oauthMetadata.introspection_endpoint
