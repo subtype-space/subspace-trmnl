@@ -81,6 +81,7 @@ server.all(
   '/mcp',
   logIncomingAuth,
   authMiddleware,
+  rateLimiter,
   logAuthedIdentity,
   safe(async (req: Request, res: Response) => {
     await mcpTransport.handleRequest(req, res, req.body)

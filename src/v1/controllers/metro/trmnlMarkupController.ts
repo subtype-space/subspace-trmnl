@@ -1,9 +1,9 @@
 import { RequestHandler } from 'express'
-import { logger } from '../../utils/logger.js'
-import { getSettingsByUuid } from '../../utils/dbConnector.js'
-import { WmataClient } from '../../integrations/wmata/wmataClient.js'
-import { MetroIncident } from '../../types/wmata/types.js'
-import { TrmnlMeta, MetroMarkup, MarkupVariant } from '../../types/trmnl/types.js'
+import { logger } from '../../../utils/logger.js'
+import { getSettingsByUuid } from '../../../utils/dbConnector.js'
+import { WmataClient } from '../../../integrations/wmata/wmataClient.js'
+import { MetroIncident } from '../../../types/wmata/types.js'
+import { TrmnlMeta, MetroMarkup, MarkupVariant } from '../../../types/trmnl/types.js'
 
 // Set up cache so we dont needlessly call to WMATA all the time
 // rough TTL of about 10 minutes, can change. Minimum at TRMNL is ~15 but can change based on device and dev
@@ -25,13 +25,13 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
 
   logger.debug('[TRMNL] Incoming markup request: ', { tokenHash, userUuid, trmnlRaw })
   if (!tokenHash) {
-    res.status(500).json({ error: 'missing trmnl auth context' })
+    res.status(500).json({ error: 'Bad Request', message: 'missing trmnl auth context' })
     return
   }
 
   if (typeof userUuid !== 'string' || !userUuid) {
     logger.debug('[TRMNL] UUID was not provided. Will not render.')
-    res.status(400).json({ error: 'missing user_uuid' })
+    res.status(400).json({ error: 'Bad Request', message: 'missing user_uuid' })
     return
   }
 
@@ -138,10 +138,10 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
   // Only for half vert set the title to refresh time, otherwise set total amount of alerts across the system
   const bottomTitleBarTitle =
     variant === 'half_vertical' || variant === 'quadrant'
-      ? `${escapeHtml(String(m.totalIncidents))} alert(s)`
+      ? `{{ "alert" | pluralize: ${escapeHtml(String(m.totalIncidents))}  }} • ${escapeHtml(m.displayLine)}`
       : m.totalIncidents === 0
         ? escapeHtml(m.instanceName)
-        : `${escapeHtml(String(m.totalIncidents))} total alerts(s) across WMATA`
+        : `{{ "alert" | pluralize: ${escapeHtml(String(m.totalIncidents))}  }} across WMATA`
 
   // Dont set this for half vert
   const bottomTitleBarInstance =
@@ -159,11 +159,11 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
   }
 
   /* line colors */
-  .line-GR { background: #2E8B57; }
-  .line-RD { background: #B22222; }
-  .line-BL { background: #1E3A8A; }
-  .line-OR { background: #D97706; }
-  .line-YL { background: #CA8A04; }
+  .line-GR { background: #6B7280; }
+  .line-RD { background: #6B7280; }
+  .line-BL { background: #6B7280; }
+  .line-OR { background: #6B7280; }
+  .line-YL { background: #6B7280; }
   .line-SV { background: #6B7280; }
 
   .line-dot {

@@ -8,7 +8,7 @@ let cachedIPs: Set<string> | null = null
 let cachedAtMs = 0
 let inFlight: Promise<Set<string>> | null = null
 
-const TRMNL_TTL_IPS_MS = 10 * 60 * 1000 // 10 minute cache
+const TRMNL_TTL_IPS_MS = 24 * 60 * 60 * 1000 // 24hr cache
 
 // Disallow TRMNL worker IP bypass by default
 const TRMNL_IP_ALLOW_BYPASS: boolean = (process.env.TRMNL_IP_AUTH_ALLOW_PRIVATE === 'true')
@@ -23,7 +23,7 @@ export const requireTrmnlAuth: RequestHandler = async (req: Request, res: Respon
   const auth = req.headers.authorization
   if (!auth || typeof auth !== 'string' || !auth.toLowerCase().startsWith('bearer ')) {
     logger.warn('[AUTH] - TRMNL No auth header detected or is invalid')
-    res.status(401).send('Unauthorized')
+    res.status(401).json({error: 'Unauthorized', message: 'Missing authorization'})
     return
   }
 
@@ -33,7 +33,7 @@ export const requireTrmnlAuth: RequestHandler = async (req: Request, res: Respon
   if (!(await isKnownTokenHash(tokenHash))) {
     logger.info('[AUTH] Unrecognized TRMNL token hash')
     logger.debug(tokenHash)
-    res.status(401).send('Unauthorized')
+    res.status(401).json({ error: 'Forbidden', message: 'Access Denied'})
     return
   }
 
@@ -60,14 +60,14 @@ export const requireTrmnlUuidMatch: RequestHandler = async (req: Request, res: R
   const tokenHash = (req as any).trmnl?.tokenHash as string | undefined
   if (!tokenHash) {
     logger.warn('[AUTH] No token provided')
-    res.status(401).json({ error: 'missing trmnl auth context' })
+    res.status(401).json({ error: 'Unauthorized', message: 'missing trmnl auth context' })
     return
   }
 
   const uuid = readUuid(req)
   if (!uuid) {
     logger.warn('[AUTH] Missing UUID')
-    res.status(400).json({ error: 'missing uuid' })
+    res.status(400).json({ error: 'Bad Request', message: 'missing uuid' })
     return
   }
 
@@ -75,13 +75,13 @@ export const requireTrmnlUuidMatch: RequestHandler = async (req: Request, res: R
   if (!bound) {
     // IMPORTANT: do not bind here; install_success is the place to bind.
     logger.warn('[AUTH] UUID not bound')
-    res.status(401).json({ error: 'uuid_not_bound' })
+    res.status(401).json({ error: 'Unauthorized', message: 'uuid_not_bound' })
     return
   }
 
   if (bound !== uuid) {
     logger.warn('[AUTH] token/uuid mismatch for ', tokenHash)
-    res.status(401).json({ error: 'uuid_mismatch' })
+    res.status(401).json({ error: 'Unauthorized', message: 'Unauthorized access' })
     return
   }
 
@@ -98,6 +98,7 @@ export const trmnlAuthByIP: RequestHandler = async (req: Request, res: Response,
     if (TRMNL_IP_ALLOW_BYPASS) {
       logger.warn('[AUTH] Bypassing TRMNL worker IP check')
       next()
+      return
     }
 
     // NOTE: Some worker IPs can be ipv6 based. No normalization is done here.
@@ -107,18 +108,18 @@ export const trmnlAuthByIP: RequestHandler = async (req: Request, res: Response,
 
    if (!ips.has(ip)) {
       logger.warn(`[AUTH] Connection from ${ip} not permitted. Non-TRMNL worker IP address.`)
-      res.status(403).send('Forbidden')
+      res.status(403).json({ error: 'Forbidden', message: 'Non-TRMNL worker IP address'})
       return
     }
     next()
   } catch (e) {
     logger.warn(e)
-    res.status(503).send('Auth temporarily unavailable')
+    res.status(503).json({ error: 'Server Error', message: 'Authentication temporarily unavailable'})
     return
   }
 }
 
-async function getTRMNLIPs(): Promise<Set<string>> {
+export async function getTRMNLIPs(): Promise<Set<string>> {
   const now = Date.now()
 
   if (cachedIPs && now - cachedAtMs < TRMNL_TTL_IPS_MS) {
