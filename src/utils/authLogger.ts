@@ -13,9 +13,11 @@ export function logIncomingAuth(req: Request, _res: Response, next: NextFunction
 }
 
 export function logAuthedIdentity(req: Request, _res: Response, next: NextFunction) {
-  const authInfo = (req as any).auth ?? (req as any).mcpAuth ?? (req as any).oauth ?? null
+  const authInfo = (req as any).authInfo ?? null
   if (authInfo) {
-    logger.info(`[AUTH] Authenticated client=${authInfo.clientId} scopes=${(authInfo.scopes ?? []).join(" ")}`)
+    logger.info(`[AUTH] Incoming Authenticated client=${authInfo.clientId} scopes=${(authInfo.scopes ?? []).join(' ')}`)
+  } else {
+    logger.info('[AUTH] No authInfo on request')
   }
   next()
 }
