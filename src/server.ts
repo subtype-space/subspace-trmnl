@@ -77,16 +77,33 @@ const safe = (fn: RequestHandler): RequestHandler => {
   }
 }
 
+const mark = (name: string) => (req: Request, _res: Response, next: NextFunction) => {
+  logger.info(`[PIPE] ${name} authInfo=${Boolean((req as any).authInfo)}`)
+  next()
+}
+
 server.all(
   '/mcp',
+  mark('A before logIncomingAuth'),
   logIncomingAuth,
+  mark('B before authMiddleware'),
   authMiddleware,
+  mark('C before rateLimiter'),
   rateLimiter,
-  logAuthedIdentity,
-  safe(async (req: Request, res: Response) => {
-    await mcpTransport.handleRequest(req, res, req.body)
-  })
+  mark('D before handler'),
+  safe(async (req, res) => { ... })
 )
+
+// server.all(
+//   '/mcp',
+//   logIncomingAuth,
+//   authMiddleware,
+//   rateLimiter,
+//   logAuthedIdentity,
+//   safe(async (req: Request, res: Response) => {
+//     await mcpTransport.handleRequest(req, res, req.body)
+//   })
+// )
 
 server.get('/mcp/health', async (_: Request, res: Response) => {
   if (!mcpReady) {
