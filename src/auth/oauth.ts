@@ -75,7 +75,7 @@ async function verifyToken(token: string) {
   }
 
   // This performs a POST to the auth server endpoint with the OIDC/OAuth client credentials that "belong" to the API server
-  let response: Response
+  let response
   try {
     response = await fetch(endpoint, {
       method: 'POST',
