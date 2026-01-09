@@ -1,7 +1,21 @@
 import rateLimit, { RateLimitRequestHandler } from 'express-rate-limit'
 import { logger } from './logger.js'
 import { Request, Response } from 'express'
+import { getTRMNLIPs } from '../auth/trmnlAuth.js'
 
+let ips: Set<string> = new Set()
+
+async function refreshTRMNLIPs() {
+  ips = await getTRMNLIPs()
+}
+
+function isTrmnlWorkerIp(ip: string) {
+  return ips.has(ip)
+}
+
+// warm up trmnl worker ips and refresh every 24 hours
+refreshTRMNLIPs()
+setInterval(() => void refreshTRMNLIPs(), 24 * 60 * 60 * 1000).unref()
 
 function getClientIp(req: Request): string {
   const h = req.headers['cf-connecting-ip']
@@ -20,6 +34,10 @@ export const rateLimiter: RateLimitRequestHandler = rateLimit({
   limit: (req: Request): number => {
     const ip = getClientIp(req)
     const sub = getAuthSub(req)
+    if (isTrmnlWorkerIp(ip)) {
+      logger.info(`Rate limit check for TRMNL IP: ${ip}`)
+      return 60
+    }
     logger.info(`Rate limit check for ${sub ? 'authenticated' : 'anon'} - ${ip}`)
     return sub ? 60 : 5
   },

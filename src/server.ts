@@ -60,7 +60,7 @@ server.set('trust proxy', 1)
 
 logger.info('Setting up middleware...')
 server.use(helmet())
-//server.use(rateLimiter)
+server.use(rateLimiter)
 server.use(express.json())
 // Declare regular REST API routing
 logger.info('Initializing routes...')

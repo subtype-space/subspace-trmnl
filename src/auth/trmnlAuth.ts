@@ -8,7 +8,7 @@ let cachedIPs: Set<string> | null = null
 let cachedAtMs = 0
 let inFlight: Promise<Set<string>> | null = null
 
-const TRMNL_TTL_IPS_MS = 10 * 60 * 1000 // 10 minute cache
+const TRMNL_TTL_IPS_MS = 24 * 60 * 60 * 1000 // 24hr cache
 
 // Disallow TRMNL worker IP bypass by default
 const TRMNL_IP_ALLOW_BYPASS: boolean = (process.env.TRMNL_IP_AUTH_ALLOW_PRIVATE === 'true')
@@ -98,6 +98,7 @@ export const trmnlAuthByIP: RequestHandler = async (req: Request, res: Response,
     if (TRMNL_IP_ALLOW_BYPASS) {
       logger.warn('[AUTH] Bypassing TRMNL worker IP check')
       next()
+      return
     }
 
     // NOTE: Some worker IPs can be ipv6 based. No normalization is done here.
@@ -118,7 +119,7 @@ export const trmnlAuthByIP: RequestHandler = async (req: Request, res: Response,
   }
 }
 
-async function getTRMNLIPs(): Promise<Set<string>> {
+export async function getTRMNLIPs(): Promise<Set<string>> {
   const now = Date.now()
 
   if (cachedIPs && now - cachedAtMs < TRMNL_TTL_IPS_MS) {
