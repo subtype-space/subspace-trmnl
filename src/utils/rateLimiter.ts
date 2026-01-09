@@ -26,8 +26,6 @@ function getClientIp(req: Request): string {
 function getAuthKey(req: Request): string | undefined {
   const authInfo = (req as any).authInfo
   const clientId = authInfo?.clientId
-  logger.debug(`authInfo? ${authInfo?.clientId} ${authInfo?.extra?.sub}`)
-
   if (typeof clientId === 'string' && clientId) {
     return `client:${clientId}`
   }
@@ -35,7 +33,6 @@ function getAuthKey(req: Request): string | undefined {
   const sub = authInfo?.extra?.sub
   return typeof sub === 'string' && sub.length > 0 ? sub : undefined
 }
-
 export const rateLimiter: RateLimitRequestHandler = rateLimit({
   windowMs: 60 * 1000,
   limit: (req: Request): number => {

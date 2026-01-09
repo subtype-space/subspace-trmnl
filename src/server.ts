@@ -60,14 +60,12 @@ server.set('trust proxy', 1)
 
 logger.info('Setting up middleware...')
 server.use(helmet())
-server.use(rateLimiter)
 server.use(express.json())
 // Declare regular REST API routing
 logger.info('Initializing routes...')
 
-server.use('/', statusRouter)
-server.use('/health', express.json(), statusRouter)
-server.use('/v1/trmnl', trmnlRouter)
+server.use('/health', rateLimiter, express.json(), statusRouter)
+server.use('/v1/trmnl', rateLimiter, trmnlRouter)
 
 // Wrapper around the handleRequest - I don't know if this is actually needed but it was suggested to me
 const safe = (fn: RequestHandler): RequestHandler => {
