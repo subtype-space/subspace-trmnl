@@ -69,7 +69,6 @@ server.use('/', statusRouter)
 server.use('/health', express.json(), statusRouter)
 server.use('/v1/trmnl', trmnlRouter)
 
-
 // Wrapper around the handleRequest - I don't know if this is actually needed but it was suggested to me
 const safe = (fn: RequestHandler): RequestHandler => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -91,7 +90,9 @@ server.all(
   mark('C before rateLimiter'),
   rateLimiter,
   mark('D before handler'),
-  safe(async (req, res) => { ... })
+  safe(async (req: Request, res: Response) => {
+    await mcpTransport.handleRequest(req, res, req.body)
+  })
 )
 
 // server.all(
