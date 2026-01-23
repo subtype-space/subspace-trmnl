@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { getAlerts, getForecast } from './weather.js'
 import { getStockDetails } from './stocks.js'
 import { getIncidents, getStationInfo } from './metro.js'
+import { getNodes, getVMs, getVMStatus, vmAction } from './proxmox.js'
 import { logger } from '../../utils/logger.js'
 
 
@@ -119,6 +120,84 @@ export function registerTools(mcpServer: SimpleToolRegistrar) {
           {
             type: 'text',
             text: predictionText,
+          },
+        ],
+      }
+    }
+  )
+
+  // Proxmox tools
+  mcpServer.tool(
+    'get-proxmox-nodes',
+    'Returns a list of all Proxmox nodes in the cluster with their status, CPU, memory, disk usage, and uptime.',
+    {},
+    async () => {
+      const nodesText = await getNodes()
+      return {
+        content: [
+          {
+            type: 'text',
+            text: nodesText,
+          },
+        ],
+      }
+    }
+  )
+
+  mcpServer.tool(
+    'get-proxmox-vms',
+    'Returns a list of all VMs and LXC containers in the Proxmox cluster. Optionally filter by node name. Shows status, resource usage, and network stats.',
+    {
+      node: z.string().optional().describe('Optional node name to filter VMs. If not provided, returns VMs from all nodes.'),
+    },
+    async ({ node }) => {
+      const vmsText = await getVMs(node)
+      return {
+        content: [
+          {
+            type: 'text',
+            text: vmsText,
+          },
+        ],
+      }
+    }
+  )
+
+  mcpServer.tool(
+    'get-proxmox-vm-status',
+    'Returns detailed status information for a specific VM or LXC container by its VMID. Includes CPU, memory, network I/O, and disk I/O stats.',
+    {
+      vmid: z.number().int().positive().describe('The VMID of the VM or container to query'),
+    },
+    async ({ vmid }) => {
+      const statusText = await getVMStatus(vmid)
+      return {
+        content: [
+          {
+            type: 'text',
+            text: statusText,
+          },
+        ],
+      }
+    }
+  )
+
+  mcpServer.tool(
+    'proxmox-vm-action',
+    'Perform an action on a VM or LXC container (start, stop, reboot, shutdown, suspend, resume). NOTE: This tool is not yet fully implemented.',
+    {
+      vmid: z.number().int().positive().describe('The VMID of the VM or container'),
+      action: z
+        .enum(['start', 'stop', 'reboot', 'shutdown', 'suspend', 'resume'])
+        .describe('The action to perform on the VM'),
+    },
+    async ({ vmid, action }) => {
+      const resultText = await vmAction(vmid, action)
+      return {
+        content: [
+          {
+            type: 'text',
+            text: resultText,
           },
         ],
       }
