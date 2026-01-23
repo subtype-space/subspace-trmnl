@@ -38,6 +38,8 @@ export class ProxmoxClient {
       this.dispatcher = new Agent({
         connect: {
           rejectUnauthorized: false,
+          // Skip hostname verification as well for self-signed certs
+          checkServerIdentity: () => undefined,
         },
       })
     }

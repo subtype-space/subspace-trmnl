@@ -6,6 +6,8 @@ const apiUrl = process.env.PROXMOX_API_URL ?? ''
 const apiToken = process.env.PROXMOX_API_TOKEN ?? ''
 const skipTlsVerify = process.env.PROXMOX_SKIP_TLS_VERIFY === 'true'
 
+logger.info(`[Proxmox] Config: url=${apiUrl ? 'set' : 'unset'}, token=${apiToken ? 'set' : 'unset'}, skipTls=${skipTlsVerify}`)
+
 let client: ProxmoxClient | null = null
 
 function getClient(): ProxmoxClient {
