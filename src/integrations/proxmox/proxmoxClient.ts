@@ -9,12 +9,14 @@ import type {
   ProxmoxTaskResponse,
 } from '../../types/proxmox/types.js'
 import { logger } from '../../utils/logger.js'
+import { Agent } from 'undici'
 
 export class ProxmoxClient {
   private readonly apiUrl: string
   private readonly apiToken: string
+  private readonly dispatcher: Agent | undefined
 
-  constructor(opts: { apiUrl: string; apiToken: string }) {
+  constructor(opts: { apiUrl: string; apiToken: string; skipTlsVerify?: boolean }) {
     if (!opts.apiUrl) {
       logger.error('Missing PROXMOX_API_URL')
       throw new Error('Proxmox apiUrl is required')
@@ -27,6 +29,15 @@ export class ProxmoxClient {
     // Strip trailing slash if present
     this.apiUrl = opts.apiUrl.replace(/\/+$/, '')
     this.apiToken = opts.apiToken
+
+    if (opts.skipTlsVerify) {
+      logger.warn('[Proxmox] TLS verification disabled - use only for self-signed certs')
+      this.dispatcher = new Agent({
+        connect: {
+          rejectUnauthorized: false,
+        },
+      })
+    }
   }
 
   private async request<T>(method: 'GET' | 'POST', path: string): Promise<T> {
@@ -38,6 +49,8 @@ export class ProxmoxClient {
       headers: {
         Authorization: `PVEAPIToken=${this.apiToken}`,
       },
+      // @ts-expect-error dispatcher is a valid option in Node.js fetch
+      dispatcher: this.dispatcher,
     })
 
     if (!res.ok) {

@@ -82,6 +82,7 @@ Optional:
 - `TRMNL_DB_PATH` - SQLite database path
 - `PROXMOX_API_URL` - Proxmox VE API URL
 - `PROXMOX_API_TOKEN` - Proxmox API token (format: `USER@REALM!TOKENID=UUID`)
+- `PROXMOX_SKIP_TLS_VERIFY` - Set to `true` for self-signed certs
 
 ## Release strategy
 

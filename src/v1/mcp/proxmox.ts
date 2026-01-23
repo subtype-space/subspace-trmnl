@@ -4,12 +4,13 @@ import type { ProxmoxVMAction } from '../../types/proxmox/types.js'
 
 const apiUrl = process.env.PROXMOX_API_URL ?? ''
 const apiToken = process.env.PROXMOX_API_TOKEN ?? ''
+const skipTlsVerify = process.env.PROXMOX_SKIP_TLS_VERIFY === 'true'
 
 let client: ProxmoxClient | null = null
 
 function getClient(): ProxmoxClient {
   if (!client) {
-    client = new ProxmoxClient({ apiUrl, apiToken })
+    client = new ProxmoxClient({ apiUrl, apiToken, skipTlsVerify })
   }
   return client
 }

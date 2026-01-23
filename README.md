@@ -36,4 +36,5 @@ npm run build && npm run start
 | WMATA_PRIMARY_KEY | The API key to use for obtaining WMATA status. |
 | PROXMOX_API_URL | (Optional) The Proxmox VE API URL (e.g. https://proxmox.example.com:8006) |
 | PROXMOX_API_TOKEN | (Optional) Proxmox API token in format USER@REALM!TOKENID=UUID |
+| PROXMOX_SKIP_TLS_VERIFY | (Optional) Set to 'true' to skip TLS verification for self-signed certs |
 | TZ | (Optional) Lets the container/logger format log messages with the machine's local time zone. |
