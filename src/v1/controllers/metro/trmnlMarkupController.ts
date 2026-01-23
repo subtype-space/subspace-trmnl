@@ -86,8 +86,12 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   if (hasEmergency) {
     status = crass ? "YOU'RE SO F***ED." : "YOU'RE SO SCREWED."
     subtitle = 'Emergency on the line'
+  } else if (totalIncidents >= 5) {
+    // If there are 5 or more alerts on the system as a whole, you're probably screwed
+    status = crass ? 'SO F***ED' : 'SO SCREWED'
+    subtitle = 'Delays may impact transfers'
   } else if (totalIncidents >= 4) {
-    // If there are 4 or more alerts on the system as a whole, just upgrade to maybe
+    // If there are 4 alerts on the system as a whole, upgrade to maybe
     status = 'EH. MAYBE.'
     subtitle = 'Delays may impact transfers'
   } else {
