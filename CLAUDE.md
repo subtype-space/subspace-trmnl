@@ -37,7 +37,7 @@ The server (`src/server.ts`) runs both:
 ### Directory Structure
 - `src/v1/` - Versioned API (routers, controllers, MCP tool implementations)
 - `src/auth/` - OAuth/authentication (oauth.ts for MCP bearer auth, trmnlAuth.ts for TRMNL plugin auth)
-- `src/integrations/` - External API clients (WMATA metro)
+- `src/integrations/` - External API clients (WMATA metro, Proxmox)
 - `src/types/` - TypeScript type definitions
 - `src/utils/` - Shared utilities (logger, database, rate limiter)
 
@@ -53,6 +53,10 @@ Tools are registered in `src/v1/mcp/registerTools.ts`:
 - `get-stock` - Stock quotes via yahoo-finance2
 - `get-wmata-incidents` - DC Metro rail incidents
 - `get-wmata-station-info` - Metro station arrival predictions
+- `get-proxmox-nodes` - Proxmox cluster node status
+- `get-proxmox-vms` - List VMs/containers across cluster
+- `get-proxmox-vm-status` - Detailed VM/container status by VMID
+- `proxmox-vm-action` - VM actions (skeleton, not fully implemented)
 
 ### Database
 Uses better-sqlite3 for local persistence (SQLite). Database initialization and queries are in `src/utils/dbConnector.ts`. The DB path defaults to `./trmnl.sqlite` or can be set via `TRMNL_DB_PATH` env var.
@@ -76,3 +80,10 @@ Optional:
 - `PORT` - Server port (default: 9595)
 - `LOG_LEVEL` - Logging level (default: info)
 - `TRMNL_DB_PATH` - SQLite database path
+- `PROXMOX_API_URL` - Proxmox VE API URL
+- `PROXMOX_API_TOKEN` - Proxmox API token (format: `USER@REALM!TOKENID=UUID`)
+
+## Release strategy
+
+If on the dev branch, do not create tags or push tags to this branch. Tags should ideally only be created on the v1 branch.
+If creating a new release, be sure to ask the user if they wish to create one. This should happen after a merge request is done in GitHub. If creating a new release, grab the latest tag and incriment it (e.g. 1.5.5 -> 1.5.6), unless user specifies otherwise.
