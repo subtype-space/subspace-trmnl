@@ -9,7 +9,10 @@ import type {
   ProxmoxTaskResponse,
 } from '../../types/proxmox/types.js'
 import { logger } from '../../utils/logger.js'
-import { Agent } from 'undici'
+// Using undici instead of native fetch because native fetch doesn't support
+// skipping TLS verification per-request. undici's Agent allows us to set
+// rejectUnauthorized: false for self-signed certs without affecting the whole process.
+import { Agent, fetch as undiciFetch } from 'undici'
 
 export class ProxmoxClient {
   private readonly apiUrl: string
@@ -44,12 +47,11 @@ export class ProxmoxClient {
     const url = `${this.apiUrl}${path}`
     logger.debug(`[Proxmox] ${method} ${url}`)
 
-    const res = await fetch(url, {
+    const res = await undiciFetch(url, {
       method,
       headers: {
         Authorization: `PVEAPIToken=${this.apiToken}`,
       },
-      // @ts-expect-error dispatcher is a valid option in Node.js fetch
       dispatcher: this.dispatcher,
     })
 
