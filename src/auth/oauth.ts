@@ -181,7 +181,32 @@ async function verifyToken(token: string) {
   }
 }
 
-// Auth context for passing auth info to MCP tool handlers via AsyncLocalStorage
+/**
+ * AsyncLocalStorage-based auth context for MCP tool handlers
+ *
+ * Problem: MCP tool handlers don't have access to the Express request object,
+ * so we can't directly access req.authInfo from inside a tool handler.
+ *
+ * The call chain looks like:
+ *   Express Request (has authInfo after middleware)
+ *     → MCP Transport (handleRequest)
+ *       → MCP Server (internal routing)
+ *         → Tool Handler (needs authInfo but can't access Express req!)
+ *
+ * Solution: AsyncLocalStorage provides "context" that flows through async calls
+ * without explicitly passing it as a parameter. It's like thread-local storage
+ * in other languages - each concurrent request gets its own isolated context.
+ *
+ * Usage:
+ *   1. In server.ts, wrap MCP handler: runWithAuth(authInfo, async () => { ... })
+ *   2. In tool handlers, call: requireScope('proxmox:read') or getAuthInfo()
+ *
+ * Without this, we'd have to either:
+ *   - Pass authInfo through every function (invasive, ugly)
+ *   - Use a global variable (breaks with concurrent requests)
+ *   - Monkey-patch the MCP SDK (fragile)
+ */
+
 export type AuthInfo = {
   token: string
   clientId: string
@@ -196,14 +221,26 @@ export type AuthInfo = {
 
 const authStorage = new AsyncLocalStorage<AuthInfo>()
 
+/**
+ * Wraps a function with auth context. Any code inside fn() can call
+ * getAuthInfo() or requireScope() to access the auth info.
+ */
 export function runWithAuth<T>(authInfo: AuthInfo, fn: () => T): T {
   return authStorage.run(authInfo, fn)
 }
 
+/**
+ * Retrieves the current auth context. Returns undefined if called
+ * outside of a runWithAuth() wrapper.
+ */
 export function getAuthInfo(): AuthInfo | undefined {
   return authStorage.getStore()
 }
 
+/**
+ * Throws an error if the current user doesn't have the required scope.
+ * Call this at the start of any tool handler that needs authorization.
+ */
 export function requireScope(scope: string): void {
   const auth = getAuthInfo()
   if (!auth) {
@@ -217,6 +254,10 @@ export function requireScope(scope: string): void {
   logger.debug(`[AUTH] Scope '${scope}' verified for ${auth.extra?.preferred_username ?? auth.clientId}`)
 }
 
+/**
+ * Returns true if the current user has the specified scope.
+ * Useful for conditional logic rather than hard failures.
+ */
 export function hasScope(scope: string): boolean {
   const auth = getAuthInfo()
   return auth?.scopes.includes(scope) ?? false

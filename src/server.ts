@@ -84,7 +84,10 @@ server.all(
   safe(async (req: Request, res: Response) => {
     const authInfo = (req as any).authInfo as AuthInfo | undefined
     if (authInfo) {
-      // Run MCP handler with auth context so tools can check scopes
+      // Wrap MCP handler with auth context using AsyncLocalStorage.
+      // This makes authInfo available to tool handlers via getAuthInfo()/requireScope()
+      // without having to pass it through the MCP SDK's internal call chain.
+      // See oauth.ts for detailed explanation of why this is needed.
       await runWithAuth(authInfo, async () => {
         await mcpTransport.handleRequest(req, res, req.body)
       })
