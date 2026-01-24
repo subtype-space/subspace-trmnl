@@ -82,8 +82,11 @@ function extractRoles(payload: jose.JWTPayload): string[] {
   if (resourceAccess) {
     for (const [clientId, access] of Object.entries(resourceAccess)) {
       if (access.roles) {
-        // Prefix with client ID to avoid collisions
-        roles.push(...access.roles.map((r) => `${clientId}:${r}`))
+        for (const role of access.roles) {
+          // Add both raw role and prefixed version for flexible matching
+          roles.push(role)
+          roles.push(`${clientId}:${role}`)
+        }
       }
     }
   }
