@@ -11,6 +11,7 @@
  *
  * OAuth hard.
  */
+import { AsyncLocalStorage } from 'async_hooks'
 import { RequestHandler, Request, Response, NextFunction } from 'express'
 import { getOAuthEnv } from '../utils/oauthEnv.js'
 import { createOAuthURLs } from '../utils/generateOAuthURL.js'
@@ -178,4 +179,45 @@ async function verifyToken(token: string) {
       preferred_username: data.preferred_username,
     },
   }
+}
+
+// Auth context for passing auth info to MCP tool handlers via AsyncLocalStorage
+export type AuthInfo = {
+  token: string
+  clientId: string
+  scopes: string[]
+  expiresAt: number
+  extra?: {
+    sub?: string
+    azp?: string
+    preferred_username?: string
+  }
+}
+
+const authStorage = new AsyncLocalStorage<AuthInfo>()
+
+export function runWithAuth<T>(authInfo: AuthInfo, fn: () => T): T {
+  return authStorage.run(authInfo, fn)
+}
+
+export function getAuthInfo(): AuthInfo | undefined {
+  return authStorage.getStore()
+}
+
+export function requireScope(scope: string): void {
+  const auth = getAuthInfo()
+  if (!auth) {
+    logger.warn(`[AUTH] No auth context available, denying access for scope: ${scope}`)
+    throw new Error('Unauthorized: No auth context')
+  }
+  if (!auth.scopes.includes(scope)) {
+    logger.warn(`[AUTH] User ${auth.extra?.preferred_username ?? auth.clientId} missing scope: ${scope}`)
+    throw new Error(`Forbidden: Missing required scope '${scope}'`)
+  }
+  logger.debug(`[AUTH] Scope '${scope}' verified for ${auth.extra?.preferred_username ?? auth.clientId}`)
+}
+
+export function hasScope(scope: string): boolean {
+  const auth = getAuthInfo()
+  return auth?.scopes.includes(scope) ?? false
 }

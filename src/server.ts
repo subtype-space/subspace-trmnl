@@ -16,6 +16,7 @@ import { registerTools } from './v1/mcp/registerTools.js'
 
 import { logAuthedIdentity, logIncomingAuth } from './utils/authLogger.js'
 import { rateLimiter } from './utils/rateLimiter.js'
+import { runWithAuth, AuthInfo } from './auth/oauth.js'
 
 logger.info('Initializing stateless MCP server...')
 const mcpServer = new McpServer(
@@ -81,7 +82,15 @@ server.all(
   rateLimiter,
   logAuthedIdentity,
   safe(async (req: Request, res: Response) => {
-    await mcpTransport.handleRequest(req, res, req.body)
+    const authInfo = (req as any).authInfo as AuthInfo | undefined
+    if (authInfo) {
+      // Run MCP handler with auth context so tools can check scopes
+      await runWithAuth(authInfo, async () => {
+        await mcpTransport.handleRequest(req, res, req.body)
+      })
+    } else {
+      await mcpTransport.handleRequest(req, res, req.body)
+    }
   })
 )
 
