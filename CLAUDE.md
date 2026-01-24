@@ -88,3 +88,7 @@ Optional:
 
 If on the dev branch, do not create tags or push tags to this branch. Tags should ideally only be created on the v1 branch.
 If creating a new release, be sure to ask the user if they wish to create one. This should happen after a merge request is done in GitHub. If creating a new release, grab the latest tag and incriment it (e.g. 1.5.5 -> 1.5.6), unless user specifies otherwise.
+
+Major version bump example: 1.5.5 -> 2.0.0 | 2.5.3 -> 3.0.0
+Minor version bump example: 1.5.5 -> 1.6.0 | 2.9.3 -> 2.10.0
+Patch version bump example: 1.5.5 -> 1.5.6 | 1.9.9 -> 1.9.10
