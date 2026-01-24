@@ -53,7 +53,9 @@ export const oauthMetadataRouter = mcpAuthMetadataRouter({
 async function getJWKS(): Promise<jose.JWTVerifyGetKey> {
   if (!jwks) {
     // Derive JWKS URL from the OAuth issuer
-    const jwksUrl = new URL('/protocol/openid-connect/certs', oauthURLs.issuer)
+    // Ensure issuer ends with / for proper URL concatenation
+    const issuer = oauthURLs.issuer.endsWith('/') ? oauthURLs.issuer : `${oauthURLs.issuer}/`
+    const jwksUrl = new URL('protocol/openid-connect/certs', issuer)
     logger.info(`[AUTH] Fetching JWKS from ${jwksUrl}`)
     jwks = jose.createRemoteJWKSet(jwksUrl)
   }
