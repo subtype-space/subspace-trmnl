@@ -1,12 +1,12 @@
 import { ProxmoxClient } from '../../integrations/proxmox/proxmoxClient.js'
 import { logger } from '../../utils/logger.js'
 import type { ProxmoxVMAction } from '../../types/proxmox/types.js'
-import { requireScope } from '../../auth/oauth.js'
+import { requireRole } from '../../auth/oauth.js'
 
-// Scope required to use Proxmox read tools (nodes, VMs, status)
-const PROXMOX_READ_SCOPE = 'proxmox:read'
-// Scope required to use Proxmox write tools (vm actions)
-const PROXMOX_ADMIN_SCOPE = 'proxmox:admin'
+// Role required to use Proxmox read tools (nodes, VMs, status)
+const PROXMOX_READ_ROLE = 'proxmox:read'
+// Role required to use Proxmox write tools (vm actions)
+const PROXMOX_ADMIN_ROLE = 'proxmox:admin'
 
 const apiUrl = process.env.PROXMOX_API_URL ?? ''
 const apiToken = process.env.PROXMOX_API_TOKEN ?? ''
@@ -42,7 +42,7 @@ function formatUptime(seconds: number): string {
 
 export async function getNodes(): Promise<string> {
   logger.info('[MCP] proxmox.ts - getting nodes')
-  requireScope(PROXMOX_READ_SCOPE)
+  requireRole(PROXMOX_READ_ROLE)
 
   try {
     const nodes = await getClient().getNodes()
@@ -75,7 +75,7 @@ export async function getNodes(): Promise<string> {
 
 export async function getVMs(nodeFilter?: string): Promise<string> {
   logger.info('[MCP] proxmox.ts - getting VMs', { nodeFilter })
-  requireScope(PROXMOX_READ_SCOPE)
+  requireRole(PROXMOX_READ_ROLE)
 
   try {
     let vms
@@ -116,7 +116,7 @@ export async function getVMs(nodeFilter?: string): Promise<string> {
 
 export async function getVMStatus(vmid: number): Promise<string> {
   logger.info('[MCP] proxmox.ts - getting VM status', { vmid })
-  requireScope(PROXMOX_READ_SCOPE)
+  requireRole(PROXMOX_READ_ROLE)
 
   try {
     // First find the VM to get its node and type
@@ -160,7 +160,7 @@ export async function getVMStatus(vmid: number): Promise<string> {
 
 export async function vmAction(vmid: number, action: ProxmoxVMAction): Promise<string> {
   logger.info('[MCP] proxmox.ts - VM action requested', { vmid, action })
-  requireScope(PROXMOX_ADMIN_SCOPE)
+  requireRole(PROXMOX_ADMIN_ROLE)
 
   try {
     // First find the VM to get its node and type

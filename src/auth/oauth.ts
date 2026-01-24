@@ -20,9 +20,13 @@ import { logger } from '../utils/logger.js'
 import { checkResourceAllowed } from '@modelcontextprotocol/sdk/shared/auth-utils.js'
 import { requireBearerAuth } from '@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js'
 import { getOAuthProtectedResourceMetadataUrl, mcpAuthMetadataRouter } from '@modelcontextprotocol/sdk/server/auth/router.js'
+import * as jose from 'jose'
 
 // requireBearerAuth is looking for instanceof error types, so we try to match and throw specific errors
 import { InsufficientScopeError, InvalidTokenError, ServerError } from '@modelcontextprotocol/sdk/server/auth/errors.js'
+
+// JWKS cache for user token verification (X-User-Authorization)
+let jwks: jose.JWTVerifyGetKey | null = null
 
 const { authServerUrl, realm, mcpServerUrl, clientId, clientSecret } = getOAuthEnv()
 const oauthURLs = createOAuthURLs({ authServerUrl, realm })
@@ -38,6 +42,151 @@ export const oauthMetadataRouter = mcpAuthMetadataRouter({
   scopesSupported: ['mcp:tools'],
   resourceName: 'subspace-api',
 })
+
+// ============================================================================
+// User Token Verification (X-User-Authorization header, BFF pattern)
+// ============================================================================
+
+/**
+ * Get or create JWKS key set for user token verification
+ */
+async function getJWKS(): Promise<jose.JWTVerifyGetKey> {
+  if (!jwks) {
+    // Derive JWKS URL from the OAuth issuer
+    const jwksUrl = new URL('/protocol/openid-connect/certs', oauthURLs.issuer)
+    logger.info(`[AUTH] Fetching JWKS from ${jwksUrl}`)
+    jwks = jose.createRemoteJWKSet(jwksUrl)
+  }
+  return jwks
+}
+
+/**
+ * Extract roles from Keycloak token
+ * Keycloak puts roles in:
+ * - realm_access.roles (realm roles)
+ * - resource_access.{client_id}.roles (client roles)
+ */
+function extractRoles(payload: jose.JWTPayload): string[] {
+  const roles: string[] = []
+
+  // Realm roles
+  const realmAccess = payload.realm_access as { roles?: string[] } | undefined
+  if (realmAccess?.roles) {
+    roles.push(...realmAccess.roles)
+  }
+
+  // Client roles (from all clients)
+  const resourceAccess = payload.resource_access as Record<string, { roles?: string[] }> | undefined
+  if (resourceAccess) {
+    for (const [clientId, access] of Object.entries(resourceAccess)) {
+      if (access.roles) {
+        // Prefix with client ID to avoid collisions
+        roles.push(...access.roles.map((r) => `${clientId}:${r}`))
+      }
+    }
+  }
+
+  return roles
+}
+
+/**
+ * Verify a user access token (from X-User-Authorization header) using JWKS
+ * Returns user info with roles, or null if invalid
+ */
+async function verifyUserToken(token: string): Promise<UserInfo | null> {
+  try {
+    const keySet = await getJWKS()
+
+    const { payload } = await jose.jwtVerify(token, keySet, {
+      issuer: oauthURLs.issuer,
+      // User tokens from Keycloak typically have 'account' as audience
+      // but we don't strictly require a specific audience for user tokens
+      // since they're issued by our trusted Keycloak realm (verified by issuer + signature)
+    })
+
+    // Validate token has required claims
+    if (!payload.sub) {
+      logger.warn('[AUTH] User token missing sub claim')
+      return null
+    }
+
+    if (!payload.exp || payload.exp < Math.floor(Date.now() / 1000)) {
+      logger.warn('[AUTH] User token expired or missing exp claim')
+      return null
+    }
+
+    const roles = extractRoles(payload)
+
+    const user: UserInfo = {
+      sub: payload.sub || '',
+      name: payload.name as string | undefined,
+      email: payload.email as string | undefined,
+      preferredUsername: payload.preferred_username as string | undefined,
+      roles,
+      token,
+    }
+
+    logger.info(`[AUTH] Verified user token: ${user.preferredUsername || user.sub} with roles: [${roles.join(', ') || 'none'}]`)
+    return user
+  } catch (error) {
+    if (error instanceof jose.errors.JWTExpired) {
+      logger.warn('[AUTH] User token expired')
+    } else if (error instanceof jose.errors.JWTClaimValidationFailed) {
+      logger.warn('[AUTH] User token validation failed:', (error as Error).message)
+    } else if (error instanceof jose.errors.JWSSignatureVerificationFailed) {
+      logger.warn('[AUTH] User token signature invalid')
+    } else {
+      logger.error('[AUTH] User token verification error:', error)
+    }
+    return null
+  }
+}
+
+/**
+ * Middleware to handle X-User-Authorization header for BFF pattern (defense-in-depth)
+ *
+ * This runs AFTER authMiddleware and adds user info to the existing authInfo.
+ * The BFF sends the user's access token in this header so we can verify
+ * the user's identity and roles server-side, even though BFF also filters tools.
+ */
+export const userAuthMiddleware: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+  const authInfo = (req as any).authInfo as AuthInfo | undefined
+  if (!authInfo) {
+    // No service auth - skip user auth
+    return next()
+  }
+
+  const userAuthHeader = req.headers['x-user-authorization']
+  if (!userAuthHeader || typeof userAuthHeader !== 'string') {
+    // No user token provided - continue without user context
+    // This is fine for service-to-service calls that don't have a user context
+    logger.debug('[AUTH] No X-User-Authorization header present')
+    return next()
+  }
+
+  // Extract token from "Bearer <token>" format
+  const match = userAuthHeader.match(/^Bearer\s+(.+)$/i)
+  if (!match) {
+    logger.warn('[AUTH] Invalid X-User-Authorization format (expected "Bearer <token>")')
+    return next()
+  }
+
+  const userToken = match[1]
+  const user = await verifyUserToken(userToken)
+
+  if (user) {
+    authInfo.user = user
+    logger.info(`[AUTH] BFF user context attached: ${user.preferredUsername || user.sub}`)
+  } else {
+    logger.warn('[AUTH] X-User-Authorization token invalid, continuing without user context')
+  }
+
+  next()
+}
+
+// ============================================================================
+// Service Token Middleware (Authorization header)
+// ============================================================================
 
 // This Middleware is still technically MCP SDK based, but could be extensible
 // If wanting to protect non-mcp endpoints, gotta fix the requiredScopes stuff
@@ -207,7 +356,20 @@ async function verifyToken(token: string) {
  *   - Monkey-patch the MCP SDK (fragile)
  */
 
+/**
+ * User info extracted from X-User-Authorization header (BFF pattern)
+ */
+export type UserInfo = {
+  sub: string
+  name?: string
+  email?: string
+  preferredUsername?: string
+  roles: string[]
+  token: string
+}
+
 export type AuthInfo = {
+  // Service token info (from Authorization header)
   token: string
   clientId: string
   scopes: string[]
@@ -217,6 +379,8 @@ export type AuthInfo = {
     azp?: string
     preferred_username?: string
   }
+  // User info from X-User-Authorization header (BFF pattern, defense-in-depth)
+  user?: UserInfo
 }
 
 const authStorage = new AsyncLocalStorage<AuthInfo>()
@@ -261,4 +425,61 @@ export function requireScope(scope: string): void {
 export function hasScope(scope: string): boolean {
   const auth = getAuthInfo()
   return auth?.scopes.includes(scope) ?? false
+}
+
+// ============================================================================
+// Role-based Authorization (for BFF pattern, defense-in-depth)
+// ============================================================================
+
+/**
+ * Throws an error if the current user doesn't have the required role.
+ * Call this at the start of any tool handler that needs role-based authorization.
+ *
+ * In BFF pattern, roles come from the user token (X-User-Authorization),
+ * not from the service token (Authorization). Calls without a user token
+ * are denied - this enforces that protected tools can only be called via BFF.
+ */
+export function requireRole(role: string): void {
+  const auth = getAuthInfo()
+  if (!auth) {
+    logger.warn(`[AUTH] No auth context available, denying access for role: ${role}`)
+    throw new Error('Unauthorized: No auth context')
+  }
+
+  if (!auth.user) {
+    logger.warn(`[AUTH] No user context (missing X-User-Authorization), denying access for role: ${role}`)
+    throw new Error('Forbidden: User authentication required for this operation')
+  }
+
+  if (!auth.user.roles.includes(role)) {
+    logger.warn(`[AUTH] User ${auth.user.preferredUsername ?? auth.user.sub} missing role: ${role}`)
+    throw new Error(`Forbidden: Missing required role '${role}'`)
+  }
+
+  logger.debug(`[AUTH] Role '${role}' verified for ${auth.user.preferredUsername ?? auth.user.sub}`)
+}
+
+/**
+ * Returns true if the current user has the specified role.
+ * Useful for conditional logic rather than hard failures.
+ */
+export function hasRole(role: string): boolean {
+  const auth = getAuthInfo()
+  return auth?.user?.roles.includes(role) ?? false
+}
+
+/**
+ * Returns true if the current user has any of the specified roles.
+ */
+export function hasAnyRole(roles: string[]): boolean {
+  const auth = getAuthInfo()
+  if (!auth?.user) return false
+  return roles.some((role) => auth.user!.roles.includes(role))
+}
+
+/**
+ * Get the current user info (from BFF token), if available.
+ */
+export function getUserInfo(): UserInfo | undefined {
+  return getAuthInfo()?.user
 }
