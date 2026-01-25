@@ -1,10 +1,8 @@
 import { requireRole } from '../../auth/oauth.js'
 import { getDockerClient } from '../../integrations/docker/dockerClient.js'
 import { logger } from '../../utils/logger.js'
-import type { ContainerAction } from '../../types/docker/types.js'
 
 const DOCKER_READ_ROLE = 'docker:read'
-const DOCKER_ADMIN_ROLE = 'docker:admin'
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B'
@@ -233,54 +231,5 @@ export async function getContainerLogs(containerId: string, tail: number): Promi
   } catch (e) {
     logger.error('[MCP] Docker getContainerLogs error', e)
     return `Failed to get container logs: ${e instanceof Error ? e.message : String(e)}`
-  }
-}
-
-export async function containerAction(
-  containerId: string,
-  action: ContainerAction,
-  timeout?: number
-): Promise<string> {
-  requireRole(DOCKER_ADMIN_ROLE)
-
-  try {
-    const client = getDockerClient()
-
-    // Get container name before action for better messaging
-    const info = await client.inspectContainer(containerId)
-    const name = info.Name.startsWith('/') ? info.Name.slice(1) : info.Name
-
-    // Validate action based on current state
-    const currentState = info.State.Status
-    const actionValidation: Record<ContainerAction, string[]> = {
-      start: ['exited', 'created', 'dead'],
-      stop: ['running', 'paused'],
-      restart: ['running', 'paused', 'exited'],
-      pause: ['running'],
-      unpause: ['paused'],
-      kill: ['running', 'paused'],
-    }
-
-    const validStates = actionValidation[action]
-    if (!validStates.includes(currentState)) {
-      return `Cannot ${action} container **${name}**: current state is \`${currentState}\`. Valid states for ${action}: ${validStates.join(', ')}.`
-    }
-
-    await client.containerAction(containerId, action, { timeout })
-
-    const actionVerbs: Record<ContainerAction, string> = {
-      start: 'started',
-      stop: 'stopped',
-      restart: 'restarted',
-      pause: 'paused',
-      unpause: 'unpaused',
-      kill: 'killed',
-    }
-
-    logger.info(`[Docker] Container ${name} ${actionVerbs[action]}`)
-    return `Container **${name}** has been ${actionVerbs[action]} successfully.`
-  } catch (e) {
-    logger.error('[MCP] Docker containerAction error', e)
-    return `Failed to ${action} container: ${e instanceof Error ? e.message : String(e)}`
   }
 }

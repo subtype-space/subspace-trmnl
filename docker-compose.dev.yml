@@ -10,6 +10,10 @@ services:
     # This is NOT persisted between reboots!
     environment:
       TRMNL_DB_PATH: /opt/api/dev.sqlite
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    group_add: #for docker access
+      - "988" # run stat -c '%g' /var/run/docker.sock to get the GID
     networks:
       - proxy
       - api

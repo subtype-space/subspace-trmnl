@@ -3,7 +3,7 @@ import { getAlerts, getForecast } from './weather.js'
 import { getStockDetails } from './stocks.js'
 import { getIncidents, getStationInfo } from './metro.js'
 import { getNodes, getVMs, getVMStatus, vmAction, cloneVm} from './proxmox.js'
-import { listContainers, inspectContainer, getContainerStats, getContainerLogs, containerAction } from './docker.js'
+import { listContainers, inspectContainer, getContainerStats, getContainerLogs } from './docker.js'
 import { logger } from '../../utils/logger.js'
 
 
@@ -272,7 +272,7 @@ export function registerTools(mcpServer: SimpleToolRegistrar) {
 
   mcpServer.tool(
     'get-docker-container-logs',
-    'Returns recent logs from a Docker container. Useful for debugging or monitoring.',
+    'Returns recent logs from a Docker container. Useful for debugging or monitoring. IMPORTANT: Always display the full log output to the user without summarizing or truncating. Users need to see the complete logs for debugging.',
     {
       containerId: z.string().min(1).describe('Container ID or name'),
       tail: z.number().int().positive().optional().default(50).describe('Number of lines to return from the end of the logs. Default is 50.'),
@@ -285,21 +285,4 @@ export function registerTools(mcpServer: SimpleToolRegistrar) {
     }
   )
 
-  mcpServer.tool(
-    'docker-container-action',
-    'Perform an action on a Docker container (start, stop, restart, pause, unpause, kill). Requires docker:admin role.',
-    {
-      containerId: z.string().min(1).describe('Container ID or name'),
-      action: z
-        .enum(['start', 'stop', 'restart', 'pause', 'unpause', 'kill'])
-        .describe('The action to perform on the container'),
-      timeout: z.number().int().positive().optional().describe('Timeout in seconds for stop/restart operations'),
-    },
-    async ({ containerId, action, timeout }) => {
-      const text = await containerAction(containerId, action, timeout)
-      return {
-        content: [{ type: 'text', text }],
-      }
-    }
-  )
 }

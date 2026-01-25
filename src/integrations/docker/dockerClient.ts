@@ -3,7 +3,6 @@ import type {
   DockerContainer,
   DockerContainerInspect,
   DockerContainerStats,
-  ContainerAction,
 } from '../../types/docker/types.js'
 import { logger } from '../../utils/logger.js'
 
@@ -160,16 +159,6 @@ export class DockerClient {
       req.on('error', reject)
       req.end()
     })
-  }
-
-  async containerAction(id: string, action: ContainerAction, options: { timeout?: number } = {}): Promise<void> {
-    logger.info(`[Docker] Performing ${action} on container ${id}`)
-    const params = new URLSearchParams()
-    if (options.timeout !== undefined) {
-      params.set('t', String(options.timeout))
-    }
-    const query = params.toString() ? `?${params.toString()}` : ''
-    await this.request<void>('POST', `/containers/${encodeURIComponent(id)}/${action}${query}`)
   }
 
   async ping(): Promise<boolean> {
