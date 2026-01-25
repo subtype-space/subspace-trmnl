@@ -204,3 +204,82 @@ export async function cloneVm(node: string, vmid: number, newid: number, name?: 
     return `Failed to create VM on node ${node}`
   }
 }
+
+export async function getVMConfig(vmid: number): Promise<string> {
+  logger.info('[MCP] proxmox.ts - getting VM config', { vmid })
+  requireRole(PROXMOX_READ_ROLE)
+
+  try {
+    // First find the VM to get its node and type
+    const allVMs = await getClient().getAllVMs()
+    const vm = allVMs.find((v) => v.vmid === vmid)
+
+    if (!vm) {
+      return `VM with ID ${vmid} not found.`
+    }
+
+    const config = await getClient().getVMConfig(vm.node, vmid, vm.type)
+
+    // Return as JSON for diff service to parse
+    return JSON.stringify({
+      vmid,
+      name: config.name ?? vm.name,
+      cores: config.cores ?? 1,
+      memory: config.memory ?? 512,
+      type: vm.type,
+      node: vm.node,
+    })
+  } catch (e) {
+    logger.error('[MCP] Failed to get Proxmox VM config', e)
+    return `Failed to retrieve VM config: ${e instanceof Error ? e.message : String(e)}`
+  }
+}
+
+export async function updateVMConfig(
+  vmid: number,
+  config: { cores?: number; memory?: number }
+): Promise<string> {
+  logger.info('[MCP] proxmox.ts - updating VM config', { vmid, config })
+  requireRole(PROXMOX_ADMIN_ROLE)
+
+  try {
+    // Validate inputs
+    if (config.cores !== undefined && (config.cores < 1 || config.cores > 6)) {
+      return `Invalid core count: ${config.cores}. Must be between 1 and 6.`
+    }
+    if (config.memory !== undefined && (config.memory < 16 || config.memory > 32768)) {
+      return `Invalid memory size: ${config.memory}MB. Must be between 16MB and 32GB. For larger allocations, use the Proxmox web interface.`
+    }
+
+    // First find the VM to get its node and type
+    const allVMs = await getClient().getAllVMs()
+    const vm = allVMs.find((v) => v.vmid === vmid)
+
+    if (!vm) {
+      return `VM with ID ${vmid} not found.`
+    }
+
+    // Check if VM is running - warn user that changes may require restart
+    const requiresRestart = vm.status === 'running'
+
+    await getClient().updateVMConfig(vm.node, vmid, vm.type, config)
+
+    const changes: string[] = []
+    if (config.cores !== undefined) {
+      changes.push(`cores: ${config.cores}`)
+    }
+    if (config.memory !== undefined) {
+      changes.push(`memory: ${config.memory}MB`)
+    }
+
+    let message = `VM ${vmid} configuration updated: ${changes.join(', ')}.`
+    if (requiresRestart) {
+      message += ' Note: VM is running. Some changes may require a restart to take effect.'
+    }
+
+    return message
+  } catch (e) {
+    logger.error('[MCP] Failed to update Proxmox VM config', e)
+    return `Failed to update VM config: ${e instanceof Error ? e.message : String(e)}`
+  }
+}

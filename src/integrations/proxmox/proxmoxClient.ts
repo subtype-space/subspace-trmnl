@@ -47,16 +47,16 @@ export class ProxmoxClient {
 
   // this is vibe coded no idea wtf
   private async request<T>(
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'PUT',
     path: string,
     data?: Record<string, string | number | boolean | undefined | null>
   ): Promise<T> {
     const url = `${this.apiUrl}${path}`
     logger.debug(`[Proxmox] ${method} ${url}`)
 
-    // Proxmox generally expects x-www-form-urlencoded for POST params
+    // Proxmox generally expects x-www-form-urlencoded for POST/PUT params
     const body =
-      method === 'POST' && data
+      (method === 'POST' || method === 'PUT') && data
         ? new URLSearchParams(
             Object.entries(data)
               .filter(([, v]) => v !== undefined && v !== null)
@@ -142,5 +142,47 @@ export class ProxmoxClient {
       ...(name ? { name } : {}),
       full: 1, // optional: 1 = full clone, 0 = linked clone
     })
+  }
+
+  async getVMConfig(node: string, vmid: number, type: 'qemu' | 'lxc'): Promise<Record<string, unknown>> {
+    const response = await this.request<{ data: Record<string, unknown> }>(
+      'GET',
+      `/api2/json/nodes/${encodeURIComponent(node)}/${type}/${vmid}/config`
+    )
+    return response.data
+  }
+
+  async updateVMConfig(
+    node: string,
+    vmid: number,
+    type: 'qemu' | 'lxc',
+    config: { cores?: number; memory?: number }
+  ): Promise<string | null> {
+    logger.info(`[Proxmox] updateVMConfig: ${type}/${vmid} on ${node}`, config)
+
+    // Build the config params - Proxmox uses different param names for QEMU vs LXC
+    const params: Record<string, number> = {}
+
+    if (config.cores !== undefined) {
+      params.cores = config.cores
+    }
+
+    if (config.memory !== undefined) {
+      // Memory is in MB for both QEMU and LXC
+      params.memory = config.memory
+    }
+
+    if (Object.keys(params).length === 0) {
+      return null // Nothing to update
+    }
+
+    const response = await this.request<ProxmoxTaskResponse | null>(
+      'PUT',
+      `/api2/json/nodes/${encodeURIComponent(node)}/${type}/${vmid}/config`,
+      params
+    )
+
+    // PUT to config returns null/empty on success (no task for simple config changes)
+    return response?.data ?? null
   }
 }
