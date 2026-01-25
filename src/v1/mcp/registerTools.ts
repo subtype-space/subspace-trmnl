@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { getAlerts, getForecast } from './weather.js'
 import { getStockDetails } from './stocks.js'
 import { getIncidents, getStationInfo } from './metro.js'
-import { getNodes, getVMs, getVMStatus, vmAction, cloneVm} from './proxmox.js'
+import { getNodes, getVMs, getVMStatus, vmAction, cloneVm, getVMConfig, updateVMConfig } from './proxmox.js'
 import { listContainers, inspectContainer, getContainerStats, getContainerLogs } from './docker.js'
 import { logger } from '../../utils/logger.js'
 
@@ -227,6 +227,36 @@ export function registerTools(mcpServer: SimpleToolRegistrar) {
     }
   )
 
+  mcpServer.tool(
+    'get-proxmox-vm-config',
+    'Returns the current configuration of a VM or LXC container (cores, memory, etc.) as JSON.',
+    {
+      vmid: z.number().int().positive().describe('The VMID of the VM or container'),
+    },
+    async ({ vmid }) => {
+      const configText = await getVMConfig(vmid)
+      return {
+        content: [{ type: 'text', text: configText }],
+      }
+    }
+  )
+
+  mcpServer.tool(
+    'proxmox-vm-config',
+    'Update the configuration of a VM or LXC container. Can modify CPU cores and memory. VM may need restart for changes to take effect.',
+    {
+      vmid: z.number().int().positive().describe('The VMID of the VM or container'),
+      cores: z.number().int().min(1).max(128).optional().describe('Number of CPU cores (1-128)'),
+      memory: z.number().int().min(16).max(32768).optional().describe('Memory size in MB (16-32768, i.e. up to 32GB)'),
+    },
+    async ({ vmid, cores, memory }) => {
+      const resultText = await updateVMConfig(vmid, { cores, memory })
+      return {
+        content: [{ type: 'text', text: resultText }],
+      }
+    }
+  )
+
   // Docker tools
   mcpServer.tool(
     'get-docker-containers',
@@ -272,7 +302,7 @@ export function registerTools(mcpServer: SimpleToolRegistrar) {
 
   mcpServer.tool(
     'get-docker-container-logs',
-    'Returns recent logs from a Docker container. Useful for debugging or monitoring. IMPORTANT: Always display the full log output to the user without summarizing or truncating. Users need to see the complete logs for debugging.',
+    'Returns recent logs from a Docker container. Useful for debugging or monitoring. IMPORTANT: Always display the full log output to the user without summarizing or truncating. Use a code block with ```. Users need to see the complete logs for debugging.',
     {
       containerId: z.string().min(1).describe('Container ID or name'),
       tail: z.number().int().positive().optional().default(50).describe('Number of lines to return from the end of the logs. Default is 50.'),
