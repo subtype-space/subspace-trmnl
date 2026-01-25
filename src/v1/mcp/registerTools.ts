@@ -3,6 +3,7 @@ import { getAlerts, getForecast } from './weather.js'
 import { getStockDetails } from './stocks.js'
 import { getIncidents, getStationInfo } from './metro.js'
 import { getNodes, getVMs, getVMStatus, vmAction, cloneVm} from './proxmox.js'
+import { listContainers, inspectContainer, getContainerStats, getContainerLogs, containerAction } from './docker.js'
 import { logger } from '../../utils/logger.js'
 
 
@@ -222,6 +223,82 @@ export function registerTools(mcpServer: SimpleToolRegistrar) {
             text: resultText
           }
         ]
+      }
+    }
+  )
+
+  // Docker tools
+  mcpServer.tool(
+    'get-docker-containers',
+    'Returns a list of Docker containers with their status, ports, and resource info. By default shows all containers including stopped ones.',
+    {
+      showAll: z.boolean().optional().default(true).describe('If true, shows all containers including stopped ones. Default is true.'),
+    },
+    async ({ showAll }) => {
+      const text = await listContainers(showAll ?? true)
+      return {
+        content: [{ type: 'text', text }],
+      }
+    }
+  )
+
+  mcpServer.tool(
+    'get-docker-container-details',
+    'Returns detailed information about a specific Docker container including state, network settings, mounts, and health checks.',
+    {
+      containerId: z.string().min(1).describe('Container ID or name'),
+    },
+    async ({ containerId }) => {
+      const text = await inspectContainer(containerId)
+      return {
+        content: [{ type: 'text', text }],
+      }
+    }
+  )
+
+  mcpServer.tool(
+    'get-docker-container-stats',
+    'Returns live resource usage statistics for a running Docker container (CPU, memory, network I/O).',
+    {
+      containerId: z.string().min(1).describe('Container ID or name'),
+    },
+    async ({ containerId }) => {
+      const text = await getContainerStats(containerId)
+      return {
+        content: [{ type: 'text', text }],
+      }
+    }
+  )
+
+  mcpServer.tool(
+    'get-docker-container-logs',
+    'Returns recent logs from a Docker container. Useful for debugging or monitoring.',
+    {
+      containerId: z.string().min(1).describe('Container ID or name'),
+      tail: z.number().int().positive().optional().default(50).describe('Number of lines to return from the end of the logs. Default is 50.'),
+    },
+    async ({ containerId, tail }) => {
+      const text = await getContainerLogs(containerId, tail ?? 50)
+      return {
+        content: [{ type: 'text', text }],
+      }
+    }
+  )
+
+  mcpServer.tool(
+    'docker-container-action',
+    'Perform an action on a Docker container (start, stop, restart, pause, unpause, kill). Requires docker:admin role.',
+    {
+      containerId: z.string().min(1).describe('Container ID or name'),
+      action: z
+        .enum(['start', 'stop', 'restart', 'pause', 'unpause', 'kill'])
+        .describe('The action to perform on the container'),
+      timeout: z.number().int().positive().optional().describe('Timeout in seconds for stop/restart operations'),
+    },
+    async ({ containerId, action, timeout }) => {
+      const text = await containerAction(containerId, action, timeout)
+      return {
+        content: [{ type: 'text', text }],
       }
     }
   )
