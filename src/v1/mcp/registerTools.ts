@@ -246,8 +246,8 @@ export function registerTools(mcpServer: SimpleToolRegistrar) {
     'Update the configuration of a VM or LXC container. Can modify CPU cores and memory. VM may need restart for changes to take effect.',
     {
       vmid: z.number().int().positive().describe('The VMID of the VM or container'),
-      cores: z.number().int().min(1).max(128).optional().describe('Number of CPU cores (1-128)'),
-      memory: z.number().int().min(16).max(32768).optional().describe('Memory size in MB (16-32768, i.e. up to 32GB)'),
+      cores: z.number().int().min(1).max(6).optional().describe('Number of CPU cores (1-6)'),
+      memory: z.number().int().min(16).max(32768).optional().describe('Memory size in MB (16-32768, i.e. up to 32GB). Any larger requests must be done through web interface.'),
     },
     async ({ vmid, cores, memory }) => {
       const resultText = await updateVMConfig(vmid, { cores, memory })
