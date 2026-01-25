@@ -123,8 +123,8 @@ export async function getVMs(nodeFilter?: string): Promise<string> {
   }
 }
 
-export async function getVMStatus(vmid: number): Promise<string> {
-  logger.info('[MCP] proxmox.ts - getting VM status', { vmid })
+export async function getVMStatus(vmid: number, format: 'text' | 'json' = 'text'): Promise<string> {
+  logger.info('[MCP] proxmox.ts - getting VM status', { vmid, format })
   requireRole(PROXMOX_READ_ROLE)
 
   try {
@@ -133,11 +133,29 @@ export async function getVMStatus(vmid: number): Promise<string> {
     const vm = allVMs.find((v) => v.vmid === vmid)
 
     if (!vm) {
-      return `VM with ID ${vmid} not found.`
+      return format === 'json'
+        ? JSON.stringify({ error: `VM with ID ${vmid} not found.` })
+        : `VM with ID ${vmid} not found.`
     }
 
     const status = await getClient().getVMStatus(vm.node, vmid, vm.type)
 
+    // Return JSON format for programmatic use (diffing, etc.)
+    if (format === 'json') {
+      return JSON.stringify({
+        vmid: status.vmid,
+        name: status.name,
+        status: status.status,
+        qmpstatus: status.qmpstatus,
+        node: vm.node,
+        type: vm.type,
+        cpus: status.cpus,
+        maxmem: status.maxmem,
+        maxdisk: status.maxdisk,
+      })
+    }
+
+    // Return human-readable text format (default)
     const cpuPercent = (status.cpu * 100).toFixed(1)
     const memPercent = status.maxmem > 0 ? ((status.mem / status.maxmem) * 100).toFixed(1) : '0'
 
@@ -163,7 +181,8 @@ export async function getVMStatus(vmid: number): Promise<string> {
     return lines.join('\n')
   } catch (e) {
     logger.error('[MCP] Failed to get Proxmox VM status', e)
-    return `Failed to retrieve VM status: ${e instanceof Error ? e.message : String(e)}`
+    const errorMsg = `Failed to retrieve VM status: ${e instanceof Error ? e.message : String(e)}`
+    return format === 'json' ? JSON.stringify({ error: errorMsg }) : errorMsg
   }
 }
 
@@ -221,9 +240,11 @@ export async function getVMConfig(vmid: number): Promise<string> {
     const config = await getClient().getVMConfig(vm.node, vmid, vm.type)
 
     // Return as JSON for diff service to parse
+    // Include status so we can detect if restart is needed
     return JSON.stringify({
       vmid,
       name: config.name ?? vm.name,
+      status: vm.status,
       cores: config.cores ?? 1,
       memory: config.memory ?? 512,
       type: vm.type,

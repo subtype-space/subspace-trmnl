@@ -169,9 +169,10 @@ export function registerTools(mcpServer: SimpleToolRegistrar) {
     'Returns detailed status information for a specific VM or LXC container by its VMID. Includes CPU, memory, network I/O, and disk I/O stats.',
     {
       vmid: z.number().int().positive().describe('The VMID of the VM or container to query'),
+      format: z.enum(['text', 'json']).optional().default('text').describe('Output format: "text" for human-readable, "json" for programmatic use'),
     },
-    async ({ vmid }) => {
-      const statusText = await getVMStatus(vmid)
+    async ({ vmid, format }) => {
+      const statusText = await getVMStatus(vmid, format)
       return {
         content: [
           {
