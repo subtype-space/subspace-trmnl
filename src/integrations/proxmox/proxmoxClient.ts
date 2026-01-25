@@ -45,25 +45,42 @@ export class ProxmoxClient {
     }
   }
 
-  private async request<T>(method: 'GET' | 'POST', path: string): Promise<T> {
+  // this is vibe coded no idea wtf
+  private async request<T>(
+    method: 'GET' | 'POST',
+    path: string,
+    data?: Record<string, string | number | boolean | undefined | null>
+  ): Promise<T> {
     const url = `${this.apiUrl}${path}`
     logger.debug(`[Proxmox] ${method} ${url}`)
 
-    const { statusCode, body } = await undiciRequest(url, {
+    // Proxmox generally expects x-www-form-urlencoded for POST params
+    const body =
+      method === 'POST' && data
+        ? new URLSearchParams(
+            Object.entries(data)
+              .filter(([, v]) => v !== undefined && v !== null)
+              .map(([k, v]) => [k, String(v)])
+          ).toString()
+        : undefined
+
+    const { statusCode, body: resBody } = await undiciRequest(url, {
       method,
+      body,
       headers: {
         Authorization: `PVEAPIToken=${this.apiToken}`,
+        ...(body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
       },
       dispatcher: this.dispatcher,
     })
 
     if (statusCode < 200 || statusCode >= 300) {
-      const text = await body.text()
+      const text = await resBody.text()
       logger.warn(`[Proxmox] API error: ${statusCode}`, text)
-      throw new Error(`Proxmox API Error: ${statusCode}`)
+      throw new Error(`Proxmox API Error: ${statusCode}: ${text}`)
     }
 
-    return (await body.json()) as T
+    return (await resBody.json()) as T
   }
 
   async getNodes(): Promise<ProxmoxNode[]> {
@@ -109,15 +126,21 @@ export class ProxmoxClient {
     return response.data
   }
 
-  // Skeleton for VM actions - not fully wired up
   async vmAction(node: string, vmid: number, type: 'qemu' | 'lxc', action: ProxmoxVMAction): Promise<string> {
-    logger.warn(`[Proxmox] vmAction called but not implemented: ${action} on ${type}/${vmid}`)
-    // TODO: Implement when ready
-    // const response = await this.request<ProxmoxTaskResponse>(
-    //   'POST',
-    //   `/api2/json/nodes/${encodeURIComponent(node)}/${type}/${vmid}/status/${action}`
-    // )
-    // return response.data
-    throw new Error('VM actions are not yet implemented')
+    logger.info(`[Proxmox] vmAction: ${action} on ${type}/${vmid}`)
+    const response = await this.request<ProxmoxTaskResponse>(
+      'POST',
+      `/api2/json/nodes/${encodeURIComponent(node)}/${type}/${vmid}/status/${action}`
+    )
+    return response.data
+  }
+
+  // can also be used to clone templates
+  async cloneVm(node: string, vmid: number, newid: number, name?: string) {
+    return this.request<ProxmoxTaskResponse>('POST', `/api2/json/nodes/${encodeURIComponent(node)}/qemu/${vmid}/clone`, {
+      newid,
+      ...(name ? { name } : {}),
+      full: 1, // optional: 1 = full clone, 0 = linked clone
+    })
   }
 }

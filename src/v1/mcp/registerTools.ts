@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { getAlerts, getForecast } from './weather.js'
 import { getStockDetails } from './stocks.js'
 import { getIncidents, getStationInfo } from './metro.js'
-import { getNodes, getVMs, getVMStatus, vmAction } from './proxmox.js'
+import { getNodes, getVMs, getVMStatus, vmAction, cloneVm} from './proxmox.js'
 import { logger } from '../../utils/logger.js'
 
 
@@ -200,6 +200,28 @@ export function registerTools(mcpServer: SimpleToolRegistrar) {
             text: resultText,
           },
         ],
+      }
+    }
+  )
+
+  mcpServer.tool(
+    'proxmox-vm-clone',
+    'Clone a VM by giving an existing VMID, a new VM ID, and which node to perform the operation on.',
+    {
+      vmid: z.number().int().positive().describe('The VMID of the VM to clone'),
+      newid: z.number().int().positive().describe('The new ID of the cloned VM'),
+      node: z.string().describe('The node to perform the clone on'),
+      name: z.string().optional().describe('Optional name for the cloned VM'),
+    },
+    async ({ vmid, newid, node, name }) => {
+      const resultText = await cloneVm(node, vmid, newid, name)
+      return {
+        content: [
+          {
+            type: 'text',
+            text: resultText
+          }
+        ]
       }
     }
   )

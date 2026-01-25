@@ -7,6 +7,15 @@ import { requireRole } from '../../auth/oauth.js'
 const PROXMOX_READ_ROLE = 'proxmox:read'
 // Role required to use Proxmox write tools (vm actions)
 const PROXMOX_ADMIN_ROLE = 'proxmox:admin'
+const VALID_VM_ACTIONS: ReadonlyArray<ProxmoxVMAction> = [
+  'start',
+  'stop',
+  'reboot',
+  'shutdown',
+  'suspend',
+  'resume'
+]
+const VALID_VM_ACTION_SET = new Set(VALID_VM_ACTIONS)
 
 const apiUrl = process.env.PROXMOX_API_URL ?? ''
 const apiToken = process.env.PROXMOX_API_TOKEN ?? ''
@@ -163,6 +172,10 @@ export async function vmAction(vmid: number, action: ProxmoxVMAction): Promise<s
   requireRole(PROXMOX_ADMIN_ROLE)
 
   try {
+    if (!VALID_VM_ACTION_SET.has(action)) {
+      return `Invalid action '${action}'. Valid actions: ${VALID_VM_ACTIONS.join(', ')}.`
+    }
+
     // First find the VM to get its node and type
     const allVMs = await getClient().getAllVMs()
     const vm = allVMs.find((v) => v.vmid === vmid)
@@ -171,11 +184,23 @@ export async function vmAction(vmid: number, action: ProxmoxVMAction): Promise<s
       return `VM with ID ${vmid} not found.`
     }
 
-    // This will throw since it's not implemented
-    await getClient().vmAction(vm.node, vmid, vm.type, action)
-    return `Action ${action} initiated on ${vm.type}/${vmid}`
+    const taskId = await getClient().vmAction(vm.node, vmid, vm.type, action)
+    return `Action ${action} initiated on ${vm.type}/${vmid}. Task: ${taskId}`
   } catch (e) {
-    logger.warn('[MCP] Proxmox VM action not implemented', e)
-    return `VM actions are not yet implemented. Action '${action}' was not performed on VM ${vmid}.`
+    logger.error('[MCP] Proxmox VM action failed', e)
+    return `Failed to perform action '${action}' on VM ${vmid}: ${e instanceof Error ? e.message : String(e)}`
+  }
+}
+
+export async function cloneVm(node: string, vmid: number, newid: number, name?: string): Promise <string> {
+  logger.info('[MCP] proxmox.ts - Create VM action requested - templated')
+  requireRole(PROXMOX_ADMIN_ROLE)
+
+  try {
+    const taskId = await getClient().cloneVm(node, vmid, newid, name)
+    return `Cloning in progress on ${node}. Cloning ${vmid} -> ${newid}. Clone name is ${name ?? 'unamed'}. TaskID: ${taskId}`
+  } catch (e) {
+    logger.error('[MCP] Failed to complete create VM action', e)
+    return `Failed to create VM on node ${node}`
   }
 }

@@ -63,3 +63,4 @@ export type ProxmoxVMAction = 'start' | 'stop' | 'reboot' | 'shutdown' | 'suspen
 export type ProxmoxTaskResponse = {
   data: string // UPID (task ID)
 }
+
