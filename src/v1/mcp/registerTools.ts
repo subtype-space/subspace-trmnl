@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { getAlerts, getForecast } from './weather.js'
 import { getStockDetails } from './stocks.js'
 import { getIncidents, getStationInfo } from './metro.js'
-import { getNodes, getVMs, getVMStatus, vmAction, cloneVm, getVMConfig, updateVMConfig } from './proxmox.js'
+import { getNodes, getVMs, getVMStatus, vmAction, cloneVm, getVMConfig, updateVMConfig, getTaskStatus } from './proxmox.js'
 import { listContainers, inspectContainer, getContainerStats, getContainerLogs } from './docker.js'
 import { logger } from '../../utils/logger.js'
 
@@ -254,6 +254,20 @@ export function registerTools(mcpServer: SimpleToolRegistrar) {
       const resultText = await updateVMConfig(vmid, { cores, memory })
       return {
         content: [{ type: 'text', text: resultText }],
+      }
+    }
+  )
+
+  mcpServer.tool(
+    'get-proxmox-task-status',
+    'Check the status of a Proxmox task by its UPID. Returns whether the task is still running or has completed, along with the exit status. Use this to poll for task completion after initiating actions like reboot, clone, etc.',
+    {
+      upid: z.string().min(1).describe('The UPID (task ID) returned by a Proxmox action'),
+    },
+    async ({ upid }) => {
+      const statusText = await getTaskStatus(upid)
+      return {
+        content: [{ type: 'text', text: statusText }],
       }
     }
   )

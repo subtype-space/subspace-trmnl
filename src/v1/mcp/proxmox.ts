@@ -304,3 +304,37 @@ export async function updateVMConfig(
     return `Failed to update VM config: ${e instanceof Error ? e.message : String(e)}`
   }
 }
+
+export async function getTaskStatus(upid: string): Promise<string> {
+  logger.info('[MCP] proxmox.ts - getting task status', { upid })
+  requireRole(PROXMOX_READ_ROLE)
+
+  try {
+    const status = await getClient().getTaskStatus(upid)
+
+    if (status.status === 'running') {
+      return JSON.stringify({
+        status: 'running',
+        type: status.type,
+        node: status.node,
+        starttime: status.starttime,
+        upid: status.upid,
+      })
+    }
+
+    // Task has stopped
+    return JSON.stringify({
+      status: 'stopped',
+      exitstatus: status.exitstatus ?? 'OK',
+      type: status.type,
+      node: status.node,
+      starttime: status.starttime,
+      upid: status.upid,
+    })
+  } catch (e) {
+    logger.error('[MCP] Failed to get Proxmox task status', e)
+    return JSON.stringify({
+      error: `Failed to retrieve task status: ${e instanceof Error ? e.message : String(e)}`,
+    })
+  }
+}

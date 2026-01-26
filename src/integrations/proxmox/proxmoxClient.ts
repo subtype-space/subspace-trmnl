@@ -7,6 +7,8 @@ import type {
   ProxmoxVMStatusResponse,
   ProxmoxVMAction,
   ProxmoxTaskResponse,
+  ProxmoxTaskStatus,
+  ProxmoxTaskStatusResponse,
 } from '../../types/proxmox/types.js'
 import { logger } from '../../utils/logger.js'
 // Using undici's request() instead of fetch because native fetch doesn't support
@@ -184,5 +186,35 @@ export class ProxmoxClient {
 
     // PUT to config returns null/empty on success (no task for simple config changes)
     return response?.data ?? null
+  }
+
+  /**
+   * Parse node name from a Proxmox UPID.
+   * UPID format: UPID:{node}:{pid}:{pstart}:{starttime}:{type}:{id}:{user}:
+   */
+  private parseNodeFromUpid(upid: string): string | null {
+    const parts = upid.split(':')
+    if (parts.length >= 2 && parts[0] === 'UPID') {
+      return parts[1]
+    }
+    return null
+  }
+
+  /**
+   * Get the status of a Proxmox task by its UPID.
+   * The node is automatically extracted from the UPID.
+   */
+  async getTaskStatus(upid: string): Promise<ProxmoxTaskStatus> {
+    const node = this.parseNodeFromUpid(upid)
+    if (!node) {
+      throw new Error(`Invalid UPID format: ${upid}`)
+    }
+
+    logger.info(`[Proxmox] getTaskStatus: ${upid} on node ${node}`)
+    const response = await this.request<ProxmoxTaskStatusResponse>(
+      'GET',
+      `/api2/json/nodes/${encodeURIComponent(node)}/tasks/${encodeURIComponent(upid)}/status`
+    )
+    return response.data
   }
 }
