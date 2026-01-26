@@ -186,7 +186,7 @@ export function registerTools(mcpServer: SimpleToolRegistrar) {
 
   mcpServer.tool(
     'proxmox-vm-action',
-    'Perform an action on a VM or LXC container (start, stop, reboot, shutdown, suspend, resume). NOTE: This tool is not yet fully implemented.',
+    'Perform an action on a VM or LXC container (start, stop, reboot, shutdown, suspend, resume). Returns JSON with a upid field that can be used with get-proxmox-task-status to poll for completion.',
     {
       vmid: z.number().int().positive().describe('The VMID of the VM or container'),
       action: z

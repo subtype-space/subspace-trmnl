@@ -192,7 +192,10 @@ export async function vmAction(vmid: number, action: ProxmoxVMAction): Promise<s
 
   try {
     if (!VALID_VM_ACTION_SET.has(action)) {
-      return `Invalid action '${action}'. Valid actions: ${VALID_VM_ACTIONS.join(', ')}.`
+      return JSON.stringify({
+        success: false,
+        error: `Invalid action '${action}'. Valid actions: ${VALID_VM_ACTIONS.join(', ')}.`,
+      })
     }
 
     // First find the VM to get its node and type
@@ -200,14 +203,29 @@ export async function vmAction(vmid: number, action: ProxmoxVMAction): Promise<s
     const vm = allVMs.find((v) => v.vmid === vmid)
 
     if (!vm) {
-      return `VM with ID ${vmid} not found.`
+      return JSON.stringify({
+        success: false,
+        error: `VM with ID ${vmid} not found.`,
+      })
     }
 
-    const taskId = await getClient().vmAction(vm.node, vmid, vm.type, action)
-    return `Action ${action} initiated on ${vm.type}/${vmid}. Task: ${taskId}`
+    const upid = await getClient().vmAction(vm.node, vmid, vm.type, action)
+    return JSON.stringify({
+      success: true,
+      action,
+      vmid,
+      name: vm.name,
+      type: vm.type,
+      node: vm.node,
+      upid,
+      message: `Action '${action}' initiated on ${vm.name || vm.type + '/' + vmid}. Use get-proxmox-task-status with the upid to check completion.`,
+    })
   } catch (e) {
     logger.error('[MCP] Proxmox VM action failed', e)
-    return `Failed to perform action '${action}' on VM ${vmid}: ${e instanceof Error ? e.message : String(e)}`
+    return JSON.stringify({
+      success: false,
+      error: `Failed to perform action '${action}' on VM ${vmid}: ${e instanceof Error ? e.message : String(e)}`,
+    })
   }
 }
 
