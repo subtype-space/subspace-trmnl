@@ -11,6 +11,7 @@
  *
  * OAuth hard.
  */
+import { UserInfo, AuthInfo } from '../types/oauth/types.js'
 import { AsyncLocalStorage } from 'async_hooks'
 import { RequestHandler, Request, Response, NextFunction } from 'express'
 import { getOAuthEnv } from '../utils/oauthEnv.js'
@@ -360,33 +361,6 @@ async function verifyToken(token: string) {
  *   - Use a global variable (breaks with concurrent requests)
  *   - Monkey-patch the MCP SDK (fragile)
  */
-
-/**
- * User info extracted from X-User-Authorization header (BFF pattern)
- */
-export type UserInfo = {
-  sub: string
-  name?: string
-  email?: string
-  preferredUsername?: string
-  roles: string[]
-  token: string
-}
-
-export type AuthInfo = {
-  // Service token info (from Authorization header)
-  token: string
-  clientId: string
-  scopes: string[]
-  expiresAt: number
-  extra?: {
-    sub?: string
-    azp?: string
-    preferred_username?: string
-  }
-  // User info from X-User-Authorization header (BFF pattern, defense-in-depth)
-  user?: UserInfo
-}
 
 const authStorage = new AsyncLocalStorage<AuthInfo>()
 
