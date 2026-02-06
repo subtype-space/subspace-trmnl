@@ -16,7 +16,8 @@ import { registerTools } from './v1/mcp/registerTools.js'
 
 import { logAuthedIdentity, logIncomingAuth } from './utils/authLogger.js'
 import { rateLimiter } from './utils/rateLimiter.js'
-import { runWithAuth, AuthInfo } from './auth/oauth.js'
+import { runWithAuth } from './auth/oauth.js'
+import { AuthInfo } from './types/oauth/types.js'
 
 logger.info('Initializing stateless MCP server...')
 const mcpServer = new McpServer(
