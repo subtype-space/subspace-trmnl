@@ -13,9 +13,6 @@ services:
     # Ensure ./data exists 
     volumes:
       - ./data:/opt/api/subspace-db
-      - /var/run/docker.sock:/var/run/docker.sock
-    group_add: # for docker only
-      - "988" # run stat -c '%g' /var/run/docker.sock to get the GID
     networks:
       - proxy
       - api
