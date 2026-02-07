@@ -7,6 +7,12 @@ services:
     ports:
       - 9595:9595
     env_file: .env
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:9595/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
     # For Prod, do not modify this env var unless you REALLLY need to
     environment:
       TRMNL_DB_PATH: /opt/api/subspace-db/trmnl.sqlite
