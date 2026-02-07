@@ -21,7 +21,7 @@
   "author": "subtype",
   "license": "ISC",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.25.2",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "better-sqlite3": "^12.5.0",
     "express-rate-limit": "^7.5.0",
     "express-session": "^1.18.2",
