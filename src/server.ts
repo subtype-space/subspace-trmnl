@@ -106,6 +106,7 @@ server.get('/mcp/health', async (_: Request, res: Response) => {
       status: 'unhealthy',
       reason: 'MCP server not ready',
     })
+    return
   }
   res.status(200).json({ status: 'ok' })
 })

@@ -18,21 +18,31 @@ export async function getStockDetails({ stocks }: { stocks: string[] }) {
   const stockData: StockQuoteDetailed[] = []
 
   for (const ticker of stocks) {
-    logger.debug('Attempting to search stock info on', ticker)
+    try {
+      logger.debug('Attempting to search stock info on', ticker)
 
-    const detailedQuote = await yahooFinance.search(ticker)
-    const { news } = detailedQuote
+      const detailedQuote = await yahooFinance.search(ticker)
+      const { news } = detailedQuote
 
-    const quote = await yahooFinance.quote(ticker)
-    const { regularMarketPrice, regularMarketChangePercent, shortName, symbol } = quote
+      const quote = await yahooFinance.quote(ticker)
+      const { regularMarketPrice, regularMarketChangePercent, shortName, symbol } = quote
 
-    stockData.push({
-      name: shortName ?? symbol,
-      price: regularMarketPrice ?? 'Delayed unknown stock',
-      changePercent:
-        regularMarketChangePercent != null ? Number(regularMarketChangePercent.toFixed(2)) : 'Change data unavailable',
-      newsSentiment: news.map((item) => item.title),
-    })
+      stockData.push({
+        name: shortName ?? symbol,
+        price: regularMarketPrice ?? 'Delayed unknown stock',
+        changePercent:
+          regularMarketChangePercent != null ? Number(regularMarketChangePercent.toFixed(2)) : 'Change data unavailable',
+        newsSentiment: news.map((item) => item.title),
+      })
+    } catch (e) {
+      logger.warn(`[MCP] Failed to fetch stock data for ${ticker}:`, e)
+      stockData.push({
+        name: ticker,
+        price: 'Unavailable',
+        changePercent: 'Unavailable',
+        newsSentiment: [],
+      })
+    }
   }
   return formatDetailedStockData(stockData)
 }
