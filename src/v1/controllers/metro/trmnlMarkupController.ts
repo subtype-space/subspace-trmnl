@@ -1,5 +1,6 @@
 import { RequestHandler } from 'express'
 import { logger } from '../../../utils/logger.js'
+import { config } from '../../../config.js'
 import { getSettingsByUuid } from '../../../utils/dbConnector.js'
 import { WmataClient } from '../../../integrations/wmata/wmataClient.js'
 import { MetroIncident } from '../../../types/wmata/types.js'
@@ -13,7 +14,7 @@ let inFlight: Promise<MetroIncident[]> | null = null
 
 const WMATA_TTL_MS = 10 * 60 * 1000 // 10 minute cache
 
-const client = new WmataClient({ apiKey: process.env.WMATA_PRIMARY_KEY ?? '' })
+const client = new WmataClient({ apiKey: config.wmata.apiKey })
 
 // Main logic builder
 export const trmnlMarkupController: RequestHandler = async (req, res) => {

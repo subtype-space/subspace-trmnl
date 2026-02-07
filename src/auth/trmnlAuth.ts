@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import { Request, Response, NextFunction, RequestHandler } from 'express'
 import { isKnownTokenHash, touchTrmnlToken } from '../utils/dbConnector.js'
 import { logger } from '../utils/logger.js'
+import { config } from '../config.js'
 import { getUserUuidByTokenHash } from '../utils/dbConnector.js'
 
 let cachedIPs: Set<string> | null = null
@@ -11,7 +12,7 @@ let inFlight: Promise<Set<string>> | null = null
 const TRMNL_TTL_IPS_MS = 24 * 60 * 60 * 1000 // 24hr cache
 
 // Disallow TRMNL worker IP bypass by default
-const TRMNL_IP_ALLOW_BYPASS: boolean = (process.env.TRMNL_IP_AUTH_ALLOW_PRIVATE === 'true')
+const TRMNL_IP_ALLOW_BYPASS: boolean = (config.trmnl.bypassIPCheck === 'true')
 
 const sha256 = (v: string) => crypto.createHash('sha256').update(v).digest('hex')
 

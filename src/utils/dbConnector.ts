@@ -5,10 +5,11 @@
  * also todo, stop switching back and forth on comment conventions
  */
 import Database from 'better-sqlite3'
+import { config } from '../config.js'
 import { logger } from './logger.js'
 import { mkdirSync } from 'fs'
 import { dirname } from 'path'
-const DB_PATH = process.env.TRMNL_DB_PATH || './trmnl.sqlite'
+const DB_PATH = config.trmnl.dbPath
 
 // to do - i dont like this in this file
 export type TrmnlSettings = {
@@ -56,7 +57,7 @@ export function initTrmnlDB() {
 // Everything below here is beyond me - like I know what's going on, but the syntax...
 export async function storeTrmnlToken(tokenHash: string) {
   const db = getDb()
-  logger.debug('[ DB ] Storing token')
+  logger.info('[ DB ] Storing token')
   db.prepare(
     `
     insert or ignore into trmnl_connections
@@ -126,7 +127,7 @@ export function bindUserUuidToToken(tokenHash: string, userUuid: string) {
 
 export async function revokeByUserUuid(userUuid: string) {
   const db = getDb()
-  logger.debug('[ DB ] Revoking by user UUID...')
+  logger.info('[ DB ] Revoking by user UUID...')
   db.prepare(
     `
     update trmnl_connections

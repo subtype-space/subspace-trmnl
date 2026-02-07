@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { config } from '../../../config.js'
 import { RequestHandler } from 'express'
 import { logger } from '../../../utils/logger.js'
 import { storeTrmnlToken } from '../../../utils/dbConnector.js'
@@ -39,8 +40,8 @@ const trmnlInstallController: RequestHandler = async (req, res): Promise<void> =
     },
     body: new URLSearchParams({
       code: token,
-      client_id: process.env.TRMNL_CLIENT_ID!,
-      client_secret: process.env.TRMNL_CLIENT_SECRET!,
+      client_id: config.trmnl.clientId,
+      client_secret: config.trmnl.clientSecret,
       grant_type: 'authorization_code',
     }).toString(),
   })
