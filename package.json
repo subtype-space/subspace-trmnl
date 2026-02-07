@@ -27,7 +27,6 @@
     "express-session": "^1.18.2",
     "jose": "^6.0.10",
     "keycloak-connect": "^26.1.1",
-    "node-fetch": "^3.3.2",
     "prettier": "3.5.3",
     "yahoo-finance2": "^2.13.3",
     "zod": "^3.24.2"
