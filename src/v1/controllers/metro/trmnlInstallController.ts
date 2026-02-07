@@ -25,15 +25,15 @@ const trmnlInstallController: RequestHandler = async (req, res): Promise<void> =
     return
   }
 
-  // Just in case, make sure we only permit callback urls set to usetrmnl.com domain
-  const allowedHosts = new Set(['usetrmnl.com', 'www.usetrmnl.com'])
+  // Just in case, make sure we only permit callback urls set to trmnl.com domain
+  const allowedHosts = new Set(['usetrmnl.com', 'www.usetrmnl.com', 'trmnl.com', 'www.trmnl.com'])
 
   if (!allowedHosts.has(url.hostname)) {
     res.status(400).json({ error: 'Bad Request', message: 'Invalid callback URL' })
     return
   }
 
-  const trmnlResp = await fetch('https://usetrmnl.com/oauth/token', {
+  const trmnlResp = await fetch('https://trmnl.com/oauth/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',

@@ -1,5 +1,5 @@
 import express from 'express'
-import { requireTrmnlAuth, requireTrmnlUuidMatch, trmnlAuthByIP } from '../../auth/trmnlAuth.js'
+import { requireTrmnlAuth, requireTrmnlUuidMatch, requireTrmnlJwt, trmnlAuthByIP } from '../../auth/trmnlAuth.js'
 import trmnlInstallController from '../controllers/metro/trmnlInstallController.js'
 import { trmnlMarkupController } from '../controllers/metro/trmnlMarkupController.js'
 import { trmnlInstallSuccessController } from '../controllers/metro/trmnlInstallSuccessController.js'
@@ -15,8 +15,8 @@ router.get('/metro/install', trmnlInstallController)
 router.post('/metro/install_success', requireTrmnlAuth, trmnlInstallSuccessController)
 router.post('/metro/markup', express.urlencoded({ extended: true }), requireTrmnlAuth, requireTrmnlUuidMatch, trmnlMarkupController)
 router.post('/metro/uninstall', requireTrmnlAuth, requireTrmnlUuidMatch, trmnlUninstallController)
-router.get('/metro/manage', trmnlManageGetController)
-router.post('/metro/manage', express.urlencoded({ extended: true }), trmnlManagePostController)
+router.get('/metro/manage', requireTrmnlJwt, trmnlManageGetController)
+router.post('/metro/manage', express.urlencoded({ extended: true }), requireTrmnlJwt, trmnlManagePostController)
 router.get('/metro/rail-prediction', trmnlAuthByIP, trmnlStationPrediction)
 
 export default router

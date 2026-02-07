@@ -8,6 +8,7 @@ import escapeHtml from 'escape-html'
 
 export const trmnlManageGetController: RequestHandler = async (req, res) => {
   const uuid = req.query.uuid as string | undefined
+  const jwt = req.query.jwt as string | undefined
   if (!uuid) {
     logger.warn('[TRMNL] Missing UUID in request for settings page')
     res.status(400).send('Bad Request - missing UUID')
@@ -15,6 +16,7 @@ export const trmnlManageGetController: RequestHandler = async (req, res) => {
   }
 
   const safeUuid = escapeHtml(uuid)
+  const safeJwt = jwt ? escapeHtml(jwt) : ''
 
   logger.info('[TRMNL] Displaying plugin settings page')
   const settings = await getSettingsByUuid(uuid)
@@ -32,6 +34,7 @@ export const trmnlManageGetController: RequestHandler = async (req, res) => {
 
       <form method="POST" action="/v1/trmnl/metro/manage">
         <input type="hidden" name="uuid" value="${safeUuid}"/>
+        <input type="hidden" name="jwt" value="${safeJwt}"/>
 
         <div style="margin: 12px 0;">
           <strong>Line to monitor</strong><br/>
@@ -80,7 +83,7 @@ ${['RD', 'BL', 'OR', 'SV', 'GR', 'YL']
       ${
         settings?.plugin_setting_id
           ? `<p style="margin-top:16px;">
-                <a href="https://usetrmnl.com/plugin_settings/${settings.plugin_setting_id}/edit?force_refresh=true">
+                <a href="https://trmnl.com/plugin_settings/${settings.plugin_setting_id}/edit?force_refresh=true">
                 Back to TRMNL
                 </a>
              </p>`
@@ -146,9 +149,11 @@ export const trmnlManagePostController: RequestHandler = async (req, res) => {
   const pluginSettingId = settings?.plugin_setting_id
 
   if (pluginSettingId) {
-    res.redirect(`https://usetrmnl.com/plugin_settings/${pluginSettingId}/edit?force_refresh=true`)
+    res.redirect(`https://trmnl.com/plugin_settings/${pluginSettingId}/edit?force_refresh=true`)
     return
   }
 
-  res.redirect(`/v1/trmnl/metro/manage?uuid=${encodeURIComponent(uuid)}`)
+  const jwt = req.body?.jwt
+  const jwtParam = typeof jwt === 'string' && jwt ? `&jwt=${encodeURIComponent(jwt)}` : ''
+  res.redirect(`/v1/trmnl/metro/manage?uuid=${encodeURIComponent(uuid)}${jwtParam}`)
 }

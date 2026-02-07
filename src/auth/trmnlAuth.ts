@@ -4,6 +4,7 @@ import { isKnownTokenHash, touchTrmnlToken } from '../utils/dbConnector.js'
 import { logger } from '../utils/logger.js'
 import { config } from '../config.js'
 import { getUserUuidByTokenHash } from '../utils/dbConnector.js'
+import * as jose from 'jose'
 
 let cachedIPs: Set<string> | null = null
 let cachedAtMs = 0
@@ -120,6 +121,70 @@ export const trmnlAuthByIP: RequestHandler = async (req: Request, res: Response,
   }
 }
 
+// ============================================================================
+// TRMNL JWT Verification (for plugin management pages)
+// ============================================================================
+
+const TRMNL_JWKS_URL = 'https://trmnl.com/.well-known/jwks.json'
+let trmnlJwks: jose.JWTVerifyGetKey | null = null
+
+async function getTrmnlJWKS(): Promise<jose.JWTVerifyGetKey> {
+  if (!trmnlJwks) {
+    logger.info(`[AUTH] Fetching TRMNL JWKS from ${TRMNL_JWKS_URL}`)
+    trmnlJwks = jose.createRemoteJWKSet(new URL(TRMNL_JWKS_URL))
+  }
+  return trmnlJwks
+}
+
+/**
+ * Middleware that validates the TRMNL-signed JWT on the manage endpoint.
+ * Ensures the JWT signature is valid, not expired, and that `sub` matches the UUID.
+ * Uses a 15-minute clock tolerance since the JWT has a short (~2 min) expiry
+ * but users may take longer to fill out the settings form.
+ */
+export const requireTrmnlJwt: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+  const jwt = (req.query.jwt as string) || req.body?.jwt
+  const uuid = (req.query.uuid as string) || req.body?.uuid
+
+  if (!jwt || typeof jwt !== 'string') {
+    logger.warn('[AUTH] Missing JWT in TRMNL manage request')
+    res.status(401).send('Unauthorized')
+    return
+  }
+
+  if (!uuid || typeof uuid !== 'string') {
+    logger.warn('[AUTH] Missing UUID in TRMNL manage request')
+    res.status(400).send('Bad Request - missing UUID')
+    return
+  }
+
+  try {
+    const keySet = await getTrmnlJWKS()
+    const { payload } = await jose.jwtVerify(jwt, keySet, {
+      clockTolerance: 900,
+    })
+
+    if (payload.sub !== uuid) {
+      logger.warn('[AUTH] TRMNL JWT sub does not match UUID')
+      res.status(403).send('Forbidden')
+      return
+    }
+
+    next()
+  } catch (error) {
+    if (error instanceof jose.errors.JWTExpired) {
+      logger.warn('[AUTH] TRMNL JWT expired')
+      res.status(401).send('Session expired — please reopen settings from TRMNL')
+    } else if (error instanceof jose.errors.JWSSignatureVerificationFailed) {
+      logger.warn('[AUTH] TRMNL JWT signature invalid')
+      res.status(401).send('Unauthorized')
+    } else {
+      logger.error('[AUTH] TRMNL JWT verification error:', error)
+      res.status(401).send('Unauthorized')
+    }
+  }
+}
+
 export async function getTRMNLIPs(): Promise<Set<string>> {
   const now = Date.now()
 
@@ -132,7 +197,7 @@ export async function getTRMNLIPs(): Promise<Set<string>> {
   inFlight = (async () => {
     logger.info('[AUTH] Refreshing list of TRMNL worker IPs')
 
-    const res = await fetch('https://usetrmnl.com/api/ips')
+    const res = await fetch('https://trmnl.com/api/ips')
     if (!res.ok) {
       inFlight = null
       throw new Error('Failed to fetch TRMNL IP list')
