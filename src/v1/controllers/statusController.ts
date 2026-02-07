@@ -1,7 +1,8 @@
 import { Request, Response } from 'express'
 import { logger } from '../../utils/logger.js'
+import { config } from '../../config.js'
 
-const ACTIVE_VERSION = process.env.API_VERSION || 'v1'
+const ACTIVE_VERSION = config.api.activeVersion
 
 const statusController = (request: Request, response: Response) => {
   logger.debug('Accessed /status')

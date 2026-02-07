@@ -1,4 +1,4 @@
-import './utils/env.js' // I hate how I have to do this but whatever. Stupid shim.
+import { config } from './config.js' // validate and build config object
 import { logger } from './utils/logger.js'
 import express, { Request, NextFunction, Response, RequestHandler } from 'express'
 import { initTrmnlDB } from './utils/dbConnector.js'
@@ -19,6 +19,7 @@ import { rateLimiter } from './utils/rateLimiter.js'
 import { runWithAuth } from './auth/oauth.js'
 import { AuthInfo } from './types/oauth/types.js'
 
+logger.info('Starting up subspace-api!')
 logger.info('Initializing stateless MCP server...')
 const mcpServer = new McpServer(
   {
@@ -54,8 +55,8 @@ initTrmnlDB()
 
 // Express setup
 const server = express()
-const PORT = process.env.PORT || 9595
-const ACTIVE_VERSION = process.env.API_VERSION || 'v1'
+const PORT = config.api.port
+const ACTIVE_VERSION = config.api.activeVersion
 
 // reverse proxy -- removing this will cause issues with secure cookies
 server.set('trust proxy', 1)
@@ -144,8 +145,8 @@ server.use((err: any, _req: any, res: any, _next: any) => {
 })
 
 server.listen(PORT, () => {
-  logger.info(`Using log level: ${process.env.LOG_LEVEL || 'info'}`)
-  logger.info('Using API version:', ACTIVE_VERSION)
+  logger.info('Using log level', config.api.logLevel)
+  logger.info('Using API version:', config.api.activeVersion)
   logger.debug('MCP Server debug:', mcpServer)
-  logger.info('subspace API now listening on PORT:', PORT)
+  logger.info('subspace API now listening on PORT:', config.api.port)
 })

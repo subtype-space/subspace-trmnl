@@ -14,7 +14,7 @@
 import { UserInfo, AuthInfo } from '../types/oauth/types.js'
 import { AsyncLocalStorage } from 'async_hooks'
 import { RequestHandler, Request, Response, NextFunction } from 'express'
-import { getOAuthEnv } from '../utils/oauthEnv.js'
+import { config } from '../config.js'
 import { createOAuthURLs } from '../utils/generateOAuthURL.js'
 import { OAuthMetadata } from '@modelcontextprotocol/sdk/shared/auth.js'
 import { logger } from '../utils/logger.js'
@@ -29,7 +29,7 @@ import { InsufficientScopeError, InvalidTokenError, ServerError } from '@modelco
 // JWKS cache for user token verification (X-User-Authorization)
 let jwks: jose.JWTVerifyGetKey | null = null
 
-const { authServerUrl, realm, mcpServerUrl, clientId, clientSecret } = getOAuthEnv()
+const { authServerUrl, realm, mcpServerUrl, clientId, clientSecret } = config.auth
 const oauthURLs = createOAuthURLs({ authServerUrl, realm })
 const oauthMetadata: OAuthMetadata = {
   ...oauthURLs,

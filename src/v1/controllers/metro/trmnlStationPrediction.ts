@@ -6,10 +6,11 @@
  */
 import { RequestHandler } from 'express'
 import { logger } from '../../../utils/logger.js'
+import { config } from '../../../config.js'
 import { WmataClient } from '../../../integrations/wmata/wmataClient.js'
 import { RailPrediction } from '../../../types/wmata/types.js'
 
-const client = new WmataClient({ apiKey: process.env.WMATA_PRIMARY_KEY ?? '' })
+const client = new WmataClient({ apiKey: config.wmata.apiKey })
 
 const TTL_MS = 60 * 1000
 

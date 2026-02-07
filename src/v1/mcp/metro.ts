@@ -1,8 +1,9 @@
 import { logger } from '../../utils/logger.js'
+import { config } from '../../config.js'
 import { WmataClient } from '../../integrations/wmata/wmataClient.js'
 import { formatIncidents, formatRailPredictionData } from '../../integrations/wmata/formatters.js'
 
-const client = new WmataClient({ apiKey: process.env.WMATA_PRIMARY_KEY ?? ''})
+const client = new WmataClient({ apiKey: config.wmata.apiKey })
 
 
 export async function getStationInfo({ stationCodes }: { stationCodes: string[] }) {
