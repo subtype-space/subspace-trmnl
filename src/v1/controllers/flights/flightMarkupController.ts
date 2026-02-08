@@ -256,7 +256,7 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
 
   return `
 <style>
-  .flight-card { margin: 0; padding: ${variant === 'full' ? '10px 56px' : variant === 'quadrant' ? '2px 0' : '6px 0'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; }
+  .flight-card { margin: 0; padding: ${variant === 'full' ? '12px 72px' : variant === 'half_vertical' ? '10px 36px' : variant === 'half_horizontal' ? '10px 36px' : '6px 20px'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; }
   .flight-top { display: flex; align-items: flex-start; gap: ${variant === 'quadrant' ? '12px' : '20px'}; width: 100%; }
   .flight-meta { display: flex; flex-direction: column; gap: ${variant === 'quadrant' ? '3px' : '5px'}; align-items: flex-end; text-align: right; margin-left: auto; }
   .airline-name { font-size: ${variant === 'quadrant' ? '18px' : variant === 'full' ? '30px' : '24px'}; font-weight: 700; letter-spacing: 0.2px; }
