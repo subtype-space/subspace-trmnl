@@ -277,7 +277,7 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
   .flight-status { font-size: ${variant === 'quadrant' ? '16px' : variant === 'full' ? '24px' : '20px'}; font-weight: 600; }
   .flight-route { display: flex; align-items: center; gap: 12px; width: 100%; font-size: ${variant === 'quadrant' ? '20px' : '28px'}; font-weight: 700; margin: ${variant === 'quadrant' ? '8px 0 5px' : '14px 0 8px'}; }
   .view--half_vertical .flight-top { margin-bottom: 6px; }
-  .view--half_vertical .flight-stats { margin-top: 16px; }
+  .view--half_vertical .flight-stats { margin-top: 32px; }
   .view--half_vertical .flight-route { margin: 16px 0 10px; }
   .view--half_horizontal .flight-top .flight-route { grid-column: 1 / -1; grid-row: 2; margin: 4px 0 0; font-size: 22px; }
   .view--half_horizontal .airline-name { font-size: 20px; }
