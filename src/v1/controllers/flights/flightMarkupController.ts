@@ -267,7 +267,7 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
 <style>
   .flight-card { margin: 0; padding: ${variant === 'full' ? '12px 24px' : variant === 'half_vertical' ? '10px 0' : variant === 'half_horizontal' ? '8px 0' : '6px 8px'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; }
   .flight-top { display: flex; align-items: center; gap: ${variant === 'quadrant' ? '12px' : '20px'}; width: 100%; }
-  .view--half_horizontal .flight-top { display: grid; grid-template-columns: auto auto 1fr; grid-template-rows: auto auto; align-items: center; column-gap: 16px; row-gap: 2px; }
+  .view--half_horizontal .flight-top { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; align-items: center; column-gap: 16px; row-gap: 2px; }
   .view--half_horizontal .airline-logo { grid-column: 1; grid-row: 1; align-self: center; }
   .view--half_horizontal .flight-meta { grid-column: 3; grid-row: 1; }
   .flight-meta { display: flex; flex-direction: column; gap: ${variant === 'quadrant' ? '3px' : '5px'}; align-items: flex-end; text-align: right; margin-left: auto; }
@@ -278,10 +278,12 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
   .flight-route { display: flex; align-items: center; gap: 12px; width: 100%; font-size: ${variant === 'quadrant' ? '20px' : '28px'}; font-weight: 700; margin: ${variant === 'quadrant' ? '8px 0 5px' : '14px 0 8px'}; }
   .view--half_vertical .flight-card { display: flex; flex-direction: column; height: 100%; }
   .view--half_vertical .flight-top { margin-bottom: 4px; }
-  .view--half_vertical .flight-stats { margin-top: 4px; font-size: 14px; gap: 10px; }
+  .view--half_vertical .flight-stats { margin-top: 4px; font-size: 14px; gap: 10px; justify-content: space-between; }
+  .view--half_vertical .stat-item { display: flex; flex-direction: column; align-items: center; }
+  .view--half_vertical .stat-value { font-size: 16px; font-weight: 700; }
   .view--half_vertical .flight-route { margin: auto 0 0; padding-top: 6px; }
   .view--half_horizontal .flight-top .flight-route { grid-column: 1 / -1; grid-row: 2; margin: 6px 0 0; font-size: 22px; }
-  .view--half_horizontal .flight-top .flight-stats { grid-column: 2; grid-row: 1; flex-direction: column; align-items: flex-start; gap: 2px; font-size: 16px; margin-top: 0; }
+  .view--half_horizontal .flight-top .flight-stats { grid-column: 2; grid-row: 1; flex-direction: column; align-items: center; gap: 2px; font-size: 16px; margin-top: 0; }
   .view--half_horizontal .airline-name { font-size: 20px; }
   .view--half_horizontal .flight-number { font-size: 30px; }
   .view--half_horizontal .flight-aircraft { display: none; }
@@ -342,10 +344,10 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string 
   const statsHtml = showStats
     ? `
     <div class="flight-stats">
-      <span><span class="stat-label">ALT:</span> ${escapeHtml(f.altitudeFt)}${f.altitudeFt !== '--' && f.altitudeFt !== 'Ground' ? ' ft' : ''}</span>
-      <span><span class="stat-label">SPD:</span> ${escapeHtml(f.speedMph)}${f.speedMph !== '--' ? ' mph' : ''}</span>
-      <span><span class="stat-label">HDG:</span> ${escapeHtml(f.heading)}</span>
-      <span><span class="stat-label">ETA:</span> ${escapeHtml(f.eta)}</span>
+      <span class="stat-item"><span class="stat-label">ALT:</span> <span class="stat-value">${escapeHtml(f.altitudeFt)}${f.altitudeFt !== '--' && f.altitudeFt !== 'Ground' ? ' ft' : ''}</span></span>
+      <span class="stat-item"><span class="stat-label">SPD:</span> <span class="stat-value">${escapeHtml(f.speedMph)}${f.speedMph !== '--' ? ' mph' : ''}</span></span>
+      <span class="stat-item"><span class="stat-label">HDG:</span> <span class="stat-value">${escapeHtml(f.heading)}</span></span>
+      <span class="stat-item"><span class="stat-label">ETA:</span> <span class="stat-value">${escapeHtml(f.eta)}</span></span>
     </div>`
     : ''
 
