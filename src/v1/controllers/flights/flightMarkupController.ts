@@ -159,6 +159,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
           speedMph: '--',
           aircraftModel: '--',
           aircraftIcao: '',
+          heading: '--',
           progressPct: null,
         })
         continue
@@ -174,6 +175,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
       const aircraftModel = AIRCRAFT_NAMES[aircraftIcao] ?? aircraftIcao
 
       const status = deriveStatus(altBaro, aircraft.baro_rate)
+      const heading = formatHeading(aircraft.track)
 
       const progressPct = calcProgress(
         aircraft.lat,
@@ -194,6 +196,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
         speedMph,
         aircraftModel,
         aircraftIcao,
+        heading,
         progressPct,
       })
     } catch (e) {
@@ -208,6 +211,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
         speedMph: '--',
         aircraftModel: '--',
         aircraftIcao: '',
+        heading: '--',
         progressPct: null,
       })
     }
@@ -257,10 +261,11 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
   return `
 <style>
   .flight-card { margin: 0; padding: ${variant === 'full' ? '12px 72px' : variant === 'half_vertical' ? '10px 36px' : variant === 'half_horizontal' ? '10px 36px' : '6px 20px'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; }
-  .flight-top { display: flex; align-items: flex-start; gap: ${variant === 'quadrant' ? '12px' : '20px'}; width: 100%; }
+  .flight-top { display: flex; align-items: center; gap: ${variant === 'quadrant' ? '12px' : '20px'}; width: 100%; }
   .flight-meta { display: flex; flex-direction: column; gap: ${variant === 'quadrant' ? '3px' : '5px'}; align-items: flex-end; text-align: right; margin-left: auto; }
   .airline-name { font-size: ${variant === 'quadrant' ? '18px' : variant === 'full' ? '30px' : '24px'}; font-weight: 700; letter-spacing: 0.2px; }
   .flight-number { font-size: ${variant === 'quadrant' ? '26px' : variant === 'full' ? '44px' : '34px'}; font-weight: 800; }
+  .flight-aircraft { font-size: ${variant === 'quadrant' ? '14px' : variant === 'full' ? '20px' : '17px'}; font-weight: 500; color: #444; }
   .flight-status { font-size: ${variant === 'quadrant' ? '16px' : variant === 'full' ? '24px' : '20px'}; font-weight: 600; }
   .flight-route { display: flex; align-items: center; gap: 12px; width: 100%; font-size: ${variant === 'quadrant' ? '20px' : '28px'}; font-weight: 700; margin: ${variant === 'quadrant' ? '8px 0 5px' : '14px 0 8px'}; }
   .route-line { flex: 1; height: 2px; background: black; position: relative; }
@@ -319,7 +324,7 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string 
     <div class="flight-stats">
       <span><span class="stat-label">ALT:</span> ${escapeHtml(f.altitudeFt)}${f.altitudeFt !== '--' && f.altitudeFt !== 'Ground' ? ' ft' : ''}</span>
       <span><span class="stat-label">SPD:</span> ${escapeHtml(f.speedMph)}${f.speedMph !== '--' ? ' mph' : ''}</span>
-      <span>${escapeHtml(f.aircraftModel)}</span>
+      <span><span class="stat-label">HDG:</span> ${escapeHtml(f.heading)}</span>
     </div>`
     : ''
 
@@ -330,6 +335,7 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string 
       <div class="flight-meta">
         <span class="airline-name">${escapeHtml(airlineName)}</span>
         <span class="flight-number">${escapeHtml(flightCode)}</span>
+        <span class="flight-aircraft">${escapeHtml(f.aircraftModel)}</span>
         <span class="flight-status">${escapeHtml(f.status)}</span>
       </div>
     </div>
@@ -364,6 +370,14 @@ function renderEmptyMarkup(variant: MarkupVariant, offset: number): string {
   <span class="instance">{{ 'now' | date: '%s' | plus: ${offset} | date: '%H:%M' }}</span>
 </div>
 `.trim()
+}
+
+function formatHeading(track: number | undefined): string {
+  if (typeof track !== 'number') return '--'
+  const deg = Math.round(track) % 360
+  const cardinals = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+  const idx = Math.round(deg / 45) % 8
+  return `${deg}° ${cardinals[idx]}`
 }
 
 function escapeHtml(s: string) {
