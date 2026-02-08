@@ -1,5 +1,6 @@
 // src/integrations/adsb/formatters.ts
 import type { FlightDisplayData } from '../../types/trmnl/flightTypes.js'
+import { logger } from '../../utils/logger.js'
 
 // ICAO aircraft type → friendly name
 const AIRCRAFT_NAMES: Record<string, string> = {
@@ -166,8 +167,10 @@ export function renderMarkup(
   baseUrl: string
 ): string {
   const offset = Number(utcOffset) || 0
-  const logoSize =
-    variant === 'full' ? '240px' : variant === 'half_vertical' ? '140px' : variant === 'half_horizontal' ? '160px' : '120px'
+  const logoWidth =
+    variant === 'full' ? '320px' : variant === 'half_vertical' ? '200px' : variant === 'half_horizontal' ? '220px' : '160px'
+  const logoHeight =
+    variant === 'full' ? '140px' : variant === 'half_vertical' ? '90px' : variant === 'half_horizontal' ? '100px' : '70px'
 
   if (flights.length === 0) {
     return renderEmptyMarkup(variant, offset)
@@ -207,7 +210,7 @@ export function renderMarkup(
   .route-plane { font-size: ${variant === 'quadrant' ? '28px' : variant === 'full' ? '48px' : '36px'}; line-height: 1; }
   .flight-stats { display: flex; ${variant === 'full' ? 'justify-content: space-between;' : `gap: ${variant === 'quadrant' ? '14px' : '26px'};`} font-size: ${variant === 'full' ? '24px' : variant === 'quadrant' ? '15px' : '20px'}; margin-top: ${variant === 'quadrant' ? '3px' : '7px'}; }
   .stat-label { font-weight: 700; }
-  .airline-logo { width: ${logoSize}; height: ${logoSize}; border-radius: 8px; object-fit: contain; background: #fff; }
+  .airline-logo { width: 100%; max-width: ${logoWidth}; max-height: ${logoHeight}; object-fit: contain; }
 </style>
 <div class="view view--${variant}">
   <div class="layout">
@@ -229,7 +232,8 @@ export function renderMarkup(
 }
 
 function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl: string): string {
-  const logoUrl = `${baseUrl}/public/flightaware_logos/${encodeURIComponent(f.airlineIcao)}.png`
+  const logoUrl = `${baseUrl}/public/radarbox_banners/${encodeURIComponent(f.airlineIcao)}.png`
+  logger.info(logoUrl)
   const showStats = variant !== 'quadrant'
   const showRoute = true
   const embedRouteInTop = variant === 'half_horizontal'
