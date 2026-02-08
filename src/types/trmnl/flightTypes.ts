@@ -7,6 +7,7 @@ export type TrmnlFlightSettings = {
 export type FlightDisplayData = {
   flightIata: string
   airlineIata: string
+  airlineIcao: string
   depAirport: string
   arrAirport: string
   status: string

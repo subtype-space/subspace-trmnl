@@ -1,6 +1,7 @@
 import { RequestHandler } from 'express'
 import { logger } from '../../../utils/logger.js'
 import { getFlightSettingsByUuid } from '../../../utils/dbConnector.js'
+import { config } from '../../../config.js'
 import { AdsbClient, toIcaoCallsign } from '../../../integrations/adsb/adsbClient.js'
 import {
   lookupAircraftName,
@@ -61,13 +62,15 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
     .filter(Boolean)
     .slice(0, 4)
 
+  const baseUrl = config.auth.mcpServerUrl
+
   if (flightNumbers.length === 0) {
     const emptyModel: FlightDisplayData[] = []
     res.json({
-      markup: renderMarkup(emptyModel, 'full', utcOffset),
-      markup_half_horizontal: renderMarkup(emptyModel, 'half_horizontal', utcOffset),
-      markup_half_vertical: renderMarkup(emptyModel, 'half_vertical', utcOffset),
-      markup_quadrant: renderMarkup(emptyModel, 'quadrant', utcOffset),
+      markup: renderMarkup(emptyModel, 'full', utcOffset, baseUrl),
+      markup_half_horizontal: renderMarkup(emptyModel, 'half_horizontal', utcOffset, baseUrl),
+      markup_half_vertical: renderMarkup(emptyModel, 'half_vertical', utcOffset, baseUrl),
+      markup_quadrant: renderMarkup(emptyModel, 'quadrant', utcOffset, baseUrl),
       shared: '',
     })
     return
@@ -78,6 +81,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
   for (const iataFlight of flightNumbers) {
     const icaoCallsign = toIcaoCallsign(iataFlight)
     const airlineIata = iataFlight.replace(/\d+$/, '')
+    const airlineIcao = icaoCallsign.replace(/\d+$/, '')
 
     try {
       // Fetch live data and route in parallel
@@ -93,6 +97,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
         flights.push({
           flightIata: iataFlight,
           airlineIata,
+          airlineIcao,
           depAirport: route?.from ?? '',
           arrAirport: route?.to ?? '',
           status: 'Landed',
@@ -126,6 +131,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
       flights.push({
         flightIata: iataFlight,
         airlineIata,
+        airlineIcao,
         depAirport: route?.from ?? '',
         arrAirport: route?.to ?? '',
         status,
@@ -142,6 +148,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
       flights.push({
         flightIata: iataFlight,
         airlineIata,
+        airlineIcao,
         depAirport: '',
         arrAirport: '',
         status: 'Data unavailable',
@@ -159,10 +166,10 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
   const selected = [pickFlight(userUuid, flights)]
 
   res.json({
-    markup: renderMarkup(selected, 'full', utcOffset),
-    markup_half_horizontal: renderMarkup(selected, 'half_horizontal', utcOffset),
-    markup_half_vertical: renderMarkup(selected, 'half_vertical', utcOffset),
-    markup_quadrant: renderMarkup(selected, 'quadrant', utcOffset),
+    markup: renderMarkup(selected, 'full', utcOffset, baseUrl),
+    markup_half_horizontal: renderMarkup(selected, 'half_horizontal', utcOffset, baseUrl),
+    markup_half_vertical: renderMarkup(selected, 'half_vertical', utcOffset, baseUrl),
+    markup_quadrant: renderMarkup(selected, 'quadrant', utcOffset, baseUrl),
     shared: '',
   })
 }
