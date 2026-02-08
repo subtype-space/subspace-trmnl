@@ -61,6 +61,11 @@ export const AIRLINE_NAMES: Record<string, string> = {
   AC: 'Air Canada',
   WS: 'WestJet',
   AM: 'Aeromexico',
+  KA: 'Korean Air',
+  EY: 'Etihad Airways',
+  TK: 'Turkish Airlines',
+  CZ: 'China Southern',
+  QF: 'Qantas'
 }
 
 export function lookupAircraftName(icaoType: string): string {
@@ -157,7 +162,7 @@ function escapeHtml(s: string) {
 export function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcOffset: number): string {
   const offset = Number(utcOffset) || 0
   const logoSize =
-    variant === 'full' ? '240px' : variant === 'half_vertical' ? '96px' : variant === 'half_horizontal' ? '120px' : '96px'
+    variant === 'full' ? '240px' : variant === 'half_vertical' ? '140px' : variant === 'half_horizontal' ? '160px' : '120px'
 
   if (flights.length === 0) {
     return renderEmptyMarkup(variant, offset)
