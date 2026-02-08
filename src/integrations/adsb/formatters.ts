@@ -168,9 +168,9 @@ export function renderMarkup(
 ): string {
   const offset = Number(utcOffset) || 0
   const logoWidth =
-    variant === 'full' ? '280px' : variant === 'half_vertical' ? '160px' : variant === 'half_horizontal' ? '180px' : '140px'
+    variant === 'full' ? '320px' : variant === 'half_vertical' ? '200px' : variant === 'half_horizontal' ? '220px' : '160px'
   const logoHeight =
-    variant === 'full' ? '120px' : variant === 'half_vertical' ? '70px' : variant === 'half_horizontal' ? '80px' : '60px'
+    variant === 'full' ? '140px' : variant === 'half_vertical' ? '90px' : variant === 'half_horizontal' ? '100px' : '70px'
 
   if (flights.length === 0) {
     return renderEmptyMarkup(variant, offset)
@@ -210,7 +210,7 @@ export function renderMarkup(
   .route-plane { font-size: ${variant === 'quadrant' ? '28px' : variant === 'full' ? '48px' : '36px'}; line-height: 1; }
   .flight-stats { display: flex; ${variant === 'full' ? 'justify-content: space-between;' : `gap: ${variant === 'quadrant' ? '14px' : '26px'};`} font-size: ${variant === 'full' ? '24px' : variant === 'quadrant' ? '15px' : '20px'}; margin-top: ${variant === 'quadrant' ? '3px' : '7px'}; }
   .stat-label { font-weight: 700; }
-  .airline-logo { max-width: ${logoWidth}; max-height: ${logoHeight}; object-fit: contain; }
+  .airline-logo { width: 100%; max-width: ${logoWidth}; max-height: ${logoHeight}; object-fit: contain; }
 </style>
 <div class="view view--${variant}">
   <div class="layout">
