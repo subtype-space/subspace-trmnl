@@ -1,9 +1,10 @@
 import express from 'express'
 import { requireTrmnlAuth, requireTrmnlUuidMatch, requireTrmnlJwt, trmnlAuthByIP } from '../../auth/trmnlAuth.js'
 import trmnlInstallController from '../controllers/metro/trmnlInstallController.js'
+import { trmnlUninstallController } from '../controllers/trmnlCommon/trmnlUninstallController.js'
+
 import { trmnlMarkupController } from '../controllers/metro/trmnlMarkupController.js'
 import { trmnlInstallSuccessController } from '../controllers/metro/trmnlInstallSuccessController.js'
-import { trmnlUninstallController } from '../controllers/metro/trmnlUninstallController.js'
 import { trmnlManageGetController, trmnlManagePostController } from '../controllers/metro/trmnlManageController.js'
 import { trmnlStationPrediction } from '../controllers/metro/trmnlStationPrediction.js'
 import flightInstallController from '../controllers/flights/flightInstallController.js'
