@@ -15,5 +15,6 @@ export type FlightDisplayData = {
   aircraftModel: string
   aircraftIcao: string
   heading: string
+  eta: string
   progressPct: number | null // 0-100, null if unknown
 }

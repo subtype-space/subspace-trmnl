@@ -160,6 +160,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
           aircraftModel: '--',
           aircraftIcao: '',
           heading: '--',
+          eta: '--',
           progressPct: null,
         })
         continue
@@ -186,6 +187,8 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
         route?.toLon,
       )
 
+      const eta = calcEta(aircraft.lat, aircraft.lon, route?.toLat, route?.toLon, aircraft.gs, utcOffset)
+
       flights.push({
         flightIata: iataFlight,
         airlineIata,
@@ -197,6 +200,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
         aircraftModel,
         aircraftIcao,
         heading,
+        eta,
         progressPct,
       })
     } catch (e) {
@@ -212,6 +216,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
         aircraftModel: '--',
         aircraftIcao: '',
         heading: '--',
+        eta: '--',
         progressPct: null,
       })
     }
@@ -260,7 +265,7 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
 
   return `
 <style>
-  .flight-card { margin: 0; padding: ${variant === 'full' ? '12px 72px' : variant === 'half_vertical' ? '10px 36px' : variant === 'half_horizontal' ? '10px 36px' : '6px 20px'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; }
+  .flight-card { margin: 0; padding: ${variant === 'full' ? '12px 72px' : variant === 'half_vertical' ? '10px 28px' : variant === 'half_horizontal' ? '10px 36px' : '6px 16px'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; }
   .flight-top { display: flex; align-items: center; gap: ${variant === 'quadrant' ? '12px' : '20px'}; width: 100%; }
   .view--half_horizontal .flight-top { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; align-items: center; column-gap: 20px; row-gap: 6px; }
   .view--half_horizontal .airline-logo { grid-column: 1; grid-row: 1; }
@@ -271,6 +276,9 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
   .flight-aircraft { font-size: ${variant === 'quadrant' ? '14px' : variant === 'full' ? '20px' : '17px'}; font-weight: 500; color: #444; }
   .flight-status { font-size: ${variant === 'quadrant' ? '16px' : variant === 'full' ? '24px' : '20px'}; font-weight: 600; }
   .flight-route { display: flex; align-items: center; gap: 12px; width: 100%; font-size: ${variant === 'quadrant' ? '20px' : '28px'}; font-weight: 700; margin: ${variant === 'quadrant' ? '8px 0 5px' : '14px 0 8px'}; }
+  .view--half_vertical .flight-top { margin-bottom: 6px; }
+  .view--half_vertical .flight-stats { margin-top: 12px; }
+  .view--half_vertical .flight-route { margin: 16px 0 10px; }
   .view--half_horizontal .flight-top .flight-route { grid-column: 1 / -1; grid-row: 2; margin: 6px 0 2px; }
   .route-line { flex: 1; height: 2px; background: black; position: relative; }
   .route-plane { font-size: ${variant === 'quadrant' ? '28px' : variant === 'full' ? '48px' : '36px'}; line-height: 1; }
@@ -330,6 +338,7 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string 
       <span><span class="stat-label">ALT:</span> ${escapeHtml(f.altitudeFt)}${f.altitudeFt !== '--' && f.altitudeFt !== 'Ground' ? ' ft' : ''}</span>
       <span><span class="stat-label">SPD:</span> ${escapeHtml(f.speedMph)}${f.speedMph !== '--' ? ' mph' : ''}</span>
       <span><span class="stat-label">HDG:</span> ${escapeHtml(f.heading)}</span>
+      <span><span class="stat-label">ETA:</span> ${escapeHtml(f.eta)}</span>
     </div>`
     : ''
 
@@ -426,6 +435,34 @@ function calcProgress(
   const flownDist = haversineKm(fromLat, fromLon, aircraftLat, aircraftLon)
   const pct = Math.round((flownDist / totalDist) * 100)
   return Math.max(0, Math.min(100, pct))
+}
+
+// Calculate ETA as a formatted local time string, or '--' if insufficient data
+// utcOffset is in seconds (e.g. -18000 for EST)
+function calcEta(
+  aircraftLat: number | undefined,
+  aircraftLon: number | undefined,
+  toLat: number | undefined,
+  toLon: number | undefined,
+  gsKnots: number | undefined,
+  utcOffsetSec: number,
+): string {
+  if (aircraftLat == null || aircraftLon == null) return '--'
+  if (toLat == null || toLon == null) return '--'
+  if (typeof gsKnots !== 'number' || gsKnots < 10) return '--' // too slow / no speed data
+
+  const remainingKm = haversineKm(aircraftLat, aircraftLon, toLat, toLon)
+  const gsKmh = gsKnots * 1.852
+  const hoursRemaining = remainingKm / gsKmh
+
+  const etaMs = Date.now() + hoursRemaining * 3600 * 1000
+  // Apply UTC offset to get local time
+  const localEtaMs = etaMs + utcOffsetSec * 1000
+  const etaDate = new Date(localEtaMs)
+
+  const h = etaDate.getUTCHours().toString().padStart(2, '0')
+  const m = etaDate.getUTCMinutes().toString().padStart(2, '0')
+  return `${h}:${m}`
 }
 
 // Cached fetch for live aircraft data
