@@ -154,7 +154,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
           airlineIata,
           depAirport: route?.from ?? '',
           arrAirport: route?.to ?? '',
-          status: 'Not currently tracked',
+          status: 'Landed',
           altitudeFt: '--',
           speedMph: '--',
           aircraftModel: '--',
@@ -242,7 +242,7 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
     variant === 'full'
       ? '240px'
       : variant === 'half_vertical'
-        ? '180px'
+        ? '140px'
         : variant === 'half_horizontal'
           ? '170px'
           : '96px'
@@ -268,9 +268,10 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
   .flight-aircraft { font-size: ${variant === 'quadrant' ? '14px' : variant === 'full' ? '20px' : '17px'}; font-weight: 500; color: #444; }
   .flight-status { font-size: ${variant === 'quadrant' ? '16px' : variant === 'full' ? '24px' : '20px'}; font-weight: 600; }
   .flight-route { display: flex; align-items: center; gap: 12px; width: 100%; font-size: ${variant === 'quadrant' ? '20px' : '28px'}; font-weight: 700; margin: ${variant === 'quadrant' ? '8px 0 5px' : '14px 0 8px'}; }
+  .view--half_vertical .flight-route { margin: 10px 0 6px; }
   .route-line { flex: 1; height: 2px; background: black; position: relative; }
   .route-plane { font-size: ${variant === 'quadrant' ? '28px' : variant === 'full' ? '48px' : '36px'}; line-height: 1; }
-  .flight-stats { display: flex; gap: ${variant === 'quadrant' ? '14px' : '26px'}; font-size: ${variant === 'full' ? '24px' : variant === 'quadrant' ? '15px' : '20px'}; margin-top: ${variant === 'quadrant' ? '3px' : '7px'}; }
+  .flight-stats { display: flex; ${variant === 'full' ? 'justify-content: space-between;' : `gap: ${variant === 'quadrant' ? '14px' : '26px'};`} font-size: ${variant === 'full' ? '24px' : variant === 'quadrant' ? '15px' : '20px'}; margin-top: ${variant === 'quadrant' ? '3px' : '7px'}; }
   .stat-label { font-weight: 700; }
   .airline-logo { width: ${logoSize}; height: ${logoSize}; border-radius: 8px; object-fit: contain; background: #fff; }
   .flight-divider { border: none; border-top: 1px solid #ccc; margin: ${variant === 'quadrant' ? '6px 0' : '12px 0'}; }
@@ -298,6 +299,7 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string 
   const logoUrl = `https://pics.avs.io/200/200/${escapeHtml(f.airlineIata)}.png`
   const showStats = variant !== 'quadrant'
   const showRoute = true
+  const routeFirst = variant === 'half_vertical'
   const airlineCode = f.airlineIata || ''
   const airlineName = AIRLINE_NAMES[airlineCode] ?? (airlineCode || f.flightIata)
   const flightCode = airlineCode && f.flightIata.startsWith(airlineCode)
@@ -328,6 +330,10 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string 
     </div>`
     : ''
 
+  const routeBlock = showRoute ? routeHtml : ''
+  const statsBlock = showStats ? statsHtml : ''
+  const detailsBlock = routeFirst ? `${routeBlock}${statsBlock}` : `${statsBlock}${routeBlock}`
+
   return `
   <div class="flight-card">
     <div class="flight-top">
@@ -339,8 +345,7 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string 
         <span class="flight-status">${escapeHtml(f.status)}</span>
       </div>
     </div>
-    ${statsHtml}
-    ${routeHtml}
+    ${detailsBlock}
   </div>`
 }
 
