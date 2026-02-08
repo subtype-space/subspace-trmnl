@@ -6,6 +6,10 @@ import { trmnlInstallSuccessController } from '../controllers/metro/trmnlInstall
 import { trmnlUninstallController } from '../controllers/metro/trmnlUninstallController.js'
 import { trmnlManageGetController, trmnlManagePostController } from '../controllers/metro/trmnlManageController.js'
 import { trmnlStationPrediction } from '../controllers/metro/trmnlStationPrediction.js'
+import flightInstallController from '../controllers/flights/flightInstallController.js'
+import { flightInstallSuccessController } from '../controllers/flights/flightInstallSuccessController.js'
+import { flightMarkupController } from '../controllers/flights/flightMarkupController.js'
+import { flightManageGetController, flightManagePostController } from '../controllers/flights/flightManageController.js'
 const router = express.Router()
 
 // Should be mounted at /trmnl, so <api endpoint>/v1/trmnl/install and etc.
@@ -18,5 +22,13 @@ router.post('/metro/uninstall', requireTrmnlAuth, requireTrmnlUuidMatch, trmnlUn
 router.get('/metro/manage', requireTrmnlJwt, trmnlManageGetController)
 router.post('/metro/manage', express.urlencoded({ extended: true }), requireTrmnlJwt, trmnlManagePostController)
 router.get('/metro/rail-prediction', trmnlAuthByIP, trmnlStationPrediction)
+
+// flights - live flight tracking plugin
+router.get('/flights/install', flightInstallController)
+router.post('/flights/install_success', requireTrmnlAuth, flightInstallSuccessController)
+router.post('/flights/markup', express.urlencoded({ extended: true }), requireTrmnlAuth, requireTrmnlUuidMatch, flightMarkupController)
+router.post('/flights/uninstall', requireTrmnlAuth, requireTrmnlUuidMatch, trmnlUninstallController)
+router.get('/flights/manage', requireTrmnlJwt, flightManageGetController)
+router.post('/flights/manage', express.urlencoded({ extended: true }), requireTrmnlJwt, flightManagePostController)
 
 export default router

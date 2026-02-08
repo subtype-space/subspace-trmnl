@@ -171,13 +171,12 @@ export const userAuthMiddleware: RequestHandler = async (req: Request, res: Resp
   }
 
   // Extract token from "Bearer <token>" format
-  const match = userAuthHeader.match(/^Bearer\s+(.+)$/i)
-  if (!match) {
+  if (!userAuthHeader.toLowerCase().startsWith('bearer ')) {
     logger.warn('[AUTH] Invalid X-User-Authorization format (expected "Bearer <token>")')
     return next()
   }
 
-  const userToken = match[1]
+  const userToken = userAuthHeader.slice(7).trim()
   const user = await verifyUserToken(userToken)
 
   if (user) {
