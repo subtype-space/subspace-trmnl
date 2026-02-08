@@ -62,7 +62,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
     .filter(Boolean)
     .slice(0, 4)
 
-  const baseUrl = config.auth.mcpServerUrl
+  const baseUrl = new URL(config.auth.mcpServerUrl).origin
 
   if (flightNumbers.length === 0) {
     const emptyModel: FlightDisplayData[] = []
