@@ -277,8 +277,10 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
   .view--half_vertical, .view--half_vertical .layout, .view--half_vertical .columns, .view--half_vertical .column, .view--half_vertical .markdown { display: flex; flex-direction: column; flex: 1; padding: 0; margin: 0; max-width: 100%; box-sizing: border-box; }
   .view--half_vertical { height: 100%; }
   .view--half_vertical .flight-card { display: flex; flex-direction: column; flex: 1; }
-  .view--half_vertical .flight-top { margin-bottom: 4px; width: 100%; box-sizing: border-box; }
-  .view--half_vertical .flight-stats { margin-top: 16px; font-size: 14px; gap: 10px; justify-content: space-between; }
+  .view--half_vertical .flight-card { width: 100%; box-sizing: border-box; }
+  .view--half_vertical .flight-top { margin-bottom: 4px; width: 100%; }
+  .view--half_vertical .flight-stats { margin-top: 16px; font-size: 14px; gap: 10px; justify-content: space-between; width: 100%; }
+  .view--half_vertical .flight-route { width: 100%; }
   .view--half_vertical .stat-item { display: flex; flex-direction: column; align-items: center; }
   .view--half_vertical .stat-value { font-size: 16px; font-weight: 700; }
   .view--half_vertical .flight-route { margin: auto 0 0; padding-top: 6px; }
