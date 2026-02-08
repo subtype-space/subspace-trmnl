@@ -178,14 +178,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
       const status = deriveStatus(altBaro, aircraft.baro_rate)
       const heading = formatHeading(aircraft.track)
 
-      const progressPct = calcProgress(
-        aircraft.lat,
-        aircraft.lon,
-        route?.fromLat,
-        route?.fromLon,
-        route?.toLat,
-        route?.toLon,
-      )
+      const progressPct = calcProgress(aircraft.lat, aircraft.lon, route?.fromLat, route?.fromLon, route?.toLat, route?.toLon)
 
       const eta = calcEta(aircraft.lat, aircraft.lon, route?.toLat, route?.toLon, aircraft.gs, utcOffset)
 
@@ -244,13 +237,7 @@ function deriveStatus(altBaro: number | 'ground' | undefined, baroRate: number |
 function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcOffset: number): string {
   const offset = Number(utcOffset) || 0
   const logoSize =
-    variant === 'full'
-      ? '240px'
-      : variant === 'half_vertical'
-        ? '96px'
-        : variant === 'half_horizontal'
-          ? '120px'
-          : '96px'
+    variant === 'full' ? '240px' : variant === 'half_vertical' ? '96px' : variant === 'half_horizontal' ? '120px' : '96px'
 
   if (flights.length === 0) {
     return renderEmptyMarkup(variant, offset)
@@ -275,10 +262,6 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
   .flight-status { font-size: ${variant === 'quadrant' ? '16px' : variant === 'full' ? '24px' : '20px'}; font-weight: 600; }
   .flight-route { display: flex; align-items: center; gap: 12px; width: 100%; font-size: ${variant === 'quadrant' ? '20px' : '28px'}; font-weight: 700; margin: ${variant === 'quadrant' ? '8px 0 5px' : '14px 0 8px'}; }
   .view--half_vertical { display: flex; flex-direction: column; flex: 1; align-items: stretch; width: 100% !important; max-width: 100% }
-  .view--half_vertical .layout,
-  .view--half_vertical .columns,
-  .view--half_vertical .column,
-  .view--half_vertical .markdown,
   .view--half_vertical .flight-card {
     display: flex;
     flex-direction: column;
@@ -331,9 +314,10 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string 
   const embedRouteInTop = variant === 'half_horizontal'
   const airlineCode = f.airlineIata || ''
   const airlineName = AIRLINE_NAMES[airlineCode] ?? (airlineCode || f.flightIata)
-  const flightCode = airlineCode && f.flightIata.startsWith(airlineCode)
-    ? `${airlineCode} ${f.flightIata.slice(airlineCode.length)}`
-    : f.flightIata
+  const flightCode =
+    airlineCode && f.flightIata.startsWith(airlineCode)
+      ? `${airlineCode} ${f.flightIata.slice(airlineCode.length)}`
+      : f.flightIata
 
   // If we have progress data, use flex ratios to position the plane icon
   const leftFlex = f.progressPct != null ? Math.max(f.progressPct, 2) : 1
@@ -449,7 +433,7 @@ function calcProgress(
   fromLat: number | undefined,
   fromLon: number | undefined,
   toLat: number | undefined,
-  toLon: number | undefined,
+  toLon: number | undefined
 ): number | null {
   if (aircraftLat == null || aircraftLon == null) return null
   if (fromLat == null || fromLon == null || toLat == null || toLon == null) return null
@@ -470,7 +454,7 @@ function calcEta(
   toLat: number | undefined,
   toLon: number | undefined,
   gsKnots: number | undefined,
-  utcOffsetSec: number,
+  utcOffsetSec: number
 ): string {
   if (aircraftLat == null || aircraftLon == null) return '--'
   if (toLat == null || toLon == null) return '--'
