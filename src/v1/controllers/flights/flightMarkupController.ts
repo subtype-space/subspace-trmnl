@@ -263,7 +263,6 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
 
   return `
 <style>
-  .view { padding: ${variant === 'full' ? '0 8px' : '0'}; }
   .flight-card { margin: ${variant === 'full' ? '0' : variant === 'half_vertical' ? '12px 0 0' : variant === 'half_horizontal' ? '8px 0' : '6px 8px'}; padding: ${variant === 'full' ? '12px 24px' : '0'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; }
   .flight-top { display: flex; align-items: center; gap: ${variant === 'quadrant' ? '12px' : '20px'}; width: 100%; }
   .view--half_horizontal .flight-top { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; align-items: center; column-gap: 16px; row-gap: 2px; }
@@ -276,7 +275,7 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
   .flight-status { font-size: ${variant === 'quadrant' ? '16px' : variant === 'full' ? '24px' : '20px'}; font-weight: 600; }
   .flight-route { display: flex; align-items: center; gap: 12px; width: 100%; font-size: ${variant === 'quadrant' ? '20px' : '28px'}; font-weight: 700; margin: ${variant === 'quadrant' ? '8px 0 5px' : '14px 0 8px'}; }
   .view--half_vertical { display: flex; flex-direction: column; flex: 1; align-items: stretch; padding: 0 8px !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; height: 100%; }
-  .view--half_vertical .layout, .view--half_vertical .columns, .view--half_vertical .column, .view--half_vertical .markdown, .view--half_vertical .flight-card { display: flex; flex-direction: column; flex: 1; align-items: stretch; padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box; }
+  .view--half_vertical .layout, .view--half_vertical .columns, .view--half_vertical .column, .view--half_vertical .markdown, .view--half_vertical .flight-card { display: flex; flex-direction: column; flex: 1; align-items: stretch; padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
   .view--half_vertical .flight-top { margin-bottom: 4px; }
   .view--half_vertical .flight-details { margin-top: auto; display: flex; flex-direction: column; gap: 16px; }
   .view--half_vertical .flight-stats { margin-top: 0; font-size: 14px; gap: 10px; justify-content: space-between; }
