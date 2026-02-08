@@ -256,10 +256,8 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
     return renderEmptyMarkup(variant, offset)
   }
 
-  // Full/half_vertical: show up to 2 flights with detail
-  // Half_horizontal/quadrant: show 1 flight
-  const maxFlights = variant === 'full' || variant === 'half_vertical' ? 2 : 1
-  const visible = flights.slice(0, maxFlights)
+  // Pick a random flight to display
+  const visible = [flights[Math.floor(Math.random() * flights.length)]]
 
   const flightCards = visible.map((f) => renderFlightCard(f, variant)).join(getDivider(variant))
 
@@ -280,12 +278,13 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
   .view--half_vertical { display: flex; flex-direction: column; height: 100%; }
   .view--half_vertical .flight-card { display: flex; flex-direction: column; flex: 1; }
   .view--half_vertical .flight-top { margin-bottom: 4px; }
-  .view--half_vertical .flight-stats { margin-top: 16px; font-size: 14px; gap: 10px; justify-content: space-between; }
+  .view--half_vertical .flight-stats { margin-top: auto; font-size: 14px; gap: 10px; justify-content: space-between; }
   .view--half_vertical .stat-item { display: flex; flex-direction: column; align-items: center; }
   .view--half_vertical .stat-value { font-size: 16px; font-weight: 700; }
-  .view--half_vertical .flight-route { margin: auto 0 0; padding-top: 6px; }
+  .view--half_vertical .flight-route { margin: 14px 0 0; padding-top: 6px; }
   .view--half_horizontal .flight-top .flight-route { grid-column: 1 / -1; grid-row: 2; margin: 6px 0 0; font-size: 22px; }
   .view--half_horizontal .flight-top .flight-stats { grid-column: 2; grid-row: 1; flex-direction: column; align-items: flex-start; justify-self: center; gap: 2px; font-size: 16px; margin-top: 0; }
+  .view--half_horizontal .flight-stat-aircraft { font-weight: 600; }
   .view--half_horizontal .airline-name { font-size: 20px; }
   .view--half_horizontal .flight-number { font-size: 30px; }
   .view--half_horizontal .flight-aircraft { display: none; }
@@ -346,6 +345,7 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string 
   const statsHtml = showStats
     ? `
     <div class="flight-stats">
+      ${variant === 'half_horizontal' ? `<span class="stat-item flight-stat-aircraft">${escapeHtml(f.aircraftModel)}</span>` : ''}
       <span class="stat-item"><span class="stat-label">ALT:</span> <span class="stat-value">${escapeHtml(f.altitudeFt)}${f.altitudeFt !== '--' && f.altitudeFt !== 'Ground' ? ' ft' : ''}</span></span>
       <span class="stat-item"><span class="stat-label">SPD:</span> <span class="stat-value">${escapeHtml(f.speedMph)}${f.speedMph !== '--' ? ' mph' : ''}</span></span>
       <span class="stat-item"><span class="stat-label">HDG:</span> <span class="stat-value">${escapeHtml(f.heading)}</span></span>
