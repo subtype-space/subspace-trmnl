@@ -1,5 +1,6 @@
 // src/integrations/adsb/formatters.ts
 import type { FlightDisplayData } from '../../types/trmnl/flightTypes.js'
+import { logger } from '../../utils/logger.js'
 
 // ICAO aircraft type → friendly name
 const AIRCRAFT_NAMES: Record<string, string> = {
@@ -230,6 +231,7 @@ export function renderMarkup(
 
 function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl: string): string {
   const logoUrl = `${baseUrl}/public/flightaware_logos/${encodeURIComponent(f.airlineIcao)}.png`
+  logger.info(logoUrl)
   const showStats = variant !== 'quadrant'
   const showRoute = true
   const embedRouteInTop = variant === 'half_horizontal'
