@@ -16,7 +16,7 @@ case "$MODE" in
   prod)
     echo "📦 Pulling latest image from GitHub Container Registry..."
     echo "🚀 Starting subspace-api in '$MODE' mode"
-    docker compose pull && downContainers() && docker compose up -d
+    docker compose pull && downContainers && docker compose up -d
     ;;
 
   branch)
