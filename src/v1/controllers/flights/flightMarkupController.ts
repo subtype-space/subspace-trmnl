@@ -53,6 +53,33 @@ const AIRCRAFT_NAMES: Record<string, string> = {
   C172: 'Cessna 172',
 }
 
+const AIRLINE_NAMES: Record<string, string> = {
+  UA: 'United Airlines',
+  AA: 'American Airlines',
+  DL: 'Delta Air Lines',
+  WN: 'Southwest Airlines',
+  B6: 'JetBlue',
+  AS: 'Alaska Airlines',
+  NK: 'Spirit Airlines',
+  F9: 'Frontier Airlines',
+  HA: 'Hawaiian Airlines',
+  G4: 'Allegiant Air',
+  SY: 'Sun Country Airlines',
+  BA: 'British Airways',
+  LH: 'Lufthansa',
+  AF: 'Air France',
+  KL: 'KLM',
+  EK: 'Emirates',
+  QR: 'Qatar Airways',
+  SQ: 'Singapore Airlines',
+  CX: 'Cathay Pacific',
+  NH: 'All Nippon Airways',
+  JL: 'Japan Airlines',
+  AC: 'Air Canada',
+  WS: 'WestJet',
+  AM: 'Aeromexico',
+}
+
 type MarkupVariant = 'full' | 'half_horizontal' | 'half_vertical' | 'quadrant'
 
 export const flightMarkupController: RequestHandler = async (req, res) => {
@@ -209,17 +236,18 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
 
   return `
 <style>
-  .flight-card { margin: 0; padding: 0; }
-  .flight-header { display: flex; align-items: center; justify-content: space-between; }
-  .flight-id { display: flex; align-items: center; gap: 12px; }
-  .flight-number { font-size: ${variant === 'quadrant' ? '24px' : '32px'}; font-weight: 700; }
-  .flight-status { font-size: ${variant === 'quadrant' ? '16px' : '22px'}; font-weight: 600; }
-  .flight-route { display: flex; align-items: center; gap: 8px; font-size: ${variant === 'quadrant' ? '18px' : '26px'}; font-weight: 600; margin: ${variant === 'quadrant' ? '4px 0' : '8px 0'}; }
+  .flight-card { margin: 0; padding: ${variant === 'quadrant' ? '2px 0' : '6px 0'}; }
+  .flight-top { display: flex; align-items: flex-start; gap: ${variant === 'quadrant' ? '10px' : '18px'}; }
+  .flight-meta { display: flex; flex-direction: column; gap: ${variant === 'quadrant' ? '2px' : '4px'}; }
+  .airline-name { font-size: ${variant === 'quadrant' ? '16px' : variant === 'full' ? '26px' : '20px'}; font-weight: 700; letter-spacing: 0.2px; }
+  .flight-number { font-size: ${variant === 'quadrant' ? '22px' : variant === 'full' ? '38px' : '30px'}; font-weight: 800; }
+  .flight-status { font-size: ${variant === 'quadrant' ? '14px' : variant === 'full' ? '22px' : '18px'}; font-weight: 600; }
+  .flight-route { display: flex; align-items: center; gap: 10px; width: 100%; font-size: ${variant === 'quadrant' ? '18px' : '26px'}; font-weight: 700; margin: ${variant === 'quadrant' ? '6px 0 4px' : '12px 0 6px'}; }
   .route-line { flex: 1; height: 2px; background: black; position: relative; }
   .route-plane { font-size: ${variant === 'quadrant' ? '14px' : '18px'}; }
   .flight-stats { display: flex; gap: ${variant === 'quadrant' ? '12px' : '24px'}; font-size: ${variant === 'quadrant' ? '14px' : '18px'}; margin-top: ${variant === 'quadrant' ? '2px' : '6px'}; }
   .stat-label { font-weight: 700; }
-  .airline-logo { width: ${variant === 'full' ? '80px' : variant === 'quadrant' ? '40px' : '52px'}; height: ${variant === 'full' ? '80px' : variant === 'quadrant' ? '40px' : '52px'}; border-radius: 6px; }
+  .airline-logo { width: ${variant === 'full' ? '120px' : variant === 'quadrant' ? '40px' : '72px'}; height: ${variant === 'full' ? '120px' : variant === 'quadrant' ? '40px' : '72px'}; border-radius: 8px; object-fit: contain; background: #fff; }
   .flight-divider { border: none; border-top: 1px solid #ccc; margin: ${variant === 'quadrant' ? '6px 0' : '12px 0'}; }
 </style>
 <div class="view view--${variant}">
@@ -244,7 +272,12 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
 function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string {
   const logoUrl = `https://pics.avs.io/200/200/${escapeHtml(f.airlineIata)}.png`
   const showStats = variant !== 'quadrant'
-  const showRoute = f.depAirport || f.arrAirport
+  const showRoute = true
+  const airlineCode = f.airlineIata || ''
+  const airlineName = AIRLINE_NAMES[airlineCode] ?? (airlineCode || f.flightIata)
+  const flightCode = airlineCode && f.flightIata.startsWith(airlineCode)
+    ? `${airlineCode} ${f.flightIata.slice(airlineCode.length)}`
+    : f.flightIata
 
   const routeHtml = showRoute
     ? `
@@ -268,12 +301,13 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string 
 
   return `
   <div class="flight-card">
-    <div class="flight-header">
-      <div class="flight-id">
-        <img class="airline-logo" src="${logoUrl}" />
-        <span class="flight-number">${escapeHtml(f.flightIata)}</span>
+    <div class="flight-top">
+      <img class="airline-logo" src="${logoUrl}" />
+      <div class="flight-meta">
+        <span class="airline-name">${escapeHtml(airlineName)}</span>
+        <span class="flight-number">${escapeHtml(flightCode)}</span>
+        <span class="flight-status">${escapeHtml(f.status)}</span>
       </div>
-      <span class="flight-status">${escapeHtml(f.status)}</span>
     </div>
     ${routeHtml}
     ${statsHtml}

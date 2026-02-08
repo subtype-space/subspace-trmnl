@@ -27,6 +27,7 @@ case "$MODE" in
 
     echo "🔧 Building $BRANCH build locally..."
     docker compose -f docker-compose.dev.yml build
+    downContainers
     echo "🚀 Starting subspace-api in '$MODE' mode (branch: $BRANCH)..."
     docker compose -f docker-compose.dev.yml up -d
     ;;
@@ -34,6 +35,7 @@ case "$MODE" in
   dev)
     echo "🔧 Building development locally..."
     docker compose -f docker-compose.dev.yml build
+    downContainers
     echo "🚀 Starting subspace-api in '$MODE' mode"
     docker compose -f docker-compose.dev.yml up -d
   ;;
