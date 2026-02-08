@@ -261,11 +261,11 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
   .flight-aircraft { font-size: ${variant === 'quadrant' ? '14px' : variant === 'full' ? '20px' : '17px'}; font-weight: 500; color: #444; }
   .flight-status { font-size: ${variant === 'quadrant' ? '16px' : variant === 'full' ? '24px' : '20px'}; font-weight: 600; }
   .flight-route { display: flex; align-items: center; gap: 12px; width: 100%; font-size: ${variant === 'quadrant' ? '20px' : '28px'}; font-weight: 700; margin: ${variant === 'quadrant' ? '8px 0 5px' : '14px 0 8px'}; }
-  .view--half_vertical { display: flex; flex-direction: column; flex: 1; align-items: stretch; width: 100% !important; max-width: 100% }
+  .view--half_vertical { display: flex; flex-direction: column; flex: 1; align-items: stretch; width: 100%; }
   .view--half_vertical .flight-top { margin-bottom: 64px; }
   .view--half_vertical .flight-details { margin-top: auto; display: flex; flex-direction: column; gap: 16px; }
   .view--half_vertical .flight-stats { margin-top: 64px; font-size: 14px; gap: 10px; justify-content: space-between; }
-  .view--half_vertical .flight-route { margin: 0; padding-top: 0; }
+  .view--half_vertical .flight-route { width:100%; margin: 0; }
   .view--half_vertical .stat-item { display: flex; flex-direction: column; align-items: center; }
   .view--half_vertical .stat-value { font-size: 16px; font-weight: 700; }
   .view--half_horizontal .flight-top .flight-route { grid-column: 1 / -1; grid-row: 2; margin: 6px 0 0; font-size: 22px; }
