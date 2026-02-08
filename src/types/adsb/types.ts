@@ -29,4 +29,8 @@ export type AdsbAircraft = {
 export type AdsbRoute = {
   from: string
   to: string
+  fromLat?: number
+  fromLon?: number
+  toLat?: number
+  toLon?: number
 }

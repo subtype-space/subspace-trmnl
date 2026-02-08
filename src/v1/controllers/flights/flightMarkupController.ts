@@ -159,6 +159,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
           speedMph: '--',
           aircraftModel: '--',
           aircraftIcao: '',
+          progressPct: null,
         })
         continue
       }
@@ -174,6 +175,15 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
 
       const status = deriveStatus(altBaro, aircraft.baro_rate)
 
+      const progressPct = calcProgress(
+        aircraft.lat,
+        aircraft.lon,
+        route?.fromLat,
+        route?.fromLon,
+        route?.toLat,
+        route?.toLon,
+      )
+
       flights.push({
         flightIata: iataFlight,
         airlineIata,
@@ -184,6 +194,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
         speedMph,
         aircraftModel,
         aircraftIcao,
+        progressPct,
       })
     } catch (e) {
       logger.warn(`[FLIGHTS] Failed to fetch data for ${iataFlight}`, String(e))
@@ -197,6 +208,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
         speedMph: '--',
         aircraftModel: '--',
         aircraftIcao: '',
+        progressPct: null,
       })
     }
   }
@@ -244,7 +256,7 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
 
   return `
 <style>
-  .flight-card { margin: 0; padding: ${variant === 'quadrant' ? '2px 0' : '6px 0'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; }
+  .flight-card { margin: 0; padding: ${variant === 'full' ? '10px 56px' : variant === 'quadrant' ? '2px 0' : '6px 0'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; }
   .flight-top { display: flex; align-items: flex-start; gap: ${variant === 'quadrant' ? '12px' : '20px'}; width: 100%; }
   .flight-meta { display: flex; flex-direction: column; gap: ${variant === 'quadrant' ? '3px' : '5px'}; align-items: flex-end; text-align: right; margin-left: auto; }
   .airline-name { font-size: ${variant === 'quadrant' ? '18px' : variant === 'full' ? '30px' : '24px'}; font-weight: 700; letter-spacing: 0.2px; }
@@ -287,13 +299,17 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string 
     ? `${airlineCode} ${f.flightIata.slice(airlineCode.length)}`
     : f.flightIata
 
+  // If we have progress data, use flex ratios to position the plane icon
+  const leftFlex = f.progressPct != null ? Math.max(f.progressPct, 2) : 1
+  const rightFlex = f.progressPct != null ? Math.max(100 - f.progressPct, 2) : 1
+
   const routeHtml = showRoute
     ? `
     <div class="flight-route">
       <span>${escapeHtml(f.depAirport || '---')}</span>
-      <span class="route-line"></span>
+      <span class="route-line" style="flex: ${leftFlex};"></span>
       <span class="route-plane">✈</span>
-      <span class="route-line"></span>
+      <span class="route-line" style="flex: ${rightFlex};"></span>
       <span>${escapeHtml(f.arrAirport || '---')}</span>
     </div>`
     : ''
@@ -317,8 +333,8 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string 
         <span class="flight-status">${escapeHtml(f.status)}</span>
       </div>
     </div>
-    ${routeHtml}
     ${statsHtml}
+    ${routeHtml}
   </div>`
 }
 
@@ -357,6 +373,36 @@ function escapeHtml(s: string) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;')
+}
+
+// Haversine distance in km between two lat/lon points
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+// Calculate flight progress as 0-100, or null if insufficient data
+function calcProgress(
+  aircraftLat: number | undefined,
+  aircraftLon: number | undefined,
+  fromLat: number | undefined,
+  fromLon: number | undefined,
+  toLat: number | undefined,
+  toLon: number | undefined,
+): number | null {
+  if (aircraftLat == null || aircraftLon == null) return null
+  if (fromLat == null || fromLon == null || toLat == null || toLon == null) return null
+
+  const totalDist = haversineKm(fromLat, fromLon, toLat, toLon)
+  if (totalDist < 1) return null // airports too close, avoid division issues
+
+  const flownDist = haversineKm(fromLat, fromLon, aircraftLat, aircraftLon)
+  const pct = Math.round((flownDist / totalDist) * 100)
+  return Math.max(0, Math.min(100, pct))
 }
 
 // Cached fetch for live aircraft data
