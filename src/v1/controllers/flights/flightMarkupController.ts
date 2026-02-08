@@ -236,7 +236,7 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
   const offset = Number(utcOffset) || 0
   const logoSize =
     variant === 'full'
-      ? '190px'
+      ? '100px'
       : variant === 'half_vertical'
         ? '150px'
         : variant === 'half_horizontal'
