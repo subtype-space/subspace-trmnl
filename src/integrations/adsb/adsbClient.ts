@@ -41,6 +41,14 @@ export function toIcaoCallsign(iataFlight: string): string {
 export class AdsbClient {
   private readonly baseUrl = 'https://api.adsb.lol'
 
+  private readonly liveCache = new Map<string, { data: AdsbAircraft | null; at: number }>()
+  private readonly routeCache = new Map<string, { data: AdsbRoute | null; at: number }>()
+  private readonly liveInflight = new Map<string, Promise<AdsbAircraft | null>>()
+  private readonly routeInflight = new Map<string, Promise<AdsbRoute | null>>()
+
+  private readonly LIVE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+  private readonly ROUTE_TTL_MS = 12 * 60 * 60 * 1000 // 12 hours
+
   async getByCallsign(callsign: string): Promise<AdsbAircraft | null> {
     const url = `${this.baseUrl}/v2/callsign/${encodeURIComponent(callsign)}`
     logger.debug(`[ADSB] GET ${url}`)
@@ -98,5 +106,57 @@ export class AdsbClient {
       toLat: arrAirport?.lat,
       toLon: arrAirport?.lon,
     }
+  }
+
+  async getByCallsignCached(callsign: string): Promise<AdsbAircraft | null> {
+    const now = Date.now()
+    const cached = this.liveCache.get(callsign)
+    if (cached && now - cached.at < this.LIVE_TTL_MS) {
+      logger.debug(`[ADSB] Live cache hit for ${callsign}`)
+      return cached.data
+    }
+
+    const existing = this.liveInflight.get(callsign)
+    if (existing) return existing
+
+    logger.debug(`[ADSB] Live cache miss for ${callsign}`)
+    const promise = (async () => {
+      const data = await this.getByCallsign(callsign)
+      this.liveCache.set(callsign, { data, at: Date.now() })
+      this.liveInflight.delete(callsign)
+      return data
+    })().catch((err) => {
+      this.liveInflight.delete(callsign)
+      throw err
+    })
+
+    this.liveInflight.set(callsign, promise)
+    return promise
+  }
+
+  async getRouteCached(callsign: string): Promise<AdsbRoute | null> {
+    const now = Date.now()
+    const cached = this.routeCache.get(callsign)
+    if (cached && now - cached.at < this.ROUTE_TTL_MS) {
+      logger.debug(`[ADSB] Route cache hit for ${callsign}`)
+      return cached.data
+    }
+
+    const existing = this.routeInflight.get(callsign)
+    if (existing) return existing
+
+    logger.debug(`[ADSB] Route cache miss for ${callsign}`)
+    const promise = (async () => {
+      const data = await this.getRoute(callsign)
+      this.routeCache.set(callsign, { data, at: Date.now() })
+      this.routeInflight.delete(callsign)
+      return data
+    })().catch((err) => {
+      this.routeInflight.delete(callsign)
+      throw err
+    })
+
+    this.routeInflight.set(callsign, promise)
+    return promise
   }
 }

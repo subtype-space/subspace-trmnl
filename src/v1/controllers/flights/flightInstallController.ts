@@ -46,7 +46,7 @@ const flightInstallController: RequestHandler = async (req, res): Promise<void> 
   const raw = await trmnlResp.text()
 
   if (!trmnlResp.ok) {
-    logger.warn('[FLIGHTS] token exchange failed', raw)
+    logger.warn('[TRMNL] token exchange failed', raw)
     res.status(502).json({ error: 'Bad Gateway', message: 'trmnl_exchange_failed' })
     return
   }
@@ -66,11 +66,11 @@ const flightInstallController: RequestHandler = async (req, res): Promise<void> 
   }
 
   const hash = sha256(access_token)
-  logger.info('[FLIGHTS] Storing hashed access token...')
+  logger.info('[TRMNL] Storing hashed access token...')
   logger.debug(hash)
   await storeTrmnlToken(hash)
 
-  logger.debug('[FLIGHTS] Redirecting user back to', callback)
+  logger.debug('[TRMNL] Redirecting user back to', callback)
   res.redirect(callback)
   return
 }

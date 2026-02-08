@@ -5,7 +5,6 @@ import { formatIncidents, formatRailPredictionData } from '../../integrations/wm
 
 const client = new WmataClient({ apiKey: config.wmata.apiKey })
 
-
 export async function getStationInfo({ stationCodes }: { stationCodes: string[] }) {
   if (stationCodes.length === 0) {
     logger.debug('No station codes were given')
