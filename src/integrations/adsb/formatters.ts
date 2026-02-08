@@ -278,7 +278,7 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl:
   return `
   <div class="flight-card">
     <div class="flight-top">
-      <img class="airline-logo" src="${logoUrl}" onerror="this.style.display='none'" />
+      <img class="image-dither airline-logo" src="${logoUrl}" onerror="this.style.display='none'" />
       <div class="flight-meta">
         <span class="airline-name">${escapeHtml(airlineName)}</span>
         <span class="flight-number">${escapeHtml(flightCode)}</span>
