@@ -84,10 +84,19 @@ export class AdsbClient {
     const airports = plane?._airports
     if (!airports) return null
 
-    const from = airports[0]?.iata || airports[0]?.icao || ''
-    const to = airports[1]?.iata || airports[1]?.icao || ''
+    const depAirport = airports[0]
+    const arrAirport = airports[1]
+    const from = depAirport?.iata || depAirport?.icao || ''
+    const to = arrAirport?.iata || arrAirport?.icao || ''
 
     if (!from && !to) return null
-    return { from, to }
+    return {
+      from,
+      to,
+      fromLat: depAirport?.lat,
+      fromLon: depAirport?.lon,
+      toLat: arrAirport?.lat,
+      toLon: arrAirport?.lon,
+    }
   }
 }

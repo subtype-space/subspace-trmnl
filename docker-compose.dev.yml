@@ -13,9 +13,10 @@ services:
       timeout: 5s
       start_period: 10s
       retries: 3
-    # This is NOT persisted between reboots!
     environment:
-      TRMNL_DB_PATH: /opt/api/dev.sqlite
+      TRMNL_DB_PATH: /opt/api/subspace-db/trmnl.sqlite
+    volumes:
+      - ./data_dev:/opt/api/subspace-db
     networks:
       - proxy
       - api
