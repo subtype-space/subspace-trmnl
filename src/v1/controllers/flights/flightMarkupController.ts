@@ -224,12 +224,12 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
   const offset = Number(utcOffset) || 0
   const logoSize =
     variant === 'full'
-      ? '160px'
+      ? '190px'
       : variant === 'half_vertical'
-        ? '120px'
+        ? '150px'
         : variant === 'half_horizontal'
-          ? '110px'
-          : '64px'
+          ? '140px'
+          : '80px'
 
   if (flights.length === 0) {
     return renderEmptyMarkup(variant, offset)
@@ -244,16 +244,16 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
 
   return `
 <style>
-  .flight-card { margin: 0; padding: ${variant === 'quadrant' ? '2px 0' : '6px 0'}; }
-  .flight-top { display: flex; align-items: flex-start; gap: ${variant === 'quadrant' ? '10px' : '18px'}; }
-  .flight-meta { display: flex; flex-direction: column; gap: ${variant === 'quadrant' ? '2px' : '4px'}; align-items: flex-end; text-align: right; }
-  .airline-name { font-size: ${variant === 'quadrant' ? '16px' : variant === 'full' ? '26px' : '20px'}; font-weight: 700; letter-spacing: 0.2px; }
-  .flight-number { font-size: ${variant === 'quadrant' ? '22px' : variant === 'full' ? '38px' : '30px'}; font-weight: 800; }
-  .flight-status { font-size: ${variant === 'quadrant' ? '14px' : variant === 'full' ? '22px' : '18px'}; font-weight: 600; }
-  .flight-route { display: flex; align-items: center; gap: 10px; width: 100%; font-size: ${variant === 'quadrant' ? '18px' : '26px'}; font-weight: 700; margin: ${variant === 'quadrant' ? '6px 0 4px' : '12px 0 6px'}; }
+  .flight-card { margin: 0; padding: ${variant === 'quadrant' ? '2px 0' : '6px 0'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; }
+  .flight-top { display: flex; align-items: flex-start; gap: ${variant === 'quadrant' ? '12px' : '20px'}; width: 100%; }
+  .flight-meta { display: flex; flex-direction: column; gap: ${variant === 'quadrant' ? '3px' : '5px'}; align-items: flex-end; text-align: right; margin-left: auto; }
+  .airline-name { font-size: ${variant === 'quadrant' ? '18px' : variant === 'full' ? '30px' : '24px'}; font-weight: 700; letter-spacing: 0.2px; }
+  .flight-number { font-size: ${variant === 'quadrant' ? '26px' : variant === 'full' ? '44px' : '34px'}; font-weight: 800; }
+  .flight-status { font-size: ${variant === 'quadrant' ? '16px' : variant === 'full' ? '24px' : '20px'}; font-weight: 600; }
+  .flight-route { display: flex; align-items: center; gap: 12px; width: 100%; font-size: ${variant === 'quadrant' ? '20px' : '28px'}; font-weight: 700; margin: ${variant === 'quadrant' ? '8px 0 5px' : '14px 0 8px'}; }
   .route-line { flex: 1; height: 2px; background: black; position: relative; }
   .route-plane { font-size: ${variant === 'quadrant' ? '14px' : '18px'}; }
-  .flight-stats { display: flex; gap: ${variant === 'quadrant' ? '12px' : '24px'}; font-size: ${variant === 'quadrant' ? '14px' : '18px'}; margin-top: ${variant === 'quadrant' ? '2px' : '6px'}; }
+  .flight-stats { display: flex; gap: ${variant === 'quadrant' ? '14px' : '26px'}; font-size: ${variant === 'quadrant' ? '15px' : '19px'}; margin-top: ${variant === 'quadrant' ? '3px' : '7px'}; }
   .stat-label { font-weight: 700; }
   .airline-logo { width: ${logoSize}; height: ${logoSize}; border-radius: 8px; object-fit: contain; background: #fff; }
   .flight-divider { border: none; border-top: 1px solid #ccc; margin: ${variant === 'quadrant' ? '6px 0' : '12px 0'}; }
