@@ -265,22 +265,23 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
 
   return `
 <style>
-  .flight-card { margin: 0; padding: ${variant === 'full' ? '12px 24px' : variant === 'half_vertical' ? '10px 12px' : variant === 'half_horizontal' ? '8px 16px' : '6px 8px'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; }
+  .flight-card { margin: 0; padding: ${variant === 'full' ? '12px 24px' : variant === 'half_vertical' ? '10px 0' : variant === 'half_horizontal' ? '8px 0' : '6px 8px'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; }
   .flight-top { display: flex; align-items: center; gap: ${variant === 'quadrant' ? '12px' : '20px'}; width: 100%; }
-  .view--half_horizontal .flight-top { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto auto; align-items: center; column-gap: 16px; row-gap: 2px; }
-  .view--half_horizontal .airline-logo { grid-column: 1; grid-row: 1 / -1; align-self: center; }
-  .view--half_horizontal .flight-meta { grid-column: 2; grid-row: 1; }
+  .view--half_horizontal .flight-top { display: grid; grid-template-columns: auto auto 1fr; grid-template-rows: auto auto; align-items: center; column-gap: 16px; row-gap: 2px; }
+  .view--half_horizontal .airline-logo { grid-column: 1; grid-row: 1; align-self: center; }
+  .view--half_horizontal .flight-meta { grid-column: 3; grid-row: 1; }
   .flight-meta { display: flex; flex-direction: column; gap: ${variant === 'quadrant' ? '3px' : '5px'}; align-items: flex-end; text-align: right; margin-left: auto; }
   .airline-name { font-size: ${variant === 'quadrant' ? '18px' : variant === 'full' ? '30px' : '24px'}; font-weight: 700; letter-spacing: 0.2px; }
   .flight-number { font-size: ${variant === 'quadrant' ? '26px' : variant === 'full' ? '44px' : '34px'}; font-weight: 800; }
   .flight-aircraft { font-size: ${variant === 'quadrant' ? '14px' : variant === 'full' ? '20px' : '17px'}; font-weight: 500; color: #444; }
   .flight-status { font-size: ${variant === 'quadrant' ? '16px' : variant === 'full' ? '24px' : '20px'}; font-weight: 600; }
   .flight-route { display: flex; align-items: center; gap: 12px; width: 100%; font-size: ${variant === 'quadrant' ? '20px' : '28px'}; font-weight: 700; margin: ${variant === 'quadrant' ? '8px 0 5px' : '14px 0 8px'}; }
-  .view--half_vertical .flight-top { margin-bottom: 6px; }
-  .view--half_vertical .flight-stats { margin-top: 32px; }
-  .view--half_vertical .flight-route { margin: 16px 0 10px; }
-  .view--half_horizontal .flight-top .flight-route { grid-column: 2; grid-row: 2; margin: 4px 0 0; font-size: 22px; }
-  .view--half_horizontal .flight-top .flight-stats { grid-column: 2; grid-row: 3; margin-top: 2px; font-size: 16px; gap: 14px; }
+  .view--half_vertical .flight-card { display: flex; flex-direction: column; height: 100%; }
+  .view--half_vertical .flight-top { margin-bottom: 4px; }
+  .view--half_vertical .flight-stats { margin-top: 4px; font-size: 14px; gap: 10px; }
+  .view--half_vertical .flight-route { margin: auto 0 0; padding-top: 6px; }
+  .view--half_horizontal .flight-top .flight-route { grid-column: 1 / -1; grid-row: 2; margin: 6px 0 0; font-size: 22px; }
+  .view--half_horizontal .flight-top .flight-stats { grid-column: 2; grid-row: 1; flex-direction: column; align-items: flex-start; gap: 2px; font-size: 16px; margin-top: 0; }
   .view--half_horizontal .airline-name { font-size: 20px; }
   .view--half_horizontal .flight-number { font-size: 30px; }
   .view--half_horizontal .flight-aircraft { display: none; }
