@@ -277,11 +277,11 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
   .view--half_vertical, .view--half_vertical .layout, .view--half_vertical .columns, .view--half_vertical .column, .view--half_vertical .markdown, .view--half_vertical .flight-card { display: flex; flex-direction: column; flex: 1; align-items: stretch; padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box; }
   .view--half_vertical { height: 100%; }
   .view--half_vertical .flight-top { margin-bottom: 4px; }
-  .view--half_vertical .flight-stats { margin-top: 16px; font-size: 14px; gap: 10px; justify-content: space-between; }
-  .view--half_vertical .flight-route { margin: auto 0 0; padding-top: 6px; }
+  .view--half_vertical .flight-details { margin-top: auto; display: flex; flex-direction: column; gap: 16px; }
+  .view--half_vertical .flight-stats { margin-top: 0; font-size: 14px; gap: 10px; justify-content: space-between; }
+  .view--half_vertical .flight-route { margin: 0; padding-top: 0; }
   .view--half_vertical .stat-item { display: flex; flex-direction: column; align-items: center; }
   .view--half_vertical .stat-value { font-size: 16px; font-weight: 700; }
-  .view--half_vertical .flight-route { margin: auto 0 0; padding-top: 6px; }
   .view--half_horizontal .flight-top .flight-route { grid-column: 1 / -1; grid-row: 2; margin: 6px 0 0; font-size: 22px; }
   .view--half_horizontal .flight-top .flight-stats { grid-column: 2; grid-row: 1; flex-direction: column; align-items: flex-start; justify-self: center; gap: 2px; font-size: 16px; margin-top: 0; }
   .view--half_horizontal .flight-stat-aircraft { font-weight: 600; }
@@ -355,6 +355,12 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string 
 
   const routeBlock = showRoute ? routeHtml : ''
   const statsBlock = showStats ? statsHtml : ''
+  const detailsContent = `${statsBlock}${routeBlock}`
+  const detailsBlock = embedRouteInTop
+    ? ''
+    : variant === 'half_vertical'
+      ? `<div class="flight-details">${detailsContent}</div>`
+      : detailsContent
 
   return `
   <div class="flight-card">
@@ -369,7 +375,7 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string 
       ${embedRouteInTop ? routeBlock : ''}
       ${embedRouteInTop ? statsBlock : ''}
     </div>
-    ${embedRouteInTop ? '' : `${statsBlock}${routeBlock}`}
+    ${detailsBlock}
   </div>`
 }
 
