@@ -1,4 +1,4 @@
-import type { AdsbResponse, AdsbAircraft, AdsbRoute } from '../../types/adsb/types.js'
+import type { AdsbResponse, AdsbAircraft, AdsbRoute, LastSeenData } from '../../types/adsb/types.js'
 import { logger } from '../../utils/logger.js'
 
 // IATA airline code → ICAO airline code mapping
@@ -50,9 +50,11 @@ export class AdsbClient {
   private readonly routeCache = new Map<string, { data: AdsbRoute | null; at: number }>()
   private readonly liveInflight = new Map<string, Promise<AdsbAircraft | null>>()
   private readonly routeInflight = new Map<string, Promise<AdsbRoute | null>>()
+  private readonly lastSeenStore = new Map<string, LastSeenData>()
 
   private readonly LIVE_TTL_MS = 5 * 60 * 1000 // 5 minutes
   private readonly ROUTE_TTL_MS = 12 * 60 * 60 * 1000 // 12 hours
+  private readonly LAST_SEEN_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
 
   async getByCallsign(callsign: string): Promise<AdsbAircraft | null> {
     const url = `${this.baseUrl}/v2/callsign/${encodeURIComponent(callsign)}`
@@ -163,5 +165,19 @@ export class AdsbClient {
 
     this.routeInflight.set(callsign, promise)
     return promise
+  }
+
+  getLastSeen(callsign: string): LastSeenData | null {
+    const entry = this.lastSeenStore.get(callsign)
+    if (!entry) return null
+    if (Date.now() - entry.timestamp > this.LAST_SEEN_TTL_MS) {
+      this.lastSeenStore.delete(callsign)
+      return null
+    }
+    return entry
+  }
+
+  updateLastSeen(callsign: string, data: LastSeenData): void {
+    this.lastSeenStore.set(callsign, data)
   }
 }

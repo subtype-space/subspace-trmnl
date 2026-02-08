@@ -25,6 +25,15 @@ export type AdsbAircraft = {
   nav_heading?: number
 }
 
+// Last-seen snapshot for coverage-gap inference
+export type LastSeenData = {
+  timestamp: number // Date.now() when observed
+  aircraft: AdsbAircraft // Full telemetry snapshot
+  route: AdsbRoute | null // Route info at time of observation
+  progressPct: number | null // Calculated progress 0-100
+  status: string // Derived status at observation time
+}
+
 // POST /api/0/routeset - parsed route info
 export type AdsbRoute = {
   from: string

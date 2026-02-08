@@ -3,14 +3,8 @@ import { logger } from '../../../utils/logger.js'
 import { getFlightSettingsByUuid } from '../../../utils/dbConnector.js'
 import { config } from '../../../config.js'
 import { AdsbClient, toIcaoCallsign } from '../../../integrations/adsb/adsbClient.js'
-import {
-  lookupAircraftName,
-  deriveStatus,
-  formatHeading,
-  calcProgress,
-  calcEta,
-  renderMarkup,
-} from '../../../integrations/adsb/formatters.js'
+import { lookupAircraftName, formatHeading, calcProgress, calcEta, renderMarkup } from '../../../integrations/adsb/formatters.js'
+import { resolveFlightStatus } from '../../../integrations/adsb/statusLogic.js'
 import type { FlightDisplayData } from '../../../types/trmnl/flightTypes.js'
 import type { TrmnlMeta } from '../../../types/trmnl/types.js'
 
@@ -85,7 +79,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
 
     try {
       // Fetch live data and route in parallel
-      const [aircraft, route] = await Promise.all([
+      const [liveAircraft, route] = await Promise.all([
         client.getByCallsignCached(icaoCallsign),
         client.getRouteCached(icaoCallsign).catch((e) => {
           logger.warn(`[FLIGHTS] Route fetch failed for ${icaoCallsign}`, String(e))
@@ -93,14 +87,38 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
         }),
       ])
 
+      const lastSeen = client.getLastSeen(icaoCallsign)
+      const resolved = resolveFlightStatus(liveAircraft, lastSeen, route)
+      const aircraft = resolved.aircraft
+      const effectiveRoute = resolved.route
+
+      // Update last-seen store when we have live data
+      if (liveAircraft) {
+        const progressPct = calcProgress(
+          liveAircraft.lat,
+          liveAircraft.lon,
+          route?.fromLat,
+          route?.fromLon,
+          route?.toLat,
+          route?.toLon
+        )
+        client.updateLastSeen(icaoCallsign, {
+          timestamp: Date.now(),
+          aircraft: liveAircraft,
+          route,
+          progressPct,
+          status: resolved.status,
+        })
+      }
+
       if (!aircraft) {
         flights.push({
           flightIata: iataFlight,
           airlineIata,
           airlineIcao,
-          depAirport: route?.from ?? '',
-          arrAirport: route?.to ?? '',
-          status: 'Landed',
+          depAirport: effectiveRoute?.from ?? '',
+          arrAirport: effectiveRoute?.to ?? '',
+          status: resolved.status,
           altitudeFt: '--',
           speedMph: '--',
           aircraftModel: '--',
@@ -121,20 +139,21 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
       const aircraftIcao = aircraft.t ?? ''
       const aircraftModel = lookupAircraftName(aircraftIcao)
 
-      const status = deriveStatus(altBaro, aircraft.baro_rate)
       const heading = formatHeading(aircraft.track)
 
-      const progressPct = calcProgress(aircraft.lat, aircraft.lon, route?.fromLat, route?.fromLon, route?.toLat, route?.toLon)
+      const progressPct =
+        resolved.progressPct ??
+        calcProgress(aircraft.lat, aircraft.lon, effectiveRoute?.fromLat, effectiveRoute?.fromLon, effectiveRoute?.toLat, effectiveRoute?.toLon)
 
-      const eta = calcEta(aircraft.lat, aircraft.lon, route?.toLat, route?.toLon, aircraft.gs, utcOffset)
+      const eta = calcEta(aircraft.lat, aircraft.lon, effectiveRoute?.toLat, effectiveRoute?.toLon, aircraft.gs, utcOffset)
 
       flights.push({
         flightIata: iataFlight,
         airlineIata,
         airlineIcao,
-        depAirport: route?.from ?? '',
-        arrAirport: route?.to ?? '',
-        status,
+        depAirport: effectiveRoute?.from ?? '',
+        arrAirport: effectiveRoute?.to ?? '',
+        status: resolved.status,
         altitudeFt: altStr,
         speedMph,
         aircraftModel,
