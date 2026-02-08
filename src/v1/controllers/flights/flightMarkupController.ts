@@ -222,6 +222,14 @@ function deriveStatus(altBaro: number | 'ground' | undefined, baroRate: number |
 
 function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcOffset: number): string {
   const offset = Number(utcOffset) || 0
+  const logoSize =
+    variant === 'full'
+      ? '160px'
+      : variant === 'half_vertical'
+        ? '120px'
+        : variant === 'half_horizontal'
+          ? '110px'
+          : '64px'
 
   if (flights.length === 0) {
     return renderEmptyMarkup(variant, offset)
@@ -238,7 +246,7 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
 <style>
   .flight-card { margin: 0; padding: ${variant === 'quadrant' ? '2px 0' : '6px 0'}; }
   .flight-top { display: flex; align-items: flex-start; gap: ${variant === 'quadrant' ? '10px' : '18px'}; }
-  .flight-meta { display: flex; flex-direction: column; gap: ${variant === 'quadrant' ? '2px' : '4px'}; }
+  .flight-meta { display: flex; flex-direction: column; gap: ${variant === 'quadrant' ? '2px' : '4px'}; align-items: flex-end; text-align: right; }
   .airline-name { font-size: ${variant === 'quadrant' ? '16px' : variant === 'full' ? '26px' : '20px'}; font-weight: 700; letter-spacing: 0.2px; }
   .flight-number { font-size: ${variant === 'quadrant' ? '22px' : variant === 'full' ? '38px' : '30px'}; font-weight: 800; }
   .flight-status { font-size: ${variant === 'quadrant' ? '14px' : variant === 'full' ? '22px' : '18px'}; font-weight: 600; }
@@ -247,7 +255,7 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
   .route-plane { font-size: ${variant === 'quadrant' ? '14px' : '18px'}; }
   .flight-stats { display: flex; gap: ${variant === 'quadrant' ? '12px' : '24px'}; font-size: ${variant === 'quadrant' ? '14px' : '18px'}; margin-top: ${variant === 'quadrant' ? '2px' : '6px'}; }
   .stat-label { font-weight: 700; }
-  .airline-logo { width: ${variant === 'full' ? '120px' : variant === 'quadrant' ? '40px' : '72px'}; height: ${variant === 'full' ? '120px' : variant === 'quadrant' ? '40px' : '72px'}; border-radius: 8px; object-fit: contain; background: #fff; }
+  .airline-logo { width: ${logoSize}; height: ${logoSize}; border-radius: 8px; object-fit: contain; background: #fff; }
   .flight-divider { border: none; border-top: 1px solid #ccc; margin: ${variant === 'quadrant' ? '6px 0' : '12px 0'}; }
 </style>
 <div class="view view--${variant}">
