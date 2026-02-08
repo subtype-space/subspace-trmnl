@@ -70,7 +70,11 @@ server.use(express.json())
 logger.info('Initializing routes...')
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-server.use('/public', express.static(path.join(__dirname, 'public'), { maxAge: '7d' }))
+server.use(
+  '/public',
+  helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }),
+  express.static(path.join(__dirname, 'public'), { maxAge: '7d' })
+)
 
 server.use('/health', rateLimiter, express.json(), statusRouter)
 server.use('/v1/trmnl', rateLimiter, trmnlRouter)
