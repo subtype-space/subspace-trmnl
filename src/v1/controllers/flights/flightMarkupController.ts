@@ -219,7 +219,7 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
   .route-plane { font-size: ${variant === 'quadrant' ? '14px' : '18px'}; }
   .flight-stats { display: flex; gap: ${variant === 'quadrant' ? '12px' : '24px'}; font-size: ${variant === 'quadrant' ? '14px' : '18px'}; margin-top: ${variant === 'quadrant' ? '2px' : '6px'}; }
   .stat-label { font-weight: 700; }
-  .airline-logo { width: ${variant === 'quadrant' ? '28px' : '40px'}; height: ${variant === 'quadrant' ? '28px' : '40px'}; border-radius: 6px; }
+  .airline-logo { width: ${variant === 'full' ? '80px' : variant === 'quadrant' ? '40px' : '52px'}; height: ${variant === 'full' ? '80px' : variant === 'quadrant' ? '40px' : '52px'}; border-radius: 6px; }
   .flight-divider { border: none; border-top: 1px solid #ccc; margin: ${variant === 'quadrant' ? '6px 0' : '12px 0'}; }
 </style>
 <div class="view view--${variant}">

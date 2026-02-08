@@ -6,16 +6,17 @@ MODE=${1:-prod}
 BRANCH=${2:-v1}
 LATEST_RELEASE="v1"
 
-echo "🧹 Ensuring all subspace-api containers are stopped..."
-docker compose down || true
-docker compose -f docker-compose.dev.yml down || true
-
+downContainers() {
+  echo "🧹 Ensuring all subspace-api containers are stopped..."
+  docker compose down || true
+  docker compose -f docker-compose.dev.yml down || true
+}
 
 case "$MODE" in
   prod)
     echo "📦 Pulling latest image from GitHub Container Registry..."
     echo "🚀 Starting subspace-api in '$MODE' mode"
-    docker compose pull && docker compose up -d
+    docker compose pull && downContainers() && docker compose up -d
     ;;
 
   branch)
