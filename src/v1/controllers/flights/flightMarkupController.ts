@@ -264,7 +264,7 @@ function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcO
   .view--half_vertical { display: flex; flex-direction: column; flex: 1; align-items: stretch; width: 100% !important; max-width: 100% }
   .view--half_vertical .flight-top { margin-bottom: 64px; }
   .view--half_vertical .flight-details { margin-top: auto; display: flex; flex-direction: column; gap: 16px; }
-  .view--half_vertical .flight-stats { margin-top: 0; font-size: 14px; gap: 10px; justify-content: space-between; }
+  .view--half_vertical .flight-stats { margin-top: 64px; font-size: 14px; gap: 10px; justify-content: space-between; }
   .view--half_vertical .flight-route { margin: 0; padding-top: 0; }
   .view--half_vertical .stat-item { display: flex; flex-direction: column; align-items: center; }
   .view--half_vertical .stat-value { font-size: 16px; font-weight: 700; }
