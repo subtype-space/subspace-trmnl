@@ -159,7 +159,12 @@ function escapeHtml(s: string) {
     .replaceAll("'", '&#39;')
 }
 
-export function renderMarkup(flights: FlightDisplayData[], variant: MarkupVariant, utcOffset: number): string {
+export function renderMarkup(
+  flights: FlightDisplayData[],
+  variant: MarkupVariant,
+  utcOffset: number,
+  baseUrl: string
+): string {
   const offset = Number(utcOffset) || 0
   const logoSize =
     variant === 'full' ? '240px' : variant === 'half_vertical' ? '140px' : variant === 'half_horizontal' ? '160px' : '120px'
@@ -168,7 +173,7 @@ export function renderMarkup(flights: FlightDisplayData[], variant: MarkupVarian
     return renderEmptyMarkup(variant, offset)
   }
 
-  const flightCards = flights.map((f) => renderFlightCard(f, variant)).join('')
+  const flightCards = flights.map((f) => renderFlightCard(f, variant, baseUrl)).join('')
 
   return `
 <style>
@@ -223,8 +228,8 @@ export function renderMarkup(flights: FlightDisplayData[], variant: MarkupVarian
 `.trim()
 }
 
-function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string {
-  const logoUrl = `https://pics.avs.io/200/200/${escapeHtml(f.airlineIata)}.png`
+function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl: string): string {
+  const logoUrl = `${baseUrl}/public/flightaware_logos/${encodeURIComponent(f.airlineIcao)}.png`
   const showStats = variant !== 'quadrant'
   const showRoute = true
   const embedRouteInTop = variant === 'half_horizontal'
@@ -273,7 +278,7 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant): string 
   return `
   <div class="flight-card">
     <div class="flight-top">
-      <img class="airline-logo" src="${logoUrl}" />
+      <img class="airline-logo" src="${logoUrl}" onerror="this.style.display='none'" />
       <div class="flight-meta">
         <span class="airline-name">${escapeHtml(airlineName)}</span>
         <span class="flight-number">${escapeHtml(flightCode)}</span>

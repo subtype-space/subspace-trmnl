@@ -41,3 +41,12 @@ Parts of this project were assisted with OpenAI/Claude Code by having them provi
 Some parts of the code base were refactored by Claude Code/OpenAI suggestion to improve efficiency (TS is new to me)
 
 It is subspace's responsibilty to examine the output of these LLMs to look for accuracy, implementation detail, and direction.
+
+# Disclaimer & Fair Use
+
+This flight tracker contains logos and banners of various airlines and aviation operators.
+
+**Fair Use Notice:** These images are the property of their respective owners (airlines and operators). They are provided here for **educational and identification purposes only** (e.g., to identify airlines in flight tracking applications).
+
+* This use is considered **Fair Use** under copyright law as it is non-commercial, transformative (aggregating for identification), and does not impede the owners' ability to profit from their branding.
+* The repository does not claim ownership of any trademarks or copyrighted material.
