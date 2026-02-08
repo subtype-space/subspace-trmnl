@@ -20,6 +20,12 @@ export type TrmnlSettings = {
   plugin_setting_id?: number | null
 }
 
+export type TrmnlFlightSettings = {
+  user_uuid: string
+  flight_numbers?: string | null
+  plugin_setting_id?: number | null
+}
+
 // Let this file manage the lifecycle of the db
 let db: Database.Database | null = null
 function getDb(): Database.Database {
@@ -49,6 +55,12 @@ export function initTrmnlDB() {
     lines text,
     plugin_setting_id integer,
     crass_level integer default 0,
+    updated_at integer not null
+  );
+  create table if not exists trmnl_flight_settings (
+    user_uuid text primary key,
+    flight_numbers text,
+    plugin_setting_id integer,
     updated_at integer not null
   );
 `)
@@ -194,4 +206,55 @@ export async function upsertSettings(input: TrmnlSettings) {
       updated_at = excluded.updated_at
   `
   ).run(userUuid, primaryLine, lines, pluginSettingId, crassLevel, Date.now())
+}
+
+// Flight settings
+export async function getFlightSettingsByUuid(userUuid: string): Promise<TrmnlFlightSettings | null> {
+  const db = getDb()
+  logger.info(`[ DB ] Getting flight settings for ${userUuid}`)
+  const row = db
+    .prepare(
+      `
+      select user_uuid, flight_numbers, plugin_setting_id, updated_at
+      from trmnl_flight_settings
+      where user_uuid = ?
+    `
+    )
+    .get(userUuid) as
+    | {
+        user_uuid: string
+        flight_numbers: string | null
+        plugin_setting_id: number | null
+        updated_at: number
+      }
+    | undefined
+
+  if (!row) return null
+
+  return {
+    user_uuid: row.user_uuid,
+    flight_numbers: row.flight_numbers,
+    plugin_setting_id: row.plugin_setting_id,
+  }
+}
+
+export async function upsertFlightSettings(input: TrmnlFlightSettings) {
+  const db = getDb()
+
+  const userUuid = input.user_uuid
+  const flightNumbers = input.flight_numbers ?? null
+  const pluginSettingId = input.plugin_setting_id ?? null
+
+  db.prepare(
+    `
+    insert into trmnl_flight_settings (
+      user_uuid, flight_numbers, plugin_setting_id, updated_at
+    )
+    values (?, ?, ?, ?)
+    on conflict(user_uuid) do update set
+      flight_numbers = coalesce(excluded.flight_numbers, trmnl_flight_settings.flight_numbers),
+      plugin_setting_id = coalesce(excluded.plugin_setting_id, trmnl_flight_settings.plugin_setting_id),
+      updated_at = excluded.updated_at
+  `
+  ).run(userUuid, flightNumbers, pluginSettingId, Date.now())
 }

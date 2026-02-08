@@ -31,7 +31,10 @@ export const config = {
         dbPath:         process.env.TRMNL_DB_PATH || './trmnl.sqlite',
         // These clientID and secret are provided by TRMNL, this is not the same as the ones in auth
         clientId:       required('TRMNL_CLIENT_ID'),
-        clientSecret:   required('TRMNL_CLIENT_SECRET')
+        clientSecret:   required('TRMNL_CLIENT_SECRET'),
+        // Flights plugin (optional - only needed if running the flight tracker plugin)
+        flightsClientId:     process.env.TRMNL_FLIGHTS_CLIENT_ID ?? '',
+        flightsClientSecret: process.env.TRMNL_FLIGHTS_CLIENT_SECRET ?? '',
     },
     wmata: {
         apiKey:         required('WMATA_PRIMARY_KEY')
