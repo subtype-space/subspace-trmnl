@@ -49,10 +49,31 @@ function refineInFlightStatus(flight: AeroFlightContract): string {
   return 'Cruising'
 }
 
+// Infer progress percentage from flight status when no location data is available
+function inferProgressFromStatus(status: AeroFlightStatus): number | null {
+  switch (status) {
+    case 'Expected':
+    case 'CheckIn':
+    case 'Boarding':
+    case 'GateClosed':
+    case 'Delayed':
+      return 0
+    case 'Departed':
+      return 5
+    case 'Approaching':
+      return 95
+    case 'Arrived':
+      return 100
+    default:
+      return null
+  }
+}
+
 // Format an ISO datetime string to HH:MM in the user's local time
 function formatEta(flight: AeroFlightContract, utcOffsetSec: number): string {
-  // Prefer revised (updated) arrival time, fall back to scheduled
-  const timeInfo = flight.arrival.revisedTime ?? flight.arrival.scheduledTime
+  // Prefer the most specific arrival time available
+  const timeInfo =
+    flight.arrival.runwayTime ?? flight.arrival.revisedTime ?? flight.arrival.predictedTime ?? flight.arrival.scheduledTime
   if (!timeInfo?.utc) return '--'
 
   const arrivalMs = new Date(timeInfo.utc).getTime()
@@ -109,8 +130,8 @@ export function buildFlightDisplayData(flight: AeroFlightContract, utcOffsetSec:
   // ETA
   const eta = formatEta(flight, utcOffsetSec)
 
-  // Progress
-  const progressPct = calcProgress(
+  // Progress — calculate from position if available, otherwise infer from status
+  let progressPct = calcProgress(
     loc?.lat,
     loc?.lon,
     flight.departure.airport.location?.lat,
@@ -118,6 +139,9 @@ export function buildFlightDisplayData(flight: AeroFlightContract, utcOffsetSec:
     flight.arrival.airport.location?.lat,
     flight.arrival.airport.location?.lon
   )
+  if (progressPct == null) {
+    progressPct = inferProgressFromStatus(flight.status)
+  }
 
   return {
     flightIata: flight.number.replace(/\s/g, ''),

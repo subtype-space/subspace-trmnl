@@ -38,6 +38,7 @@ export type AeroDepartureArrival = {
   quality?: string[]
   scheduledTime?: AeroTimeInfo
   revisedTime?: AeroTimeInfo
+  predictedTime?: AeroTimeInfo
   runwayTime?: AeroTimeInfo
   terminal?: string
   gate?: string

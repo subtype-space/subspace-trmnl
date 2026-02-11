@@ -105,30 +105,22 @@ export class AeroClient {
   }
 
   private pickBestFlight(flights: AeroFlightContract[]): AeroFlightContract | null {
-    // Prefer the operating flight over codeshares
-    let candidates = flights.filter((f) => f.codeshareStatus === 'IsOperator' && !f.isCargo)
-
-    // If no operator flights, fall back to codeshares (user may have entered a codeshare number)
-    if (candidates.length === 0) {
-      candidates = flights.filter((f) => !f.isCargo)
-    }
-
+    const candidates = flights.filter((f) => !f.isCargo)
     if (candidates.length === 0) return null
     if (candidates.length === 1) return candidates[0]
 
-    // Multiple results — pick the one nearest to now
-    const now = Date.now()
+    // Pick the most recently updated entry — the API may return multiple
+    // entries for the same physical flight (e.g. operator + codeshare) with
+    // different freshness levels
     return candidates.reduce((best, flight) => {
-      const bestTime = this.getFlightTimestamp(best)
-      const flightTime = this.getFlightTimestamp(flight)
-      return Math.abs(flightTime - now) < Math.abs(bestTime - now) ? flight : best
+      const bestTime = this.getLastUpdated(best)
+      const flightTime = this.getLastUpdated(flight)
+      return flightTime > bestTime ? flight : best
     })
   }
 
-  private getFlightTimestamp(flight: AeroFlightContract): number {
-    const timeStr =
-      flight.departure.runwayTime?.utc ?? flight.departure.revisedTime?.utc ?? flight.departure.scheduledTime?.utc
-    if (timeStr) return new Date(timeStr).getTime()
+  private getLastUpdated(flight: AeroFlightContract): number {
+    if (flight.lastUpdatedUtc) return new Date(flight.lastUpdatedUtc).getTime()
     return 0
   }
 }
