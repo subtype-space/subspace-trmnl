@@ -12,11 +12,11 @@ import type { TrmnlMeta } from '../../../types/trmnl/types.js'
 const aeroClient = config.aerodatabox.apiKey ? new AeroClient(config.aerodatabox.apiKey) : null
 const rotationIndex = new Map<string, number>()
 
-function pickFlight(userUuid: string, flights: FlightDisplayData[]): FlightDisplayData {
+function nextRotationIndex(userUuid: string, count: number): number {
   const prev = rotationIndex.get(userUuid) ?? -1
-  const next = (prev + 1) % flights.length
+  const next = (prev + 1) % count
   rotationIndex.set(userUuid, next)
-  return flights[next]
+  return next
 }
 
 export const flightMarkupController: RequestHandler = async (req, res) => {
@@ -77,47 +77,25 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
     return
   }
 
-  const flights: FlightDisplayData[] = []
+  // Only fetch data for the flight we're about to display (1 API call per request)
+  const idx = nextRotationIndex(userUuid, flightNumbers.length)
+  const iataFlight = flightNumbers[idx]
+  const icaoCallsign = toIcaoCallsign(iataFlight)
 
-  for (const iataFlight of flightNumbers) {
-    const icaoCallsign = toIcaoCallsign(iataFlight)
+  let displayData: FlightDisplayData
+  try {
+    const aeroFlight = await aeroClient.getFlightByCallsignCached(icaoCallsign)
 
-    try {
-      const aeroFlight = await aeroClient.getFlightByCallsignCached(icaoCallsign)
-
-      if (!aeroFlight) {
-        const airlineIata = iataFlight.replace(/\d+$/, '')
-        const airlineIcao = icaoCallsign.replace(/\d+$/, '')
-        flights.push({
-          flightIata: iataFlight,
-          airlineIata,
-          airlineIcao,
-          depAirport: '',
-          arrAirport: '',
-          status: 'Flight not found',
-          altitudeFt: '--',
-          speedMph: '--',
-          aircraftModel: '--',
-          aircraftIcao: '',
-          heading: '--',
-          eta: '--',
-          progressPct: null,
-        })
-        continue
-      }
-
-      flights.push(buildFlightDisplayData(aeroFlight, utcOffset))
-    } catch (e) {
-      logger.warn(`[FLGHT] Failed to fetch data for ${iataFlight}`, String(e))
+    if (!aeroFlight) {
       const airlineIata = iataFlight.replace(/\d+$/, '')
       const airlineIcao = icaoCallsign.replace(/\d+$/, '')
-      flights.push({
+      displayData = {
         flightIata: iataFlight,
         airlineIata,
         airlineIcao,
         depAirport: '',
         arrAirport: '',
-        status: 'Data unavailable',
+        status: 'Flight not found',
         altitudeFt: '--',
         speedMph: '--',
         aircraftModel: '--',
@@ -125,11 +103,32 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
         heading: '--',
         eta: '--',
         progressPct: null,
-      })
+      }
+    } else {
+      displayData = buildFlightDisplayData(aeroFlight, utcOffset)
+    }
+  } catch (e) {
+    logger.warn(`[FLGHT] Failed to fetch data for ${iataFlight}`, String(e))
+    const airlineIata = iataFlight.replace(/\d+$/, '')
+    const airlineIcao = icaoCallsign.replace(/\d+$/, '')
+    displayData = {
+      flightIata: iataFlight,
+      airlineIata,
+      airlineIcao,
+      depAirport: '',
+      arrAirport: '',
+      status: 'Data unavailable',
+      altitudeFt: '--',
+      speedMph: '--',
+      aircraftModel: '--',
+      aircraftIcao: '',
+      heading: '--',
+      eta: '--',
+      progressPct: null,
     }
   }
 
-  const selected = [pickFlight(userUuid, flights)]
+  const selected = [displayData]
 
   res.json({
     markup: renderMarkup(selected, 'full', utcOffset, baseUrl),
