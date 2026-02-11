@@ -75,15 +75,6 @@ export function lookupAircraftName(icaoType: string): string {
 
 type MarkupVariant = 'full' | 'half_horizontal' | 'half_vertical' | 'quadrant'
 
-export function deriveStatus(altBaro: number | 'ground' | undefined, baroRate: number | undefined): string {
-  if (altBaro === 'ground' || altBaro === 0) return 'On Ground'
-  if (typeof altBaro !== 'number') return 'Unknown'
-  if (typeof baroRate === 'number') {
-    if (baroRate > 200) return 'Climbing'
-    if (baroRate < -200) return 'Descending'
-  }
-  return 'Airborne'
-}
 
 export function formatHeading(track: number | undefined): string {
   if (typeof track !== 'number') return '--'

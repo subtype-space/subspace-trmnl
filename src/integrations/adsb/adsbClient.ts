@@ -1,4 +1,4 @@
-import type { AdsbResponse, AdsbAircraft, AdsbRoute, LastSeenData } from '../../types/adsb/types.js'
+import type { AdsbResponse, AdsbAircraft } from '../../types/adsb/types.js'
 import { logger } from '../../utils/logger.js'
 
 // IATA airline code → ICAO airline code mapping
@@ -31,10 +31,10 @@ const IATA_TO_ICAO: Record<string, string> = {
   EY: 'ETD',
   TK: 'THY',
   CZ: 'CSN',
-  QF: 'CFA'
+  QF: 'CFA',
 }
 
-// in case a user uses IATA convert to ICAO
+// Convert IATA flight number to ICAO callsign (e.g. UA804 → UAL804)
 export function toIcaoCallsign(iataFlight: string): string {
   const match = iataFlight.match(/^([A-Z]{2})(\d{1,4})$/)
   if (!match) return iataFlight
@@ -47,14 +47,9 @@ export class AdsbClient {
   private readonly baseUrl = 'https://api.adsb.lol'
 
   private readonly liveCache = new Map<string, { data: AdsbAircraft | null; at: number }>()
-  private readonly routeCache = new Map<string, { data: AdsbRoute | null; at: number }>()
   private readonly liveInflight = new Map<string, Promise<AdsbAircraft | null>>()
-  private readonly routeInflight = new Map<string, Promise<AdsbRoute | null>>()
-  private readonly lastSeenStore = new Map<string, LastSeenData>()
 
   private readonly LIVE_TTL_MS = 5 * 60 * 1000 // 5 minutes
-  private readonly ROUTE_TTL_MS = 12 * 60 * 60 * 1000 // 12 hours
-  private readonly LAST_SEEN_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
 
   async getByCallsign(callsign: string): Promise<AdsbAircraft | null> {
     const url = `${this.baseUrl}/v2/callsign/${encodeURIComponent(callsign)}`
@@ -70,49 +65,6 @@ export class AdsbClient {
     if (!data.ac || data.ac.length === 0) return null
 
     return data.ac[0]
-  }
-
-  async getRoute(callsign: string): Promise<AdsbRoute | null> {
-    const url = `${this.baseUrl}/api/0/routeset`
-    logger.debug(`[ADSB] POST ${url} for ${callsign}`)
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        planes: [{ callsign, lat: 0, lng: 0 }],
-      }),
-    })
-
-    if (!res.ok) {
-      logger.warn(`[ADSB] route lookup failed: ${res.status} ${res.statusText}`)
-      return null
-    }
-
-    const data = await res.json()
-
-    // routeset returns an array, each entry has _airports with dep/arr info
-    const planes = Array.isArray(data) ? data : []
-    if (planes.length === 0) return null
-
-    const plane = planes[0]
-    const airports = plane?._airports
-    if (!airports) return null
-
-    const depAirport = airports[0]
-    const arrAirport = airports[1]
-    const from = depAirport?.iata || depAirport?.icao || ''
-    const to = arrAirport?.iata || arrAirport?.icao || ''
-
-    if (!from && !to) return null
-    return {
-      from,
-      to,
-      fromLat: depAirport?.lat,
-      fromLon: depAirport?.lon,
-      toLat: arrAirport?.lat,
-      toLon: arrAirport?.lon,
-    }
   }
 
   async getByCallsignCached(callsign: string): Promise<AdsbAircraft | null> {
@@ -139,45 +91,5 @@ export class AdsbClient {
 
     this.liveInflight.set(callsign, promise)
     return promise
-  }
-
-  async getRouteCached(callsign: string): Promise<AdsbRoute | null> {
-    const now = Date.now()
-    const cached = this.routeCache.get(callsign)
-    if (cached && now - cached.at < this.ROUTE_TTL_MS) {
-      logger.debug(`[ADSB] Route cache hit for ${callsign}`)
-      return cached.data
-    }
-
-    const existing = this.routeInflight.get(callsign)
-    if (existing) return existing
-
-    logger.debug(`[ADSB] Route cache miss for ${callsign}`)
-    const promise = (async () => {
-      const data = await this.getRoute(callsign)
-      this.routeCache.set(callsign, { data, at: Date.now() })
-      this.routeInflight.delete(callsign)
-      return data
-    })().catch((err) => {
-      this.routeInflight.delete(callsign)
-      throw err
-    })
-
-    this.routeInflight.set(callsign, promise)
-    return promise
-  }
-
-  getLastSeen(callsign: string): LastSeenData | null {
-    const entry = this.lastSeenStore.get(callsign)
-    if (!entry) return null
-    if (Date.now() - entry.timestamp > this.LAST_SEEN_TTL_MS) {
-      this.lastSeenStore.delete(callsign)
-      return null
-    }
-    return entry
-  }
-
-  updateLastSeen(callsign: string, data: LastSeenData): void {
-    this.lastSeenStore.set(callsign, data)
   }
 }

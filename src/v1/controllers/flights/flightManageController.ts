@@ -40,6 +40,7 @@ export const flightManageGetController: RequestHandler = async (req, res) => {
           />
           <p style="color: #666; font-size: 14px; margin-top: 4px;">
             Enter IATA flight numbers separated by commas (e.g. UA804, DL123). Max 4 flights.
+            If multiple flights are configured, they will rotate on each screen refresh throughout the day.
           </p>
         </div>
 
