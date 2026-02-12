@@ -167,10 +167,11 @@ export function buildFlightDisplayData(flight: AeroFlightContract): FlightDispla
   // ETA
   const eta = formatEta(flight)
 
-  // Last updated — show relative staleness
+  // Last updated — prefer location reportedAtUtc (live telemetry) over flight-level lastUpdatedUtc
   let lastUpdated = '--'
-  if (flight.lastUpdatedUtc) {
-    const updMs = parseUtcMs(flight.lastUpdatedUtc)
+  const bestUpdateUtc = loc?.reportedAtUtc ?? flight.lastUpdatedUtc
+  if (bestUpdateUtc) {
+    const updMs = parseUtcMs(bestUpdateUtc)
     if (!isNaN(updMs)) {
       const diffMs = Date.now() - updMs
       const diffMin = Math.floor(diffMs / 60_000)
