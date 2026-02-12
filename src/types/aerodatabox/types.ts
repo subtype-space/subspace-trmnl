@@ -52,7 +52,7 @@ export type AeroLocation = {
   lon: number
   pressureAltitude?: { feet?: number; meter?: number }
   altitude?: { feet?: number; meter?: number }
-  groundSpeed?: { kt?: number; kmh?: number; mph?: number }
+  groundSpeed?: { kt?: number; kmPerHour?: number; miPerHour?: number }
   trueTrack?: { deg?: number }
   reportedAtUtc?: string
 }

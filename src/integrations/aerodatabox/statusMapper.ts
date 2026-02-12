@@ -93,12 +93,17 @@ function formatEta(flight: AeroFlightContract): string {
   return formatLocalTime(timeInfo)
 }
 
+// Parse UTC time string from API (handles "2026-02-11 08:28Z" format with space instead of T)
+function parseUtcMs(utcStr: string): number {
+  return new Date(utcStr.replace(' ', 'T')).getTime()
+}
+
 // Get best arrival time as UTC ms for comparison
 function getArrivalUtcMs(flight: AeroFlightContract): number | null {
   const timeInfo =
     flight.arrival.runwayTime ?? flight.arrival.revisedTime ?? flight.arrival.predictedTime ?? flight.arrival.scheduledTime
   if (!timeInfo?.utc) return null
-  const ms = new Date(timeInfo.utc).getTime()
+  const ms = parseUtcMs(timeInfo.utc)
   return isNaN(ms) ? null : ms
 }
 
@@ -115,11 +120,11 @@ export function buildFlightDisplayData(flight: AeroFlightContract): FlightDispla
   const arrivalMs = getArrivalUtcMs(flight)
   const likelyArrived = isActive && arrivalMs != null && Date.now() - arrivalMs > LIKELY_ARRIVED_BUFFER_MS
 
-  // Status — refine with altitude data for active flights, or override if likely arrived
+  // Status — location data always takes priority over API status
   let status: string
   if (likelyArrived) {
     status = 'Likely Arrived'
-  } else if (isActive && loc) {
+  } else if (loc) {
     status = refineInFlightStatus(flight)
   } else {
     status = mapAeroStatus(flight.status)
@@ -147,8 +152,8 @@ export function buildFlightDisplayData(flight: AeroFlightContract): FlightDispla
 
   // Speed
   let speedMph = '--'
-  if (loc?.groundSpeed?.mph != null) {
-    speedMph = Math.round(loc.groundSpeed.mph).toLocaleString()
+  if (loc?.groundSpeed?.miPerHour != null) {
+    speedMph = Math.round(loc.groundSpeed.miPerHour).toLocaleString()
   } else if (loc?.groundSpeed?.kt != null) {
     speedMph = Math.round(loc.groundSpeed.kt * 1.15078).toLocaleString()
   }
@@ -165,7 +170,7 @@ export function buildFlightDisplayData(flight: AeroFlightContract): FlightDispla
   // Last updated — show relative staleness
   let lastUpdated = '--'
   if (flight.lastUpdatedUtc) {
-    const updMs = new Date(flight.lastUpdatedUtc).getTime()
+    const updMs = parseUtcMs(flight.lastUpdatedUtc)
     if (!isNaN(updMs)) {
       const diffMs = Date.now() - updMs
       const diffMin = Math.floor(diffMs / 60_000)
@@ -180,16 +185,14 @@ export function buildFlightDisplayData(flight: AeroFlightContract): FlightDispla
     }
   }
 
-  // Progress
+  // Progress — location data takes priority, then infer from status
   let progressPct: number | null
   if (likelyArrived) {
     progressPct = 100
-  } else if (isPreflight) {
-    progressPct = 0
-  } else {
+  } else if (loc) {
     progressPct = calcProgress(
-      loc?.lat,
-      loc?.lon,
+      loc.lat,
+      loc.lon,
       flight.departure.airport.location?.lat,
       flight.departure.airport.location?.lon,
       flight.arrival.airport.location?.lat,
@@ -198,6 +201,10 @@ export function buildFlightDisplayData(flight: AeroFlightContract): FlightDispla
     if (progressPct == null) {
       progressPct = inferProgressFromStatus(flight.status)
     }
+  } else if (isPreflight) {
+    progressPct = 0
+  } else {
+    progressPct = inferProgressFromStatus(flight.status)
   }
 
   return {
