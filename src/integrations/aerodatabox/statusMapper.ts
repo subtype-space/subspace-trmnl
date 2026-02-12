@@ -93,14 +93,36 @@ function formatEta(flight: AeroFlightContract): string {
   return formatLocalTime(timeInfo)
 }
 
+// Get best arrival time as UTC ms for comparison
+function getArrivalUtcMs(flight: AeroFlightContract): number | null {
+  const timeInfo =
+    flight.arrival.runwayTime ?? flight.arrival.revisedTime ?? flight.arrival.predictedTime ?? flight.arrival.scheduledTime
+  if (!timeInfo?.utc) return null
+  const ms = new Date(timeInfo.utc).getTime()
+  return isNaN(ms) ? null : ms
+}
+
+const ACTIVE_STATUSES: AeroFlightStatus[] = ['EnRoute', 'Departed', 'Approaching']
+const PREFLIGHT_STATUSES: AeroFlightStatus[] = ['Expected', 'CheckIn', 'Boarding', 'GateClosed', 'Delayed']
+const LIKELY_ARRIVED_BUFFER_MS = 2 * 60 * 60 * 1000 // 2 hours
+
 export function buildFlightDisplayData(flight: AeroFlightContract): FlightDisplayData {
   const loc = flight.location
-  const isActive = ['EnRoute', 'Departed', 'Approaching'].includes(flight.status)
+  const isActive = ACTIVE_STATUSES.includes(flight.status)
+  const isPreflight = PREFLIGHT_STATUSES.includes(flight.status)
 
-  // Status — refine with altitude data for active flights
-  let status = mapAeroStatus(flight.status)
-  if (isActive && loc) {
+  // Check if flight is likely arrived — active status but ETA passed by 2+ hours
+  const arrivalMs = getArrivalUtcMs(flight)
+  const likelyArrived = isActive && arrivalMs != null && Date.now() - arrivalMs > LIKELY_ARRIVED_BUFFER_MS
+
+  // Status — refine with altitude data for active flights, or override if likely arrived
+  let status: string
+  if (likelyArrived) {
+    status = 'Likely Arrived'
+  } else if (isActive && loc) {
     status = refineInFlightStatus(flight)
+  } else {
+    status = mapAeroStatus(flight.status)
   }
 
   // Route
@@ -158,17 +180,24 @@ export function buildFlightDisplayData(flight: AeroFlightContract): FlightDispla
     }
   }
 
-  // Progress — calculate from position if available, otherwise infer from status
-  let progressPct = calcProgress(
-    loc?.lat,
-    loc?.lon,
-    flight.departure.airport.location?.lat,
-    flight.departure.airport.location?.lon,
-    flight.arrival.airport.location?.lat,
-    flight.arrival.airport.location?.lon
-  )
-  if (progressPct == null) {
-    progressPct = inferProgressFromStatus(flight.status)
+  // Progress
+  let progressPct: number | null
+  if (likelyArrived) {
+    progressPct = 100
+  } else if (isPreflight) {
+    progressPct = 0
+  } else {
+    progressPct = calcProgress(
+      loc?.lat,
+      loc?.lon,
+      flight.departure.airport.location?.lat,
+      flight.departure.airport.location?.lon,
+      flight.arrival.airport.location?.lat,
+      flight.arrival.airport.location?.lon
+    )
+    if (progressPct == null) {
+      progressPct = inferProgressFromStatus(flight.status)
+    }
   }
 
   return {
