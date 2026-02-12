@@ -28,7 +28,7 @@ const IATA_TO_ICAO: Record<string, string> = {
   AC: 'ACA',
   WS: 'WJA',
   AM: 'AMX',
-  KA: 'KAL',
+  KE: 'KAL',
   EY: 'ETD',
   TK: 'THY',
   CZ: 'CSN',
