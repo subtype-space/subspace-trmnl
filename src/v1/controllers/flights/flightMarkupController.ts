@@ -2,20 +2,20 @@ import { RequestHandler } from 'express'
 import { logger } from '../../../utils/logger.js'
 import { getFlightSettingsByUuid } from '../../../utils/dbConnector.js'
 import { config } from '../../../config.js'
-import { AdsbClient, toIcaoCallsign } from '../../../integrations/adsb/adsbClient.js'
-import { lookupAircraftName, formatHeading, calcProgress, calcEta, renderMarkup } from '../../../integrations/adsb/formatters.js'
-import { resolveFlightStatus } from '../../../integrations/adsb/statusLogic.js'
+import { AeroClient } from '../../../integrations/aerodatabox/aeroClient.js'
+import { renderMarkup } from '../../../integrations/aerodatabox/formatters.js'
+import { buildFlightDisplayData } from '../../../integrations/aerodatabox/statusMapper.js'
 import type { FlightDisplayData } from '../../../types/trmnl/flightTypes.js'
 import type { TrmnlMeta } from '../../../types/trmnl/types.js'
 
-const client = new AdsbClient()
+const aeroClient = config.aerodatabox.apiKey ? new AeroClient(config.aerodatabox.apiKey) : null
 const rotationIndex = new Map<string, number>()
 
-function pickFlight(userUuid: string, flights: FlightDisplayData[]): FlightDisplayData {
+function nextRotationIndex(userUuid: string, count: number): number {
   const prev = rotationIndex.get(userUuid) ?? -1
-  const next = (prev + 1) % flights.length
+  const next = (prev + 1) % count
   rotationIndex.set(userUuid, next)
-  return flights[next]
+  return next
 }
 
 export const flightMarkupController: RequestHandler = async (req, res) => {
@@ -35,6 +35,12 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
     return
   }
 
+  if (!aeroClient) {
+    logger.warn('[FLGHT] AeroDataBox API key not configured')
+    res.status(503).json({ error: 'Service Unavailable', message: 'Flight tracking not configured' })
+    return
+  }
+
   // parse TRMNL meta (optional)
   let meta: TrmnlMeta | null = null
   if (trmnlRaw && typeof trmnlRaw === 'object') {
@@ -43,7 +49,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
     try {
       meta = JSON.parse(trmnlRaw)
     } catch {
-      logger.warn('[FLIGHTS] Failed to parse trmnl metadata JSON')
+      logger.warn('[FLGHT] Failed to parse trmnl metadata JSON')
     }
   }
 
@@ -70,107 +76,23 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
     return
   }
 
-  const flights: FlightDisplayData[] = []
+  // Only fetch data for the flight we're about to display (1 API call per request)
+  const idx = nextRotationIndex(userUuid, flightNumbers.length)
+  const flightNumber = flightNumbers[idx]
+  const airlineCode = flightNumber.replace(/\d+$/, '')
 
-  for (const iataFlight of flightNumbers) {
-    const icaoCallsign = toIcaoCallsign(iataFlight)
-    const airlineIata = iataFlight.replace(/\d+$/, '')
-    const airlineIcao = icaoCallsign.replace(/\d+$/, '')
+  let displayData: FlightDisplayData
+  try {
+    const aeroFlight = await aeroClient.getFlightByNumberCached(flightNumber)
 
-    try {
-      // Fetch live data and route in parallel
-      const [liveAircraft, route] = await Promise.all([
-        client.getByCallsignCached(icaoCallsign),
-        client.getRouteCached(icaoCallsign).catch((e) => {
-          logger.warn(`[FLIGHTS] Route fetch failed for ${icaoCallsign}`, String(e))
-          return null
-        }),
-      ])
-
-      const lastSeen = client.getLastSeen(icaoCallsign)
-      const resolved = resolveFlightStatus(liveAircraft, lastSeen, route)
-      const aircraft = resolved.aircraft
-      const effectiveRoute = resolved.route
-
-      // Update last-seen store when we have live data
-      if (liveAircraft) {
-        const progressPct = calcProgress(
-          liveAircraft.lat,
-          liveAircraft.lon,
-          route?.fromLat,
-          route?.fromLon,
-          route?.toLat,
-          route?.toLon
-        )
-        client.updateLastSeen(icaoCallsign, {
-          timestamp: Date.now(),
-          aircraft: liveAircraft,
-          route,
-          progressPct,
-          status: resolved.status,
-        })
-      }
-
-      if (!aircraft) {
-        flights.push({
-          flightIata: iataFlight,
-          airlineIata,
-          airlineIcao,
-          depAirport: effectiveRoute?.from ?? '',
-          arrAirport: effectiveRoute?.to ?? '',
-          status: resolved.status,
-          altitudeFt: '--',
-          speedMph: '--',
-          aircraftModel: '--',
-          aircraftIcao: '',
-          heading: '--',
-          eta: '--',
-          progressPct: null,
-        })
-        continue
-      }
-
-      const altBaro = aircraft.alt_baro
-      const isOnGround = altBaro === 'ground' || altBaro === 0
-      const altStr = isOnGround ? 'Ground' : typeof altBaro === 'number' ? altBaro.toLocaleString() : '--'
-
-      const speedMph = typeof aircraft.gs === 'number' ? Math.round(aircraft.gs * 1.15078).toLocaleString() : '--'
-
-      const aircraftIcao = aircraft.t ?? ''
-      const aircraftModel = lookupAircraftName(aircraftIcao)
-
-      const heading = formatHeading(aircraft.track)
-
-      const progressPct =
-        resolved.progressPct ??
-        calcProgress(aircraft.lat, aircraft.lon, effectiveRoute?.fromLat, effectiveRoute?.fromLon, effectiveRoute?.toLat, effectiveRoute?.toLon)
-
-      const eta = calcEta(aircraft.lat, aircraft.lon, effectiveRoute?.toLat, effectiveRoute?.toLon, aircraft.gs, utcOffset)
-
-      flights.push({
-        flightIata: iataFlight,
-        airlineIata,
-        airlineIcao,
-        depAirport: effectiveRoute?.from ?? '',
-        arrAirport: effectiveRoute?.to ?? '',
-        status: resolved.status,
-        altitudeFt: altStr,
-        speedMph,
-        aircraftModel,
-        aircraftIcao,
-        heading,
-        eta,
-        progressPct,
-      })
-    } catch (e) {
-      logger.warn(`[FLIGHTS] Failed to fetch data for ${iataFlight}`, String(e))
-      flights.push({
-        flightIata: iataFlight,
-        airlineIata,
-        airlineIcao,
+    if (!aeroFlight) {
+      displayData = {
+        flightIata: flightNumber,
+        airlineIata: airlineCode,
+        airlineIcao: '',
         depAirport: '',
         arrAirport: '',
-        status: 'Data unavailable',
+        status: 'Flight not found',
         altitudeFt: '--',
         speedMph: '--',
         aircraftModel: '--',
@@ -178,11 +100,32 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
         heading: '--',
         eta: '--',
         progressPct: null,
-      })
+        lastUpdated: '--',
+      }
+    } else {
+      displayData = buildFlightDisplayData(aeroFlight, utcOffset)
+    }
+  } catch (e) {
+    logger.warn(`[FLGHT] Failed to fetch data for ${flightNumber}`, String(e))
+    displayData = {
+      flightIata: flightNumber,
+      airlineIata: airlineCode,
+      airlineIcao: '',
+      depAirport: '',
+      arrAirport: '',
+      status: 'Data unavailable',
+      altitudeFt: '--',
+      speedMph: '--',
+      aircraftModel: '--',
+      aircraftIcao: '',
+      heading: '--',
+      eta: '--',
+      progressPct: null,
+      lastUpdated: '--',
     }
   }
 
-  const selected = [pickFlight(userUuid, flights)]
+  const selected = [displayData]
 
   res.json({
     markup: renderMarkup(selected, 'full', utcOffset, baseUrl),
