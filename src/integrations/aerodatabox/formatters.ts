@@ -149,7 +149,7 @@ export function renderMarkup(
 
 <div class="title_bar">
   <span class="title">Flight Tracker</span>
-  <span class="instance">Updated at ${escapeHtml(lastUpdated)}</span>
+  <span class="instance">Updated ${escapeHtml(lastUpdated)}</span>
 </div>
 `.trim()
 }

@@ -144,10 +144,10 @@ export function buildFlightDisplayData(flight: AeroFlightContract, utcOffsetSec:
       const diffHr = Math.floor(diffMs / 3_600_000)
       const diffDays = Math.floor(diffMs / 86_400_000)
 
-      if (diffMin < 1) lastUpdated = 'Just now'
+      if (diffMin < 30) lastUpdated = 'recently'
       else if (diffMin < 60) lastUpdated = `${diffMin}m ago`
       else if (diffHr < 24) lastUpdated = `${diffHr}h ago`
-      else if (diffDays === 1) lastUpdated = 'Yesterday'
+      else if (diffDays === 1) lastUpdated = 'yesterday'
       else lastUpdated = `${diffDays}d ago`
     }
   }
