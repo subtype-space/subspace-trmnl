@@ -26,7 +26,7 @@ export const AIRLINE_NAMES: Record<string, string> = {
   AC: 'Air Canada',
   WS: 'WestJet',
   AM: 'Aeromexico',
-  KA: 'Korean Air',
+  KE: 'Korean Air',
   EY: 'Etihad Airways',
   TK: 'Turkish Airlines',
   CZ: 'China Southern',
