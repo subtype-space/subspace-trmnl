@@ -73,24 +73,27 @@ function inferProgressFromStatus(status: AeroFlightStatus): number | null {
   }
 }
 
-// Format an ISO datetime string to HH:MM in the user's local time
-function formatEta(flight: AeroFlightContract, utcOffsetSec: number): string {
-  // Prefer the most specific arrival time available
-  const timeInfo =
-    flight.arrival.runwayTime ?? flight.arrival.revisedTime ?? flight.arrival.predictedTime ?? flight.arrival.scheduledTime
-  if (!timeInfo?.utc) return '--'
-
-  const arrivalMs = new Date(timeInfo.utc).getTime()
-  if (isNaN(arrivalMs)) return '--'
-
-  const localMs = arrivalMs + utcOffsetSec * 1000
-  const d = new Date(localMs)
-  const h = d.getUTCHours().toString().padStart(2, '0')
-  const m = d.getUTCMinutes().toString().padStart(2, '0')
-  return `${h}:${m}`
+// Extract HH:MM from the API's local time string (e.g. "2026-02-11 12:39-05:00" -> "12:39")
+function formatLocalTime(timeInfo: { local?: string } | undefined): string {
+  if (!timeInfo?.local) return '--'
+  const match = timeInfo.local.match(/\d{4}-\d{2}-\d{2}\s(\d{2}:\d{2})/)
+  return match ? match[1] : '--'
 }
 
-export function buildFlightDisplayData(flight: AeroFlightContract, utcOffsetSec: number): FlightDisplayData {
+// Format departure time in the departure airport's local timezone
+function formatDepTime(flight: AeroFlightContract): string {
+  const timeInfo = flight.departure.runwayTime ?? flight.departure.revisedTime ?? flight.departure.scheduledTime
+  return formatLocalTime(timeInfo)
+}
+
+// Format ETA in the arrival airport's local timezone
+function formatEta(flight: AeroFlightContract): string {
+  const timeInfo =
+    flight.arrival.runwayTime ?? flight.arrival.revisedTime ?? flight.arrival.predictedTime ?? flight.arrival.scheduledTime
+  return formatLocalTime(timeInfo)
+}
+
+export function buildFlightDisplayData(flight: AeroFlightContract): FlightDisplayData {
   const loc = flight.location
   const isActive = ['EnRoute', 'Departed', 'Approaching'].includes(flight.status)
 
@@ -131,8 +134,11 @@ export function buildFlightDisplayData(flight: AeroFlightContract, utcOffsetSec:
   // Heading
   const heading = formatHeading(loc?.trueTrack?.deg)
 
+  // Departure time (airport local)
+  const depTime = formatDepTime(flight)
+
   // ETA
-  const eta = formatEta(flight, utcOffsetSec)
+  const eta = formatEta(flight)
 
   // Last updated — show relative staleness
   let lastUpdated = '--'
@@ -177,6 +183,7 @@ export function buildFlightDisplayData(flight: AeroFlightContract, utcOffsetSec:
     aircraftModel,
     aircraftIcao: '',
     heading,
+    depTime,
     eta,
     progressPct,
     lastUpdated,

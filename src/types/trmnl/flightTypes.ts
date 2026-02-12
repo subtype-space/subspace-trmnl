@@ -16,7 +16,8 @@ export type FlightDisplayData = {
   aircraftModel: string
   aircraftIcao: string
   heading: string
+  depTime: string // HH:MM departure time in departure airport's local time
   eta: string
   progressPct: number | null // 0-100, null if unknown
-  lastUpdated: string // HH:MM local time of last API update
+  lastUpdated: string // relative staleness (e.g. "5m ago", "Yesterday")
 }

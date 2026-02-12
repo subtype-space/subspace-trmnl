@@ -98,12 +98,13 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
         aircraftModel: '--',
         aircraftIcao: '',
         heading: '--',
+        depTime: '--',
         eta: '--',
         progressPct: null,
         lastUpdated: '--',
       }
     } else {
-      displayData = buildFlightDisplayData(aeroFlight, utcOffset)
+      displayData = buildFlightDisplayData(aeroFlight)
     }
   } catch (e) {
     logger.warn(`[FLGHT] Failed to fetch data for ${flightNumber}`, String(e))
@@ -119,6 +120,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
       aircraftModel: '--',
       aircraftIcao: '',
       heading: '--',
+      depTime: '--',
       eta: '--',
       progressPct: null,
       lastUpdated: '--',

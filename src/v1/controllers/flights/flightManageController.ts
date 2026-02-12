@@ -49,6 +49,8 @@ function renderSettingsPage(opts: {
             Enter flight numbers separated by commas (e.g. UA804, DL123). Max 4 flights.
             Both IATA (UA804) and ICAO (UAL804) formats are accepted.
             If multiple flights are configured, they will rotate on each screen refresh throughout the day.
+
+            If an aircraft is in an area with no receivers in proximity (e.g. trans-atlantic travel), live telemetry for speed, altitude, and heading will be unavailable.
           </p>
         </div>
 
