@@ -53,9 +53,13 @@ function refineInFlightStatus(flight: AeroFlightContract): string {
 function inferProgressFromStatus(status: AeroFlightStatus): number | null {
   switch (status) {
     case 'Expected':
+      return 0
     case 'CheckIn':
+      return 0
     case 'Boarding':
+      return 0
     case 'GateClosed':
+      return 0
     case 'Delayed':
       return 0
     case 'Departed':
@@ -130,14 +134,21 @@ export function buildFlightDisplayData(flight: AeroFlightContract, utcOffsetSec:
   // ETA
   const eta = formatEta(flight, utcOffsetSec)
 
-  // Last updated — convert API's lastUpdatedUtc to user's local time
+  // Last updated — show relative staleness
   let lastUpdated = '--'
   if (flight.lastUpdatedUtc) {
     const updMs = new Date(flight.lastUpdatedUtc).getTime()
     if (!isNaN(updMs)) {
-      const localMs = updMs + utcOffsetSec * 1000
-      const d = new Date(localMs)
-      lastUpdated = `${d.getUTCHours().toString().padStart(2, '0')}:${d.getUTCMinutes().toString().padStart(2, '0')}`
+      const diffMs = Date.now() - updMs
+      const diffMin = Math.floor(diffMs / 60_000)
+      const diffHr = Math.floor(diffMs / 3_600_000)
+      const diffDays = Math.floor(diffMs / 86_400_000)
+
+      if (diffMin < 1) lastUpdated = 'Just now'
+      else if (diffMin < 60) lastUpdated = `${diffMin}m ago`
+      else if (diffHr < 24) lastUpdated = `${diffHr}h ago`
+      else if (diffDays === 1) lastUpdated = 'Yesterday'
+      else lastUpdated = `${diffDays}d ago`
     }
   }
 

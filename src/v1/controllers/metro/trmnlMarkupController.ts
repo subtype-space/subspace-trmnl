@@ -14,7 +14,7 @@ let inFlight: Promise<MetroIncident[]> | null = null
 
 const WMATA_TTL_MS = 10 * 60 * 1000 // 10 minute cache
 
-const client = new WmataClient({ apiKey: config.wmata.apiKey })
+const client = config.wmata.apiKey ? new WmataClient({ apiKey: config.wmata.apiKey }) : null
 
 // Main logic builder
 export const trmnlMarkupController: RequestHandler = async (req, res) => {
@@ -34,6 +34,11 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     logger.debug('[TRMNL] UUID was not provided. Will not render.')
     res.status(400).json({ error: 'Bad Request', message: 'missing user_uuid' })
     return
+  }
+
+  if (!client) {
+    logger.warn('[WMATA] WMATA API key not configured.')
+    res.status(503).json({ error: 'Service Unavailable', message: 'WMATA monitoring not configured.'})
   }
 
   // parse TRMNL meta (optional)
@@ -319,7 +324,7 @@ async function fetchWmataIncidents(): Promise<MetroIncident[]> {
   logger.info('[TRMNL] Attempting WMATA API call')
 
   try {
-    const response = await client.getIncidents()
+    const response = await client!.getIncidents()
     return Array.isArray(response) ? response : []
   } catch (e) {
     logger.warn(`[TRMNL] Failed to fetch WMATA incidents`)

@@ -37,7 +37,7 @@ export const config = {
         flightsClientSecret: process.env.TRMNL_FLIGHTS_CLIENT_SECRET ?? '',
     },
     wmata: {
-        apiKey:         required('WMATA_PRIMARY_KEY')
+        apiKey:         process.env.WMATA_PRIMARY_KEY ?? '',
     },
     aerodatabox: {
         apiKey:         process.env.AERODATABOX_API_KEY ?? '',

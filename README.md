@@ -33,8 +33,18 @@ npm run build && npm run start
 | LOG_LEVEL | Defaults to 'info'. Set the logging level. |
 | MCP_SERVER_URL | This sets the Protected Resource of what the incoming clients should have in their audience claim |
 | PORT | Defaults to 9595. The port for the API and MCP server to listen on. |
-| WMATA_PRIMARY_KEY | The API key to use for obtaining WMATA status. |
 | TZ | (Optional) Lets the container/logger format log messages with the machine's local time zone. |
+
+## Optional .env settings for TRMNL users:
+These are optional veriables that you can set for enhanced functionality.
+| Env var | Purpose |
+|---------|--------|
+| AERODATABOX_API_KEY | Used to retrieve basic/live flight information |
+| TRMNL_CLIENT_ID | Used for WMATA tracking |
+| TRMNL_CLIENT_SECRET | If TRMNL_CLIENT_ID is configured, this also must be configured. |
+| TRMNL_FLIGHTS_CLIENT_ID | Used for the Flight Tracker Plugin provided for free to TRMNL owners. |
+| TRMNL_FLIGHTS_CLIENT_SECRET | If FLIGHTS_CLIENT is configured, this also must be configured. OAuth 2.0 spec. |
+| WMATA_PRIMARY_KEY | The API key to use for obtaining WMATA status. |
 
 # AI Disclosure
 Parts of this project were assisted with OpenAI/Claude Code by having them provide examples for implementation.
