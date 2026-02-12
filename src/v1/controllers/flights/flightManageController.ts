@@ -58,6 +58,11 @@ function renderSettingsPage(opts: {
       ${backLink}
 
       <p style="color: #999; font-size: 13px; margin-top: 24px;">
+        Source: <a href="https://aerodatabox.com" target="_blank">AeroDataBox</a>.
+        Coverage is best for U.S., Canadian, and European flights.
+        Data is sourced from receivers globally and can be inconsistent at times.
+      </p>
+      <p style="color: #999; font-size: 13px; margin-top: 8px;">
         Missing flight data? Email <a href="mailto:andrew@subtype.space">andrew@subtype.space</a>
       </p>
     </body></html>

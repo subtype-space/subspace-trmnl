@@ -2,7 +2,7 @@ import { RequestHandler } from 'express'
 import { logger } from '../../../utils/logger.js'
 import { getFlightSettingsByUuid } from '../../../utils/dbConnector.js'
 import { config } from '../../../config.js'
-import { AeroClient, toIcaoCallsign } from '../../../integrations/aerodatabox/aeroClient.js'
+import { AeroClient } from '../../../integrations/aerodatabox/aeroClient.js'
 import { renderMarkup } from '../../../integrations/aerodatabox/formatters.js'
 import { buildFlightDisplayData } from '../../../integrations/aerodatabox/statusMapper.js'
 import type { FlightDisplayData } from '../../../types/trmnl/flightTypes.js'
@@ -78,20 +78,18 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
 
   // Only fetch data for the flight we're about to display (1 API call per request)
   const idx = nextRotationIndex(userUuid, flightNumbers.length)
-  const iataFlight = flightNumbers[idx]
-  const icaoCallsign = toIcaoCallsign(iataFlight)
+  const flightNumber = flightNumbers[idx]
+  const airlineCode = flightNumber.replace(/\d+$/, '')
 
   let displayData: FlightDisplayData
   try {
-    const aeroFlight = await aeroClient.getFlightByCallsignCached(icaoCallsign)
+    const aeroFlight = await aeroClient.getFlightByNumberCached(flightNumber)
 
     if (!aeroFlight) {
-      const airlineIata = iataFlight.replace(/\d+$/, '')
-      const airlineIcao = icaoCallsign.replace(/\d+$/, '')
       displayData = {
-        flightIata: iataFlight,
-        airlineIata,
-        airlineIcao,
+        flightIata: flightNumber,
+        airlineIata: airlineCode,
+        airlineIcao: '',
         depAirport: '',
         arrAirport: '',
         status: 'Flight not found',
@@ -108,13 +106,11 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
       displayData = buildFlightDisplayData(aeroFlight, utcOffset)
     }
   } catch (e) {
-    logger.warn(`[FLGHT] Failed to fetch data for ${iataFlight}`, String(e))
-    const airlineIata = iataFlight.replace(/\d+$/, '')
-    const airlineIcao = icaoCallsign.replace(/\d+$/, '')
+    logger.warn(`[FLGHT] Failed to fetch data for ${flightNumber}`, String(e))
     displayData = {
-      flightIata: iataFlight,
-      airlineIata,
-      airlineIcao,
+      flightIata: flightNumber,
+      airlineIata: airlineCode,
+      airlineIcao: '',
       depAirport: '',
       arrAirport: '',
       status: 'Data unavailable',

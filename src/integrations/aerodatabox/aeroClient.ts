@@ -1,49 +1,6 @@
 import type { AeroFlightContract, AeroFlightStatus } from '../../types/aerodatabox/types.js'
 import { logger } from '../../utils/logger.js'
 
-// IATA airline code → ICAO airline code mapping
-const IATA_TO_ICAO: Record<string, string> = {
-  UA: 'UAL',
-  GB: 'ABX',
-  AA: 'AAL',
-  DL: 'DAL',
-  WN: 'SWA',
-  B6: 'JBU',
-  AS: 'ASA',
-  NK: 'NKS',
-  F9: 'FFT',
-  HA: 'HAL',
-  G4: 'AAY',
-  SY: 'SCX',
-  BA: 'BAA',
-  LH: 'DLH',
-  AF: 'AFR',
-  KL: 'KLM',
-  EK: 'UAE',
-  QR: 'QTR',
-  SQ: 'SIA',
-  CX: 'CPA',
-  NH: 'ANA',
-  JL: 'JAL',
-  AC: 'ACA',
-  WS: 'WJA',
-  AM: 'AMX',
-  KE: 'KAL',
-  EY: 'ETD',
-  TK: 'THY',
-  CZ: 'CSN',
-  QF: 'CFA',
-}
-
-// Convert IATA flight number to ICAO callsign (e.g. UA804 → UAL804)
-export function toIcaoCallsign(iataFlight: string): string {
-  const match = iataFlight.match(/^([A-Z]{2})(\d{1,4})$/)
-  if (!match) return iataFlight
-  const [, airline, number] = match
-  const icao = IATA_TO_ICAO[airline]
-  return icao ? `${icao}${number}` : iataFlight
-}
-
 type CacheEntry = {
   data: AeroFlightContract | null
   at: number
@@ -88,8 +45,8 @@ export class AeroClient {
     }
   }
 
-  async getFlightByCallsign(callsign: string): Promise<AeroFlightContract | null> {
-    const url = `${this.baseUrl}/flights/CallSign/${encodeURIComponent(callsign)}?withLocation=true`
+  async getFlightByNumber(flightNumber: string): Promise<AeroFlightContract | null> {
+    const url = `${this.baseUrl}/flights/number/${encodeURIComponent(flightNumber)}?withLocation=true`
     logger.debug(`[AERO] GET ${url}`)
 
     const res = await fetch(url, {
@@ -100,7 +57,7 @@ export class AeroClient {
     })
 
     if (res.status === 204) {
-      logger.debug(`[AERO] No flights found for callsign ${callsign}`)
+      logger.debug(`[AERO] No flights found for ${flightNumber}`)
       return null
     }
 
@@ -115,35 +72,35 @@ export class AeroClient {
     return this.pickBestFlight(flights)
   }
 
-  async getFlightByCallsignCached(callsign: string): Promise<AeroFlightContract | null> {
+  async getFlightByNumberCached(flightNumber: string): Promise<AeroFlightContract | null> {
     const now = Date.now()
-    const cached = this.cache.get(callsign)
+    const cached = this.cache.get(flightNumber)
     if (cached && now - cached.at < this.getTtl(cached.status)) {
-      logger.debug(`[AERO] Cache hit for ${callsign}`)
+      logger.debug(`[AERO] Cache hit for ${flightNumber}`)
       return cached.data
     }
 
-    const existing = this.inflight.get(callsign)
+    const existing = this.inflight.get(flightNumber)
     if (existing) return existing
 
-    logger.debug(`[AERO] Cache miss for ${callsign}`)
+    logger.debug(`[AERO] Cache miss for ${flightNumber}`)
     const promise = (async () => {
-      const data = await this.getFlightByCallsign(callsign)
-      this.cache.set(callsign, { data, at: Date.now(), status: data?.status ?? null })
-      this.inflight.delete(callsign)
+      const data = await this.getFlightByNumber(flightNumber)
+      this.cache.set(flightNumber, { data, at: Date.now(), status: data?.status ?? null })
+      this.inflight.delete(flightNumber)
       return data
     })().catch((err) => {
-      this.inflight.delete(callsign)
+      this.inflight.delete(flightNumber)
       // Return stale cache on error if available
-      const stale = this.cache.get(callsign)
+      const stale = this.cache.get(flightNumber)
       if (stale) {
-        logger.warn(`[AERO] Fetch failed for ${callsign}, returning stale cache: ${String(err)}`)
+        logger.warn(`[AERO] Fetch failed for ${flightNumber}, returning stale cache: ${String(err)}`)
         return stale.data
       }
       throw err
     })
 
-    this.inflight.set(callsign, promise)
+    this.inflight.set(flightNumber, promise)
     return promise
   }
 
