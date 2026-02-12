@@ -1,6 +1,49 @@
 import type { AeroFlightContract, AeroFlightStatus } from '../../types/aerodatabox/types.js'
 import { logger } from '../../utils/logger.js'
 
+// IATA airline code → ICAO airline code mapping
+const IATA_TO_ICAO: Record<string, string> = {
+  UA: 'UAL',
+  GB: 'ABX',
+  AA: 'AAL',
+  DL: 'DAL',
+  WN: 'SWA',
+  B6: 'JBU',
+  AS: 'ASA',
+  NK: 'NKS',
+  F9: 'FFT',
+  HA: 'HAL',
+  G4: 'AAY',
+  SY: 'SCX',
+  BA: 'BAA',
+  LH: 'DLH',
+  AF: 'AFR',
+  KL: 'KLM',
+  EK: 'UAE',
+  QR: 'QTR',
+  SQ: 'SIA',
+  CX: 'CPA',
+  NH: 'ANA',
+  JL: 'JAL',
+  AC: 'ACA',
+  WS: 'WJA',
+  AM: 'AMX',
+  KA: 'KAL',
+  EY: 'ETD',
+  TK: 'THY',
+  CZ: 'CSN',
+  QF: 'CFA',
+}
+
+// Convert IATA flight number to ICAO callsign (e.g. UA804 → UAL804)
+export function toIcaoCallsign(iataFlight: string): string {
+  const match = iataFlight.match(/^([A-Z]{2})(\d{1,4})$/)
+  if (!match) return iataFlight
+  const [, airline, number] = match
+  const icao = IATA_TO_ICAO[airline]
+  return icao ? `${icao}${number}` : iataFlight
+}
+
 type CacheEntry = {
   data: AeroFlightContract | null
   at: number

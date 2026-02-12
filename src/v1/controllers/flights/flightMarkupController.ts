@@ -2,9 +2,8 @@ import { RequestHandler } from 'express'
 import { logger } from '../../../utils/logger.js'
 import { getFlightSettingsByUuid } from '../../../utils/dbConnector.js'
 import { config } from '../../../config.js'
-import { toIcaoCallsign } from '../../../integrations/adsb/adsbClient.js'
-import { renderMarkup } from '../../../integrations/adsb/formatters.js'
-import { AeroClient } from '../../../integrations/aerodatabox/aeroClient.js'
+import { AeroClient, toIcaoCallsign } from '../../../integrations/aerodatabox/aeroClient.js'
+import { renderMarkup } from '../../../integrations/aerodatabox/formatters.js'
 import { buildFlightDisplayData } from '../../../integrations/aerodatabox/statusMapper.js'
 import type { FlightDisplayData } from '../../../types/trmnl/flightTypes.js'
 import type { TrmnlMeta } from '../../../types/trmnl/types.js'
@@ -103,6 +102,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
         heading: '--',
         eta: '--',
         progressPct: null,
+        lastUpdated: '--',
       }
     } else {
       displayData = buildFlightDisplayData(aeroFlight, utcOffset)
@@ -125,6 +125,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
       heading: '--',
       eta: '--',
       progressPct: null,
+      lastUpdated: '--',
     }
   }
 

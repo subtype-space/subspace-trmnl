@@ -18,4 +18,5 @@ export type FlightDisplayData = {
   heading: string
   eta: string
   progressPct: number | null // 0-100, null if unknown
+  lastUpdated: string // HH:MM local time of last API update
 }

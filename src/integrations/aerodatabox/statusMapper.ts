@@ -1,6 +1,6 @@
 import type { AeroFlightContract, AeroFlightStatus } from '../../types/aerodatabox/types.js'
 import type { FlightDisplayData } from '../../types/trmnl/flightTypes.js'
-import { calcProgress, formatHeading } from '../adsb/formatters.js'
+import { calcProgress, formatHeading } from './formatters.js'
 
 export function mapAeroStatus(status: AeroFlightStatus): string {
   switch (status) {
@@ -130,6 +130,17 @@ export function buildFlightDisplayData(flight: AeroFlightContract, utcOffsetSec:
   // ETA
   const eta = formatEta(flight, utcOffsetSec)
 
+  // Last updated — convert API's lastUpdatedUtc to user's local time
+  let lastUpdated = '--'
+  if (flight.lastUpdatedUtc) {
+    const updMs = new Date(flight.lastUpdatedUtc).getTime()
+    if (!isNaN(updMs)) {
+      const localMs = updMs + utcOffsetSec * 1000
+      const d = new Date(localMs)
+      lastUpdated = `${d.getUTCHours().toString().padStart(2, '0')}:${d.getUTCMinutes().toString().padStart(2, '0')}`
+    }
+  }
+
   // Progress — calculate from position if available, otherwise infer from status
   let progressPct = calcProgress(
     loc?.lat,
@@ -157,5 +168,6 @@ export function buildFlightDisplayData(flight: AeroFlightContract, utcOffsetSec:
     heading,
     eta,
     progressPct,
+    lastUpdated,
   }
 }

@@ -1,41 +1,5 @@
-// src/integrations/adsb/formatters.ts
 import type { FlightDisplayData } from '../../types/trmnl/flightTypes.js'
 import { logger } from '../../utils/logger.js'
-
-// ICAO aircraft type → friendly name
-const AIRCRAFT_NAMES: Record<string, string> = {
-  B38M: 'Boeing 737 MAX 8',
-  B39M: 'Boeing 737 MAX 9',
-  B738: 'Boeing 737-800',
-  B737: 'Boeing 737-700',
-  B739: 'Boeing 737-900',
-  A320: 'Airbus A320',
-  A321: 'Airbus A321',
-  A319: 'Airbus A319',
-  A20N: 'Airbus A320neo',
-  A21N: 'Airbus A321neo',
-  B789: 'Boeing 787-9',
-  B78X: 'Boeing 787-10',
-  B788: 'Boeing 787-8',
-  B77W: 'Boeing 777-300ER',
-  B772: 'Boeing 777-200',
-  B773: 'Boeing 777-300',
-  B744: 'Boeing 747-400',
-  B748: 'Boeing 747-8',
-  A359: 'Airbus A350-900',
-  A35K: 'Airbus A350-1000',
-  A388: 'Airbus A380',
-  A332: 'Airbus A330-200',
-  A333: 'Airbus A330-300',
-  A339: 'Airbus A330-900neo',
-  E175: 'Embraer E175',
-  E190: 'Embraer E190',
-  E195: 'Embraer E195',
-  CRJ9: 'CRJ-900',
-  CRJ7: 'CRJ-700',
-  CRJ2: 'CRJ-200',
-  C172: 'Cessna 172',
-}
 
 export const AIRLINE_NAMES: Record<string, string> = {
   UA: 'United Airlines',
@@ -66,15 +30,11 @@ export const AIRLINE_NAMES: Record<string, string> = {
   EY: 'Etihad Airways',
   TK: 'Turkish Airlines',
   CZ: 'China Southern',
-  QF: 'Qantas'
-}
-
-export function lookupAircraftName(icaoType: string): string {
-  return AIRCRAFT_NAMES[icaoType] ?? icaoType
+  QF: 'Qantas',
+  GB: 'ABX Air'
 }
 
 type MarkupVariant = 'full' | 'half_horizontal' | 'half_vertical' | 'quadrant'
-
 
 export function formatHeading(track: number | undefined): string {
   if (typeof track !== 'number') return '--'
@@ -114,34 +74,6 @@ export function calcProgress(
   return Math.max(0, Math.min(100, pct))
 }
 
-// Calculate ETA as a formatted local time string, or '--' if insufficient data
-// utcOffset is in seconds (e.g. -18000 for EST)
-export function calcEta(
-  aircraftLat: number | undefined,
-  aircraftLon: number | undefined,
-  toLat: number | undefined,
-  toLon: number | undefined,
-  gsKnots: number | undefined,
-  utcOffsetSec: number
-): string {
-  if (aircraftLat == null || aircraftLon == null) return '--'
-  if (toLat == null || toLon == null) return '--'
-  if (typeof gsKnots !== 'number' || gsKnots < 10) return '--' // too slow / no speed data
-
-  const remainingKm = haversineKm(aircraftLat, aircraftLon, toLat, toLon)
-  const gsKmh = gsKnots * 1.852
-  const hoursRemaining = remainingKm / gsKmh
-
-  const etaMs = Date.now() + hoursRemaining * 3600 * 1000
-  // Apply UTC offset to get local time
-  const localEtaMs = etaMs + utcOffsetSec * 1000
-  const etaDate = new Date(localEtaMs)
-
-  const h = etaDate.getUTCHours().toString().padStart(2, '0')
-  const m = etaDate.getUTCMinutes().toString().padStart(2, '0')
-  return `${h}:${m}`
-}
-
 function escapeHtml(s: string) {
   return s
     .replaceAll('&', '&amp;')
@@ -154,19 +86,19 @@ function escapeHtml(s: string) {
 export function renderMarkup(
   flights: FlightDisplayData[],
   variant: MarkupVariant,
-  utcOffset: number,
+  _utcOffset: number,
   baseUrl: string
 ): string {
-  const offset = Number(utcOffset) || 0
   const logoWidth =
     variant === 'full' ? '320px' : variant === 'half_vertical' ? '200px' : variant === 'half_horizontal' ? '220px' : '160px'
   const logoHeight =
     variant === 'full' ? '140px' : variant === 'half_vertical' ? '90px' : variant === 'half_horizontal' ? '100px' : '70px'
 
   if (flights.length === 0) {
-    return renderEmptyMarkup(variant, offset)
+    return renderEmptyMarkup(variant)
   }
 
+  const lastUpdated = flights.length > 0 ? flights[0].lastUpdated : '--'
   const flightCards = flights.map((f) => renderFlightCard(f, variant, baseUrl)).join('')
 
   return `
@@ -217,7 +149,7 @@ export function renderMarkup(
 
 <div class="title_bar">
   <span class="title">Flight Tracker</span>
-  <span class="instance">Refreshed at {{ 'now' | date: '%s' | plus: ${offset} | date: '%H:%M' }}</span>
+  <span class="instance">Updated at ${escapeHtml(lastUpdated)}</span>
 </div>
 `.trim()
 }
@@ -287,7 +219,7 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl:
   </div>`
 }
 
-function renderEmptyMarkup(variant: MarkupVariant, offset: number): string {
+function renderEmptyMarkup(variant: MarkupVariant): string {
   const textSize = variant === 'quadrant' ? '20px' : '28px'
   return `
 <div class="view view--${variant}">
@@ -306,7 +238,6 @@ function renderEmptyMarkup(variant: MarkupVariant, offset: number): string {
 
 <div class="title_bar">
   <span class="title">Flight Tracker</span>
-  <span class="instance">{{ 'now' | date: '%s' | plus: ${offset} | date: '%H:%M' }}</span>
 </div>
 `.trim()
 }
