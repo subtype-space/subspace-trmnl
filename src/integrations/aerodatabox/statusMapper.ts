@@ -107,6 +107,26 @@ function getArrivalUtcMs(flight: AeroFlightContract): number | null {
   return isNaN(ms) ? null : ms
 }
 
+// Get best departure time as UTC ms for time-based progress
+function getDepartureUtcMs(flight: AeroFlightContract): number | null {
+  const timeInfo = flight.departure.runwayTime ?? flight.departure.revisedTime ?? flight.departure.scheduledTime
+  if (!timeInfo?.utc) return null
+  const ms = parseUtcMs(timeInfo.utc)
+  return isNaN(ms) ? null : ms
+}
+
+// Calculate progress from elapsed time between departure and arrival
+function calcTimeBasedProgress(flight: AeroFlightContract): number | null {
+  const depMs = getDepartureUtcMs(flight)
+  const arrMs = getArrivalUtcMs(flight)
+  if (depMs == null || arrMs == null) return null
+  const totalMs = arrMs - depMs
+  if (totalMs <= 0) return null
+  const elapsedMs = Date.now() - depMs
+  const pct = Math.round((elapsedMs / totalMs) * 100)
+  return Math.max(0, Math.min(100, pct))
+}
+
 const ACTIVE_STATUSES: AeroFlightStatus[] = ['EnRoute', 'Departed', 'Approaching']
 const PREFLIGHT_STATUSES: AeroFlightStatus[] = ['Expected', 'CheckIn', 'Boarding', 'GateClosed', 'Delayed']
 const LIKELY_ARRIVED_BUFFER_MS = 30 * 60 * 1000 // 30 minutes
@@ -186,7 +206,7 @@ export function buildFlightDisplayData(flight: AeroFlightContract): FlightDispla
     }
   }
 
-  // Progress — location data takes priority, then infer from status
+  // Progress — location data takes priority, then time-based, then infer from status
   let progressPct: number | null
   if (likelyArrived) {
     progressPct = 100
@@ -200,12 +220,12 @@ export function buildFlightDisplayData(flight: AeroFlightContract): FlightDispla
       flight.arrival.airport.location?.lon
     )
     if (progressPct == null) {
-      progressPct = inferProgressFromStatus(flight.status)
+      progressPct = calcTimeBasedProgress(flight) ?? inferProgressFromStatus(flight.status)
     }
   } else if (isPreflight) {
     progressPct = 0
   } else {
-    progressPct = inferProgressFromStatus(flight.status)
+    progressPct = calcTimeBasedProgress(flight) ?? inferProgressFromStatus(flight.status)
   }
 
   return {
