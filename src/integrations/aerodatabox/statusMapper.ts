@@ -109,7 +109,7 @@ function getArrivalUtcMs(flight: AeroFlightContract): number | null {
 
 const ACTIVE_STATUSES: AeroFlightStatus[] = ['EnRoute', 'Departed', 'Approaching']
 const PREFLIGHT_STATUSES: AeroFlightStatus[] = ['Expected', 'CheckIn', 'Boarding', 'GateClosed', 'Delayed']
-const LIKELY_ARRIVED_BUFFER_MS = 2 * 60 * 60 * 1000 // 2 hours
+const LIKELY_ARRIVED_BUFFER_MS = 30 * 60 * 1000 // 30 minutes
 
 export function buildFlightDisplayData(flight: AeroFlightContract): FlightDisplayData {
   const loc = flight.location
