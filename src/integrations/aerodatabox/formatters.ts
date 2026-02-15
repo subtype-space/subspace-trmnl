@@ -103,6 +103,7 @@ export function renderMarkup(
 
   return `
 <style>
+  .view .layout, .view .columns, .view .column, .view .markdown { display: flex; flex-direction: column; flex: 1; }
   .flight-card { margin: ${variant === 'full' ? '0' : variant === 'half_vertical' ? '12px 0 0' : variant === 'half_horizontal' ? '8px 0' : '6px 8px'}; padding: ${variant === 'full' ? '12px 24px' : '0'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; display: flex; flex-direction: column; flex: 1; }
   .flight-details { margin-top: auto; }
   .flight-top { display: flex; align-items: center; gap: ${variant === 'quadrant' ? '12px' : '20px'}; width: 100%; }
