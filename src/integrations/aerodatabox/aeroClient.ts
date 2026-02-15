@@ -8,7 +8,7 @@ type CacheEntry = {
 }
 
 export class AeroClient {
-  private readonly baseUrl = 'https://prod.api.market/api/v1/aedbx/aerodatabox'
+  private readonly baseUrl = 'https://aerodatabox.p.rapidapi.com'
   private readonly apiKey: string
 
   private readonly cache = new Map<string, CacheEntry>()
@@ -51,7 +51,8 @@ export class AeroClient {
 
     const res = await fetch(url, {
       headers: {
-        'x-api-market-key': this.apiKey,
+        'x-rapidapi-key': this.apiKey,
+        'x-rapidapi-host': 'aerodatabox.p.rapidapi.com',
         Accept: 'application/json',
       },
     })
