@@ -10,7 +10,7 @@ let cachedIPs: Set<string> | null = null
 let cachedAtMs = 0
 let inFlight: Promise<Set<string>> | null = null
 
-const TRMNL_TTL_IPS_MS = 24 * 60 * 60 * 1000 // 24hr cache
+const TRMNL_TTL_IPS_MS = 12 * 60 * 60 * 1000 // 12hr cache
 
 // Disallow TRMNL worker IP bypass by default
 const TRMNL_IP_ALLOW_BYPASS: boolean = (config.trmnl.bypassIPCheck === 'true')

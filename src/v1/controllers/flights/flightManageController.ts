@@ -1,6 +1,7 @@
 import { RequestHandler } from 'express'
 import { getFlightSettingsByUuid, upsertFlightSettings } from '../../../utils/dbConnector.js'
 import { logger } from '../../../utils/logger.js'
+import { wrapSettingsPage } from '../../../utils/settingsLayout.js'
 import escapeHtml from 'escape-html'
 
 const FLIGHT_PATTERN = /^[A-Z0-9]{2,3}\d{1,4}$/
@@ -16,62 +17,54 @@ function renderSettingsPage(opts: {
   const safeJwt = escapeHtml(opts.jwt)
 
   const errorHtml = opts.error
-    ? `<p style="color: #c00; font-size: 14px; font-weight: 600; margin: 8px 0;">${escapeHtml(opts.error)}</p>`
+    ? `<p class="error">${escapeHtml(opts.error)}</p>`
     : ''
 
   const backLink = opts.pluginSettingId
-    ? `<p style="margin-top:16px;">
-        <a href="https://trmnl.com/plugin_settings/${opts.pluginSettingId}/edit?force_refresh=true">
-        Back to TRMNL
-        </a>
-       </p>`
+    ? `<a class="back-link" href="https://trmnl.com/plugin_settings/${opts.pluginSettingId}/edit?force_refresh=true">← Back to TRMNL</a>`
     : ''
 
-  return `
-    <html><body style="font-family: system-ui; max-width: 520px; margin: 24px auto;">
-      <h2>Flight Tracker Settings</h2>
+  const body = `
+    <form method="POST" action="/v1/trmnl/flights/manage">
+      <input type="hidden" name="uuid" value="${safeUuid}"/>
+      <input type="hidden" name="jwt" value="${safeJwt}"/>
 
-      <form method="POST" action="/v1/trmnl/flights/manage">
-        <input type="hidden" name="uuid" value="${safeUuid}"/>
-        <input type="hidden" name="jwt" value="${safeJwt}"/>
+      <div class="card">
+        <div class="field-label">Flight numbers</div>
+        <input
+          type="text"
+          name="flightNumbers"
+          value="${escapeHtml(opts.flightNumbers)}"
+          placeholder="UA804, DL123"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+        />
+        ${errorHtml}
+        <p class="hint">
+          Enter up to 4 flight numbers separated by commas — e.g. <strong>UA804, DL123</strong>.
+          IATA (UA804) and ICAO (UAL804) formats are both accepted.
+        </p>
+        <p class="hint section-gap">
+          Multiple flights rotate on each screen refresh throughout the day.
+        </p>
+        <p class="hint section-gap">
+          Live telemetry (speed, altitude, heading) may be unavailable for flights in areas with sparse ADS-B receiver coverage, such as over the Atlantic.
+        </p>
+      </div>
 
-        <div style="margin: 12px 0;">
-          <strong>Flight numbers</strong><br/>
-          <input
-            type="text"
-            name="flightNumbers"
-            value="${escapeHtml(opts.flightNumbers)}"
-            placeholder="UA804, DL123"
-            style="width: 100%; padding: 8px; font-size: 16px; margin-top: 6px;"
-          />
-          ${errorHtml}
-          <p style="color: #666; font-size: 14px; margin-top: 4px;">
-            Enter flight numbers separated by commas (e.g. UA804, DL123). Max 4 flights.
-            Both IATA (UA804) and ICAO (UAL804) formats are accepted. 
-          </p>
-          <p style="color: #666; font-size: 13px; margin-top: 6px;">
-            If multiple flights are configured, they will rotate on each screen refresh throughout the day.
-          </p>
-          <p style="color: #666; font-size: 13px; margin-top: 4px;">
-            For aircrafts in an area with no receivers in proximity (e.g. trans-atlantic travel), live telemetry for speed, altitude, and heading will be unavailable.
-          </p>
-        </div>
+      <button class="submit-btn" type="submit">Save settings</button>
+    </form>
 
-        <button type="submit" style="padding: 8px 16px; font-size: 16px;">Save</button>
-      </form>
+    ${backLink}
 
-      ${backLink}
-
-      <p style="color: #999; font-size: 13px; margin-top: 24px;">
-        Source: <a href="https://aerodatabox.com" target="_blank">AeroDataBox</a>.
-        Coverage is best for U.S., Canadian, and European flights.
-        Data is sourced from receivers globally and can be inconsistent at times.
-      </p>
-      <p style="color: #999; font-size: 13px; margin-top: 8px;">
-        Missing flight data? Email <a href="mailto:andrew@subtype.space">andrew@subtype.space</a>
-      </p>
-    </body></html>
+    <div class="footer">
+      <p>Data: <a href="https://aerodatabox.com" target="_blank">AeroDataBox</a>. Coverage is best for U.S., Canadian, and European flights. Data is sourced from global receivers and may be inconsistent at times.</p>
+      <p style="margin-top:6px;">Missing flight data? Email <a href="mailto:andrew@subtype.space">andrew@subtype.space</a></p>
+    </div>
   `
+
+  return wrapSettingsPage('Flight Tracker Settings', body)
 }
 
 export const flightManageGetController: RequestHandler = async (req, res) => {

@@ -157,7 +157,6 @@ export function renderMarkup(
 
 function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl: string): string {
   const logoUrl = `${baseUrl}/public/radarbox_banners/${encodeURIComponent(f.airlineIcao)}.png`
-  logger.info(logoUrl)
   const showStats = variant !== 'quadrant'
   const showRoute = true
   const embedRouteInTop = variant === 'half_horizontal'

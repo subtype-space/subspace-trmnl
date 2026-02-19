@@ -1,3 +1,5 @@
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/E1E01UIU2O)
+
 # subspace-api
 subspace-api is an express-based RESTful API and stateless Model Context Protocol (MCP) server.
 
