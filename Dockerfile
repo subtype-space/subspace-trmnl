@@ -1,4 +1,4 @@
-FROM node:22.10 AS base
+FROM node:22.22 AS base
 
 USER node
 WORKDIR /opt/api
