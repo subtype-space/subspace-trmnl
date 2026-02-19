@@ -25,7 +25,7 @@ const flightInstallController: RequestHandler = async (req, res): Promise<void> 
 
   const allowedHosts = new Set(['usetrmnl.com', 'www.usetrmnl.com', 'trmnl.com', 'www.trmnl.com'])
 
-  if (!allowedHosts.has(url.hostname)) {
+  if (!allowedHosts.has(url.hostname) || url.protocol !== 'https:') {
     res.status(400).json({ error: 'Bad Request', message: 'Invalid callback URL' })
     return
   }
@@ -70,8 +70,8 @@ const flightInstallController: RequestHandler = async (req, res): Promise<void> 
   logger.debug(hash)
   await storeTrmnlToken(hash)
 
-  logger.debug('[TRMNL] Redirecting user back to', callback)
-  res.redirect(callback)
+  logger.debug('[TRMNL] Redirecting user back to', url.toString())
+  res.redirect(url.toString())
   return
 }
 
