@@ -1,4 +1,4 @@
-FROM node:22.10 AS base
+FROM node:22.22 AS base
 
 USER node
 WORKDIR /opt/api
@@ -22,8 +22,4 @@ USER node
 WORKDIR /opt/api
 RUN npm ci --omit=dev
 COPY --chown=node:node --from=builder /opt/api/build ./build
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD node -e "fetch('http://localhost:9595/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"
-
 ENTRYPOINT [ "npm", "run", "start" ]
