@@ -19,8 +19,40 @@ export class AeroClient {
   private readonly PREFLIGHT_TTL_MS = 15 * 60 * 1000 // 15 min — Expected, CheckIn, Boarding, etc.
   private readonly SETTLED_TTL_MS = 30 * 60 * 1000 // 30 min — Arrived, Canceled, Diverted
 
+  private readonly MIN_INTERVAL_MS = 1100
+  private lastCallAt = 0
+  private processing = false
+  private readonly queue: Array<() => void> = []
+
   constructor(apiKey: string) {
     this.apiKey = apiKey
+  }
+
+  private enqueue<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.queue.push(async () => {
+        try {
+          resolve(await fn())
+        } catch (e) {
+          reject(e)
+        }
+      })
+      if (this.queue.length > 1) logger.debug(`[AERO] Queued request (depth: ${this.queue.length})`)
+      this.processQueue()
+    })
+  }
+
+  private async processQueue(): Promise<void> {
+    if (this.processing) return
+    this.processing = true
+    while (this.queue.length > 0) {
+      const wait = Math.max(0, this.lastCallAt + this.MIN_INTERVAL_MS - Date.now())
+      if (wait > 0) await new Promise<void>((r) => setTimeout(r, wait))
+      const next = this.queue.shift()!
+      this.lastCallAt = Date.now()
+      await next()
+    }
+    this.processing = false
   }
 
   private getTtl(status: AeroFlightStatus | null): number {
@@ -47,30 +79,33 @@ export class AeroClient {
 
   async getFlightByNumber(flightNumber: string): Promise<AeroFlightContract | null> {
     const url = `${this.baseUrl}/flights/number/${encodeURIComponent(flightNumber)}?withLocation=true`
-    logger.debug(`[AERO] GET ${url}`)
 
-    const res = await fetch(url, {
-      headers: {
-        'x-rapidapi-key': this.apiKey,
-        'x-rapidapi-host': 'aerodatabox.p.rapidapi.com',
-        Accept: 'application/json',
-      },
+    return this.enqueue(async () => {
+      logger.debug(`[AERO] GET ${url}`)
+
+      const res = await fetch(url, {
+        headers: {
+          'x-rapidapi-key': this.apiKey,
+          'x-rapidapi-host': 'aerodatabox.p.rapidapi.com',
+          Accept: 'application/json',
+        },
+      })
+
+      if (res.status === 204) {
+        logger.debug(`[AERO] No flights found for ${flightNumber}`)
+        return null
+      }
+
+      if (!res.ok) {
+        logger.warn(`[AERO] Flight lookup failed: ${res.status} ${res.statusText}`)
+        return null
+      }
+
+      const flights = (await res.json()) as AeroFlightContract[]
+      if (!Array.isArray(flights) || flights.length === 0) return null
+
+      return this.pickBestFlight(flights)
     })
-
-    if (res.status === 204) {
-      logger.debug(`[AERO] No flights found for ${flightNumber}`)
-      return null
-    }
-
-    if (!res.ok) {
-      logger.warn(`[AERO] Flight lookup failed: ${res.status} ${res.statusText}`)
-      return null
-    }
-
-    const flights = (await res.json()) as AeroFlightContract[]
-    if (!Array.isArray(flights) || flights.length === 0) return null
-
-    return this.pickBestFlight(flights)
   }
 
   async getFlightByNumberCached(flightNumber: string): Promise<AeroFlightContract | null> {
