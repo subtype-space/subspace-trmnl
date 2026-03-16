@@ -22,21 +22,20 @@ import { runWithAuth } from './auth/oauth.js'
 import { AuthInfo } from './types/oauth/types.js'
 
 logger.info('Starting up subspace-api!')
-logger.info('Initializing stateless MCP server...')
-const mcpServer = new McpServer(
-  {
-    name: 'subspace-mcp-server',
-    version: '1.0.0',
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
-  }
-)
 
-logger.info('Registering tools with MCP server...')
-registerTools(mcpServer)
+// Factory: creates a fresh McpServer + transport per request.
+// The MCP SDK disallows reconnecting a server to a new transport, so we must
+// create a new instance each time rather than reusing a singleton.
+function createMcpHandler() {
+  const server = new McpServer(
+    { name: 'subspace-mcp-server', version: '1.0.0' },
+    { capabilities: { tools: {} } }
+  )
+  registerTools(server)
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
+  return { server, transport }
+}
+
 const mcpReady = true
 logger.info('MCP server is ready')
 
@@ -87,10 +86,8 @@ server.all(
   rateLimiter,
   logAuthedIdentity,
   safe(async (req: Request, res: Response) => {
-    // Stateless mode requires a fresh transport per request — reusing one transport
-    // across requests causes "message ID collisions" per the MCP SDK.
-    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
-    await mcpServer.connect(transport)
+    const { server, transport } = createMcpHandler()
+    await server.connect(transport)
 
     const authInfo = (req as any).authInfo as AuthInfo | undefined
     if (authInfo) {
@@ -155,6 +152,5 @@ server.use((err: any, _req: any, res: any, _next: any) => {
 server.listen(PORT, () => {
   logger.info('Using log level', config.api.logLevel)
   logger.info('Using API version:', config.api.activeVersion)
-  logger.debug('MCP Server debug:', mcpServer)
-  logger.info('subspace API now listening on PORT:', config.api.port)
+logger.info('subspace API now listening on PORT:', config.api.port)
 })
