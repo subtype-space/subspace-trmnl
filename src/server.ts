@@ -35,21 +35,10 @@ const mcpServer = new McpServer(
   }
 )
 
-// Create transport stateless
-const mcpTransport = new StreamableHTTPServerTransport({
-  sessionIdGenerator: undefined,
-})
 logger.info('Registering tools with MCP server...')
 registerTools(mcpServer)
-
-let mcpReady = false
-try {
-  await mcpServer.connect(mcpTransport)
-  logger.info('MCP server is ready')
-  mcpReady = true
-} catch (err) {
-  logger.error('There was an error connecting the MCP server to transport', err)
-}
+const mcpReady = true
+logger.info('MCP server is ready')
 
 // TODO: switch to PG connection vs flat file
 logger.info('Initializing DB...')
@@ -98,6 +87,11 @@ server.all(
   rateLimiter,
   logAuthedIdentity,
   safe(async (req: Request, res: Response) => {
+    // Stateless mode requires a fresh transport per request — reusing one transport
+    // across requests causes "message ID collisions" per the MCP SDK.
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
+    await mcpServer.connect(transport)
+
     const authInfo = (req as any).authInfo as AuthInfo | undefined
     if (authInfo) {
       // Wrap MCP handler with auth context using AsyncLocalStorage.
@@ -105,10 +99,10 @@ server.all(
       // without having to pass it through the MCP SDK's internal call chain.
       // See oauth.ts for detailed explanation of why this is needed.
       await runWithAuth(authInfo, async () => {
-        await mcpTransport.handleRequest(req, res, req.body)
+        await transport.handleRequest(req, res, req.body)
       })
     } else {
-      await mcpTransport.handleRequest(req, res, req.body)
+      await transport.handleRequest(req, res, req.body)
     }
   })
 )

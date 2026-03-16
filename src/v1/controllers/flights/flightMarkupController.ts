@@ -65,6 +65,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
   const baseUrl = new URL(config.auth.mcpServerUrl).origin
 
   if (flightNumbers.length === 0) {
+    logger.info('[AERO] No flights configured')
     const emptyModel: FlightDisplayData[] = []
     res.json({
       markup: renderMarkup(emptyModel, 'full', utcOffset, baseUrl),
