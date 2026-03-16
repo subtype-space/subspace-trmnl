@@ -260,13 +260,10 @@ async function verifyToken(token: string) {
     throw new InvalidTokenError('Invalid or expired token')
   }
 
-  logger.debug('[AUTH] Checking introspection raw data')
-
   const raw = await response.text()
   let data: any
   try {
     data = JSON.parse(raw)
-    logger.debug(`[AUTH] Auth server introspection response: ${raw}`)
   } catch (e) {
     logger.error('[AUTH] failed to parse introspection JSON', { error: String(e), body: raw })
     throw new ServerError('Failed to parse introspection JSON')
@@ -311,7 +308,7 @@ async function verifyToken(token: string) {
 
   const scopes = typeof data.scope === 'string' ? data.scope.split(/\s+/).filter(Boolean) : []
 
-  logger.info('[AUTH] Authenticating user with following info:', {
+  logger.debug('[AUTH] Authenticating user with following info:', {
     clientId: data.client_id,
     scopes: scopes,
     expiresAt: exp,
