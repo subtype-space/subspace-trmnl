@@ -1,6 +1,6 @@
 {
   "name": "subspace-api",
-  "version": "1.13.8",
+  "version": "1.13.9",
   "description": "API service for subtype.space",
   "repository": {
     "type": "git",
