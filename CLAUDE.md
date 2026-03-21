@@ -80,6 +80,7 @@ Optional:
 ## Release strategy
 
 If on the dev branch, do not create tags or push tags to this branch. Tags should ideally only be created on the v1 branch.
+CI/CD automatically cuts a GitHub release when a tag is pushed to the v1 branch — do not manually create releases via `gh release create`. To trigger a release, push a tag to v1 and CI/CD will handle the rest.
 If creating a new release, be sure to ask the user if they wish to create one. This should happen after a merge request is done in GitHub. If creating a new release, grab the latest tag and incriment it (e.g. 1.5.5 -> 1.5.6), unless user specifies otherwise.
 
 Major version bump example: 1.5.5 -> 2.0.0 | 2.5.3 -> 3.0.0
