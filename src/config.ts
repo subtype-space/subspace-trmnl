@@ -41,5 +41,6 @@ export const config = {
     },
     aerodatabox: {
         apiKey:         process.env.AERODATABOX_API_KEY ?? '',
+        provider:       (process.env.AERODATABOX_PROVIDER ?? 'apimarket') as 'apimarket' | 'rapidapi',
     }
 }
