@@ -22,4 +22,4 @@ USER node
 WORKDIR /opt/api
 RUN npm ci --omit=dev
 COPY --chown=node:node --from=builder /opt/api/build ./build
-ENTRYPOINT [ "npm", "run", "start" ]
+ENTRYPOINT [ "node", "build/server.js" ]

@@ -149,8 +149,16 @@ server.use((err: any, _req: any, res: any, _next: any) => {
   res.status(500).json({ error: 'server_error', error_description: 'Internal Server Error' })
 })
 
-server.listen(PORT, () => {
+const httpServer = server.listen(PORT, () => {
   logger.info('Using log level', config.api.logLevel)
   logger.info('Using API version:', config.api.activeVersion)
-logger.info('subspace API now listening on PORT:', config.api.port)
+  logger.info('subspace API now listening on PORT:', config.api.port)
+})
+
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received, shutting down gracefully')
+  httpServer.close(() => {
+    logger.info('Server closed')
+    process.exit(0)
+  })
 })
