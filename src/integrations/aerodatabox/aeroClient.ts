@@ -7,8 +7,21 @@ type CacheEntry = {
   status: AeroFlightStatus | null
 }
 
+type Provider = 'apimarket' | 'rapidapi'
+
+const PROVIDERS: Record<Provider, { baseUrl: string; headers: (key: string) => Record<string, string> }> = {
+  apimarket: {
+    baseUrl: 'https://prod.api.market/api/v1/aedbx/aerodatabox',
+    headers: (key) => ({ 'x-api-market-key': key, Accept: 'application/json' }),
+  },
+  rapidapi: {
+    baseUrl: 'https://aerodatabox.p.rapidapi.com',
+    headers: (key) => ({ 'x-rapidapi-key': key, 'x-rapidapi-host': 'aerodatabox.p.rapidapi.com', Accept: 'application/json' }),
+  },
+}
+
 export class AeroClient {
-  private readonly baseUrl = 'https://aerodatabox.p.rapidapi.com'
+  private readonly provider: (typeof PROVIDERS)[Provider]
   private readonly apiKey: string
 
   private readonly cache = new Map<string, CacheEntry>()
@@ -24,8 +37,10 @@ export class AeroClient {
   private processing = false
   private readonly queue: Array<() => void> = []
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, provider: Provider = 'apimarket') {
     this.apiKey = apiKey
+    this.provider = PROVIDERS[provider]
+    logger.debug(`[AERO] Using provider: ${provider}`)
   }
 
   private enqueue<T>(fn: () => Promise<T>): Promise<T> {
@@ -78,17 +93,13 @@ export class AeroClient {
   }
 
   async getFlightByNumber(flightNumber: string): Promise<AeroFlightContract | null> {
-    const url = `${this.baseUrl}/flights/number/${encodeURIComponent(flightNumber)}?withLocation=true`
+    const url = `${this.provider.baseUrl}/flights/number/${encodeURIComponent(flightNumber)}?withLocation=true`
 
     return this.enqueue(async () => {
       logger.debug(`[AERO] GET ${url}`)
 
       const res = await fetch(url, {
-        headers: {
-          'x-rapidapi-key': this.apiKey,
-          'x-rapidapi-host': 'aerodatabox.p.rapidapi.com',
-          Accept: 'application/json',
-        },
+        headers: this.provider.headers(this.apiKey),
       })
 
       if (res.status === 204) {

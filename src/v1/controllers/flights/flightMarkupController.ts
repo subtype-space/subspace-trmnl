@@ -8,7 +8,7 @@ import { buildFlightDisplayData } from '../../../integrations/aerodatabox/status
 import type { FlightDisplayData } from '../../../types/trmnl/flightTypes.js'
 import type { TrmnlMeta } from '../../../types/trmnl/types.js'
 
-const aeroClient = config.aerodatabox.apiKey ? new AeroClient(config.aerodatabox.apiKey) : null
+const aeroClient = config.aerodatabox.apiKey ? new AeroClient(config.aerodatabox.apiKey, config.aerodatabox.provider) : null
 const rotationIndex = new Map<string, number>()
 
 function nextRotationIndex(userUuid: string, count: number): number {
