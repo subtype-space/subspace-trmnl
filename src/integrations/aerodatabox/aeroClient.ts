@@ -27,10 +27,10 @@ export class AeroClient {
   private readonly cache = new Map<string, CacheEntry>()
   private readonly inflight = new Map<string, Promise<AeroFlightContract | null>>()
 
-  // Status-aware cache TTLs
-  private readonly ACTIVE_TTL_MS = 5 * 60 * 1000 // 5 min — EnRoute, Departed, Approaching
-  private readonly PREFLIGHT_TTL_MS = 15 * 60 * 1000 // 15 min — Expected, CheckIn, Boarding, etc.
-  private readonly SETTLED_TTL_MS = 30 * 60 * 1000 // 30 min — Arrived, Canceled, Diverted
+  // 5 min under TRMNL's 1hr refresh so multi-device users share a single API call per cycle
+  private readonly ACTIVE_TTL_MS = 55 * 60 * 1000
+  // Settled flights won't move for ~2hrs (turnaround time), no need to poll frequently
+  private readonly SETTLED_TTL_MS = 2 * 60 * 60 * 1000
 
   private readonly MIN_INTERVAL_MS = 1100
   private lastCallAt = 0
@@ -72,21 +72,11 @@ export class AeroClient {
 
   private getTtl(status: AeroFlightStatus | null): number {
     switch (status) {
-      case 'EnRoute':
-      case 'Departed':
-      case 'Approaching':
-        return this.ACTIVE_TTL_MS
       case 'Arrived':
       case 'Canceled':
       case 'CanceledUncertain':
       case 'Diverted':
         return this.SETTLED_TTL_MS
-      case 'Expected':
-      case 'CheckIn':
-      case 'Boarding':
-      case 'GateClosed':
-      case 'Delayed':
-        return this.PREFLIGHT_TTL_MS
       default:
         return this.ACTIVE_TTL_MS
     }
