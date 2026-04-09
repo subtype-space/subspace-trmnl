@@ -29,8 +29,8 @@ export class AeroClient {
 
   // 5 min under TRMNL's 1hr refresh so multi-device users share a single API call per cycle
   private readonly ACTIVE_TTL_MS = 55 * 60 * 1000
-  // Settled flights won't move for ~2hrs (turnaround time), no need to poll frequently
-  private readonly SETTLED_TTL_MS = 2 * 60 * 60 * 1000
+  // Settled flights keep the same flight number until next day's operation — 4hr cache is safe
+  private readonly SETTLED_TTL_MS = 4 * 60 * 60 * 1000
 
   private readonly MIN_INTERVAL_MS = 1100
   private lastCallAt = 0
