@@ -27,6 +27,6 @@ export const flightInstallSuccessController: RequestHandler = async (req, res) =
     })
   }
 
-  logger.info('[FLIGHTS] install success for uuid', { userUuid })
+  logger.info('[AERO] install success for uuid', { userUuid })
   res.status(200).json({ ok: true })
 }

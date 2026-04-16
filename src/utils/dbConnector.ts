@@ -97,7 +97,7 @@ export async function isKnownTokenHash(tokenHash: string): Promise<boolean> {
 
 export async function touchTrmnlToken(tokenHash: string) {
   const db = getDb()
-  logger.debug('[ DB ] Refreshing user token')
+  logger.info('[ DB ] Refreshing user token')
   db.prepare(
     `
     update trmnl_connections
@@ -109,7 +109,7 @@ export async function touchTrmnlToken(tokenHash: string) {
 
 export function getUserUuidByTokenHash(tokenHash: string): string | null {
   const db = getDb()
-  logger.debug('[ DB ] Retrieving UUID for hash: ', tokenHash)
+  logger.info('[ DB ] Retrieving UUID for hash: ', tokenHash)
   const row = db
     .prepare(
       `
@@ -126,7 +126,7 @@ export function getUserUuidByTokenHash(tokenHash: string): string | null {
 // bind once: only set if currently null/empty
 export function bindUserUuidToToken(tokenHash: string, userUuid: string) {
   const db = getDb()
-  logger.debug(`[ DB ] Binding ${userUuid} to ${tokenHash}`)
+  logger.info(`[ DB ] Binding ${userUuid} to ${tokenHash}`)
   db.prepare(
     `
     update trmnl_connections

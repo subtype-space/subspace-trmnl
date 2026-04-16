@@ -8,14 +8,15 @@ export function logIncomingAuth(req: Request, _res: Response, next: NextFunction
   const auth = req.headers.authorization ?? ""
   const hasBearer = auth.toLowerCase().startsWith("bearer ")
 
-  logger.debug(`[AUTH] Connection from ${ip} - ${country} bearer=${hasBearer}`)
+  logger.info(`[AUTH] Connection from ${ip} - ${country} bearer=${hasBearer}`)
   next()
 }
 
 export function logAuthedIdentity(req: Request, _res: Response, next: NextFunction) {
   const authInfo = (req as any).authInfo ?? null
   if (authInfo) {
-    logger.debug(`[AUTH] Incoming Authenticated client=${authInfo.clientId} scopes=${(authInfo.scopes ?? []).join(' ')}`)
+    logger.info(`[AUTH] Incoming Authenticated client=${authInfo.clientId}`)
+    logger.debug(`[AUTH] Debug scopes: ${(authInfo.scopes ??[]).join(' ')}`)
   } else {
     logger.debug('[AUTH] No authInfo on request')
   }

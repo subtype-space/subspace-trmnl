@@ -5,6 +5,8 @@ import { logger } from '../../utils/logger.js'
 export class WmataClient {
   private readonly apiKey: string
 
+  // todo - technically the trmnl (aero and wmata) are optional endpoints
+  // don't hardcode a stop/exit
   constructor(opts: { apiKey: string }) {
     if (!opts.apiKey) {
       logger.error('Unable to start subspace-api - missing WMATA API KEY')
@@ -15,7 +17,6 @@ export class WmataClient {
   }
 
   private async getJson<T>(url: string): Promise<T> {
-    logger.debug('Performing WMATA integration API call')
     const res = await fetch(url, {
       method: 'GET',
       headers: { api_key: this.apiKey },
