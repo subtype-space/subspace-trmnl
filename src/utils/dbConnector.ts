@@ -97,7 +97,7 @@ export async function isKnownTokenHash(tokenHash: string): Promise<boolean> {
 
 export async function touchTrmnlToken(tokenHash: string) {
   const db = getDb()
-  logger.debug('[ DB ] Refreshing user token')
+  logger.info('[ DB ] Refreshing user token')
   db.prepare(
     `
     update trmnl_connections
@@ -109,7 +109,7 @@ export async function touchTrmnlToken(tokenHash: string) {
 
 export function getUserUuidByTokenHash(tokenHash: string): string | null {
   const db = getDb()
-  logger.debug('[ DB ] Retrieving UUID for hash: ', tokenHash)
+  logger.info('[ DB ] Retrieving UUID for hash: ', tokenHash)
   const row = db
     .prepare(
       `
@@ -126,7 +126,7 @@ export function getUserUuidByTokenHash(tokenHash: string): string | null {
 // bind once: only set if currently null/empty
 export function bindUserUuidToToken(tokenHash: string, userUuid: string) {
   const db = getDb()
-  logger.debug(`[ DB ] Binding ${userUuid} to ${tokenHash}`)
+  logger.info(`[ DB ] Binding user to ${tokenHash}`)
   db.prepare(
     `
     update trmnl_connections
@@ -135,6 +135,35 @@ export function bindUserUuidToToken(tokenHash: string, userUuid: string) {
       and (user_uuid is null or user_uuid = '')
   `
   ).run(userUuid, tokenHash)
+}
+
+export function pruneStaleTokens() {
+  const db = getDb()
+  const now = Date.now()
+  const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000
+  const oneYearMs = 365 * 24 * 60 * 60 * 1000
+
+  const { changes: revokedPruned } = db
+    .prepare(
+      `
+    delete from trmnl_connections
+    where revoked_at is not null
+      and revoked_at < ?
+  `
+    )
+    .run(now - ninetyDaysMs)
+
+  const { changes: stalePruned } = db
+    .prepare(
+      `
+    delete from trmnl_connections
+    where last_seen_at is null
+      and created_at < ?
+  `
+    )
+    .run(now - oneYearMs)
+
+  logger.info(`[ DB ] Token cleanup: removed ${revokedPruned} revoked, ${stalePruned} stale`)
 }
 
 export async function revokeByUserUuid(userUuid: string) {

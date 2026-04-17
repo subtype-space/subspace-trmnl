@@ -63,7 +63,7 @@ These are required if you are running TRMNL plugins (metro or flight tracker).
 | `TRMNL_DB_PATH` | No | Path to SQLite database file (default: `./trmnl.sqlite`) |
 | `TRMNL_IP_ALLOW_PRIVATE` | No | Set to `true` to bypass TRMNL worker IP allowlist check (useful for local dev) |
 
-## Discord activity settings
+## Discord activity settings (DEPRECATED ENDPOINT)
 | Env var | Purpose |
 |---------|---------|
 | `ACTIVITY_DISCORD_CLIENT_ID` | Discord OAuth client ID for the activity token exchange endpoint |
@@ -72,6 +72,8 @@ These are required if you are running TRMNL plugins (metro or flight tracker).
 # AI Disclosure
 Parts of this project were assisted with Claude Code by having it provide examples for implementation.
 Some parts of the codebase were refactored by Claude Code suggestion to improve efficiency.
+Unless noted, the code base was largely written by hand. Some parts of implementing the OAuth 2.0 spec were assisted by LLM.
+Some parts for the TRMNL Flight Tracker logic regarding calculations were assisted by LLM, as with information display, but not generated out of thin air.
 
 It is subspace's responsibility to examine the output of these LLMs for accuracy, implementation detail, and direction.
 

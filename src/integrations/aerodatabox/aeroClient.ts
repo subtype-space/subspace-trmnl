@@ -29,9 +29,10 @@ export class AeroClient {
 
   // 5 min under TRMNL's 1hr refresh so multi-device users share a single API call per cycle
   private readonly ACTIVE_TTL_MS = 55 * 60 * 1000
-  // Settled flights won't move for ~2hrs (turnaround time), no need to poll frequently
-  private readonly SETTLED_TTL_MS = 2 * 60 * 60 * 1000
+  // Settled flights keep the same flight number until next day's operation — 4hr cache is safe
+  private readonly SETTLED_TTL_MS = 4 * 60 * 60 * 1000
 
+  // API queue system
   private readonly MIN_INTERVAL_MS = 1100
   private lastCallAt = 0
   private processing = false
@@ -40,7 +41,7 @@ export class AeroClient {
   constructor(apiKey: string, provider: Provider = 'apimarket') {
     this.apiKey = apiKey
     this.provider = PROVIDERS[provider]
-    logger.debug(`[AERO] Using provider: ${provider}`)
+    logger.info(`[AERO] Using provider: ${provider}`)
   }
 
   private enqueue<T>(fn: () => Promise<T>): Promise<T> {
@@ -52,11 +53,12 @@ export class AeroClient {
           reject(e)
         }
       })
-      if (this.queue.length > 1) logger.debug(`[AERO] Queued request (depth: ${this.queue.length})`)
+      if (this.queue.length > 1) logger.info(`[AERO] Queued request (depth: ${this.queue.length})`)
       this.processQueue()
     })
   }
 
+  // flight API limits 1 req/s, at most 2 req/s
   private async processQueue(): Promise<void> {
     if (this.processing) return
     this.processing = true
@@ -110,6 +112,7 @@ export class AeroClient {
   }
 
   async getFlightByNumberCached(flightNumber: string): Promise<AeroFlightContract | null> {
+    logger.debug(`[AERO] retrieving flight information for ${flightNumber}`)
     const now = Date.now()
     const cached = this.cache.get(flightNumber)
     if (cached && now - cached.at < this.getTtl(cached.status)) {

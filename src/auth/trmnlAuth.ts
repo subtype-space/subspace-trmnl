@@ -1,3 +1,8 @@
+/**
+ * Custom middleware that performs authentication specifically against TRMNL workers and TRMNL endpoints
+ * Middleware exposes a way to parse the Bearer auth token sent from TRMNL and validate it
+ * against their .well-known JWKS
+ */
 import crypto from 'crypto'
 import { Request, Response, NextFunction, RequestHandler } from 'express'
 import { isKnownTokenHash, touchTrmnlToken } from '../utils/dbConnector.js'
@@ -20,7 +25,7 @@ const sha256 = (v: string) => crypto.createHash('sha256').update(v).digest('hex'
 // This is all middleware
 // Do not apply the same type of oauth here
 export const requireTrmnlAuth: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
-  logger.info('[AUTH] Checking TRMNL authentication')
+  logger.info('[AUTH] TRMNL Auth MW - checking for TRMNL credentials')
 
   const auth = req.headers.authorization
   if (!auth || typeof auth !== 'string' || !auth.toLowerCase().startsWith('bearer ')) {
