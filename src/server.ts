@@ -128,6 +128,7 @@ const httpServer = server.listen(PORT, () => {
 
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down gracefully')
+  httpServer.closeAllConnections()
   httpServer.close(() => {
     logger.info('Server closed')
     process.exit(0)
