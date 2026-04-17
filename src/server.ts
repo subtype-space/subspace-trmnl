@@ -2,8 +2,8 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { config } from './config.js' // validate and build config object
 import { logger } from './utils/logger.js'
-import express, { Request, NextFunction, Response, RequestHandler } from 'express'
-import { initTrmnlDB } from './utils/dbConnector.js'
+import express, { Request, Response } from 'express'
+import { initTrmnlDB, pruneStaleTokens } from './utils/dbConnector.js'
 import trmnlRouter from './v1/routers/trmnlRouter.js'
 import statusRouter from './v1/routers/statusRouter.js'
 import helmet from 'helmet'
@@ -42,11 +42,13 @@ logger.info('MCP server is ready')
 // TODO: switch to PG connection vs flat file
 logger.info('Initializing DB...')
 initTrmnlDB()
+pruneStaleTokens()
+const TOKEN_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000 // once a day
+setInterval(pruneStaleTokens, TOKEN_CLEANUP_INTERVAL_MS).unref()
 
 // Express setup
 const server = express()
 const PORT = config.api.port
-const ACTIVE_VERSION = config.api.activeVersion
 
 // reverse proxy -- removing this will cause issues with secure cookies
 server.set('trust proxy', 1)
@@ -71,13 +73,6 @@ server.use(
 server.use('/health', rateLimiter, express.json(), statusRouter)
 server.use('/v1/trmnl', rateLimiter, trmnlRouter)
 
-// Wrapper around the handleRequest - I don't know if this is actually needed but it was suggested to me
-const safe = (fn: RequestHandler): RequestHandler => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    Promise.resolve(fn(req, res, next)).catch(next)
-  }
-}
-
 server.all(
   '/mcp',
   logIncomingAuth,
@@ -85,7 +80,7 @@ server.all(
   userAuthMiddleware, // BFF pattern: verify X-User-Authorization for defense-in-depth
   rateLimiter,
   logAuthedIdentity,
-  safe(async (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     const { server, transport } = createMcpHandler()
     await server.connect(transport)
 
@@ -101,7 +96,7 @@ server.all(
     } else {
       await transport.handleRequest(req, res, req.body)
     }
-  })
+  }
 )
 
 server.get('/mcp/health', async (_: Request, res: Response) => {
@@ -113,30 +108,6 @@ server.get('/mcp/health', async (_: Request, res: Response) => {
     return
   }
   res.status(200).json({ status: 'ok' })
-})
-
-// discord activity auth
-// Discord enpoint to return oauth2 token after user authentication
-server.post('/discord/token', logIncomingAuth, async (req, res) => {
-  // Exchange the code for an access_token
-  const response = await fetch(`https://discord.com/api/oauth2/token`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      client_id: process.env.ACTIVITY_DISCORD_CLIENT_ID!,
-      client_secret: process.env.ACTIVITY_DISCORD_CLIENT_SECRET!,
-      grant_type: 'authorization_code',
-      code: req.body.code,
-    }),
-  })
-
-  // Retrieve the access_token from the response
-  const { access_token } = await response.json()
-
-  // Return the access_token to our client as { access_token: "..."}
-  res.send({ access_token })
 })
 
 // oauth

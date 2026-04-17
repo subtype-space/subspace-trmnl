@@ -6,7 +6,7 @@ import { AeroClient } from '../../../integrations/aerodatabox/aeroClient.js'
 import { renderMarkup } from '../../../integrations/aerodatabox/formatters.js'
 import { buildFlightDisplayData } from '../../../integrations/aerodatabox/statusMapper.js'
 import type { FlightDisplayData } from '../../../types/trmnl/flightTypes.js'
-import type { TrmnlMeta } from '../../../types/trmnl/types.js'
+import { parseTrmnlMeta } from '../../../utils/trmnlMeta.js'
 
 const aeroClient = config.aerodatabox.apiKey ? new AeroClient(config.aerodatabox.apiKey, config.aerodatabox.provider) : null
 const rotationIndex = new Map<string, number>()
@@ -41,17 +41,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
     return
   }
 
-  // parse TRMNL meta (optional)
-  let meta: TrmnlMeta | null = null
-  if (trmnlRaw && typeof trmnlRaw === 'object') {
-    meta = trmnlRaw as TrmnlMeta
-  } else if (typeof trmnlRaw === 'string' && trmnlRaw.trim()) {
-    try {
-      meta = JSON.parse(trmnlRaw)
-    } catch {
-      logger.warn('[FLGHT] Failed to parse trmnl metadata JSON')
-    }
-  }
+  const meta = parseTrmnlMeta(trmnlRaw)
 
   const utcOffset = Number(meta?.user?.utc_offset ?? 0)
 

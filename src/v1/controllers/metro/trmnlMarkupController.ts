@@ -4,15 +4,8 @@ import { config } from '../../../config.js'
 import { getSettingsByUuid } from '../../../utils/dbConnector.js'
 import { WmataClient } from '../../../integrations/wmata/wmataClient.js'
 import { MetroIncident } from '../../../types/wmata/types.js'
-import { TrmnlMeta, MetroMarkup, MarkupVariant } from '../../../types/trmnl/types.js'
-
-// Set up cache so we dont needlessly call to WMATA all the time
-// rough TTL of about 10 minutes, can change. Minimum at TRMNL is ~15 but can change based on device and dev
-let cachedIncidents: MetroIncident[] | null = null
-let cachedAtMs = 0
-let inFlight: Promise<MetroIncident[]> | null = null
-
-const WMATA_TTL_MS = 10 * 60 * 1000 // 10 minute cache
+import { MetroMarkup, MarkupVariant } from '../../../types/trmnl/types.js'
+import { parseTrmnlMeta } from '../../../utils/trmnlMeta.js'
 
 const client = config.wmata.apiKey ? new WmataClient({ apiKey: config.wmata.apiKey }) : null
 
@@ -41,17 +34,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     res.status(503).json({ error: 'Service Unavailable', message: 'WMATA monitoring not configured.'})
   }
 
-  // parse TRMNL meta (optional)
-  let meta: TrmnlMeta | null = null
-  if (trmnlRaw && typeof trmnlRaw === 'object') {
-    meta = trmnlRaw as TrmnlMeta
-  } else if (typeof trmnlRaw === 'string' && trmnlRaw.trim()) {
-    try {
-      meta = JSON.parse(trmnlRaw)
-    } catch {
-      logger.warn('[TRMNL] Failed to parse trmnl metadata JSON')
-    }
-  }
+  const meta = parseTrmnlMeta(trmnlRaw)
 
   const utcOffset = Number(meta?.user?.utc_offset ?? 0)
 
@@ -71,7 +54,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
 
   let incidents: MetroIncident[] = []
   try {
-    incidents = await fetchWmataIncidentsCached()
+    incidents = await client!.getIncidentsCached()
     logger.debug('[TRMNL] WMATA incidents fetched', { count: incidents.length })
   } catch (e) {
     logger.warn('[WMATA] incidents fetch failed', String(e))
@@ -320,43 +303,6 @@ function countCommuteIssuesByLine(incidents: MetroIncident[]) {
   return { disruption, alert }
 }
 
-async function fetchWmataIncidents(): Promise<MetroIncident[]> {
-  logger.info('[TRMNL] Attempting WMATA API call')
-
-  try {
-    const response = await client!.getIncidents()
-    return Array.isArray(response) ? response : []
-  } catch (e) {
-    logger.warn(`[TRMNL] Failed to fetch WMATA incidents`)
-    throw new Error('WMATA incidents fetch failed')
-  }
-}
-
-async function fetchWmataIncidentsCached(): Promise<MetroIncident[]> {
-  const now = Date.now()
-  if (cachedIncidents && now - cachedAtMs < WMATA_TTL_MS) {
-    logger.debug('[TRMNL] Using cached info!')
-    return cachedIncidents
-  }
-
-  // de-dupe concurrent refreshes
-  if (inFlight) return inFlight
-
-  logger.debug('[TRMNL] Cache stale - using API call')
-  inFlight = (async () => {
-    const fresh = await fetchWmataIncidents()
-    cachedIncidents = fresh
-    cachedAtMs = Date.now()
-    inFlight = null
-    return fresh
-  })().catch((err) => {
-    logger.error('[TRMNL] Error updating in-memory cache for WMATA call')
-    inFlight = null
-    throw err
-  })
-
-  return inFlight
-}
 
 function statusFromCount(count: number, crass: boolean) {
   if (count === 0) return { status: "YOU'RE FINE. ", subtitle: 'No active delays' }
