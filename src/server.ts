@@ -63,7 +63,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 server.use(
   '/public',
   (req, _res, next) => {
-    logger.info(`[STATIC] ${req.method} ${req.path}`)
+    logger.info(`${req.method} ${req.path}`)
     next()
   },
   helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }),
