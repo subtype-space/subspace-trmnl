@@ -37,7 +37,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
 
   if (!aeroClient) {
     logger.warn('[FLGHT] AeroDataBox API key not configured')
-    res.status(503).json({ error: 'Service Unavailable', message: 'Flight tracking not configured' })
+    res.status(503).json({ error: 'Service Unavailable', message: 'Service Unavailable :(' })
     return
   }
 

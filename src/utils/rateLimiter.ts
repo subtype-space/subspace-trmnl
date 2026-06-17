@@ -39,7 +39,7 @@ export const rateLimiter: RateLimitRequestHandler = rateLimit({
     const ip = getClientIp(req)
     const key = getAuthKey(req)
     if (isTrmnlWorkerIp(ip)) {
-      logger.info(`Rate limit check for TRMNL IP: ${ip}`)
+      logger.debug(`Rate limit check for TRMNL IP: ${ip}`)
       return 60
     }
     logger.info(`Rate limit check for ${key ? 'authenticated' : 'anon'} - ${ip}`)

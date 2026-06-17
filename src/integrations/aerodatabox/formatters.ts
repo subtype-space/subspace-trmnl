@@ -101,40 +101,46 @@ export function renderMarkup(
   const lastUpdated = flights.length > 0 ? flights[0].lastUpdated : '--'
   const flightCards = flights.map((f) => renderFlightCard(f, variant, baseUrl)).join('')
 
+  // TRMNL X helper
+  const s = (px: number) => `calc(${px}px * var(--s, 1))`
+
   return `
 <style>
-  .flight-card { margin: ${variant === 'full' ? '0' : variant === 'half_vertical' ? '12px 0 0' : variant === 'half_horizontal' ? '8px 0' : '6px 8px'}; padding: ${variant === 'full' ? '12px 24px' : '0'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; display: flex; flex-direction: column; flex: 1; }
-  .flight-details { margin-top: ${variant === 'full' ? '60px' : variant === 'half_vertical' ? '0' : '0'}; }
-  .flight-top { display: flex; align-items: center; gap: ${variant === 'quadrant' ? '12px' : '20px'}; width: 100%; }
-  .view--half_horizontal .flight-top { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; align-items: center; column-gap: 16px; row-gap: 2px; }
+  .flight-card { --s: 1; }
+  .screen--lg .flight-card { --s: 1.3; }
+
+  .flight-card { margin: ${variant === 'full' ? '0' : variant === 'half_vertical' ? `${s(12)} 0 0` : variant === 'half_horizontal' ? `${s(8)} 0` : `${s(6)} ${s(8)}`}; padding: ${variant === 'full' ? `${s(12)} ${s(24)}` : '0'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; display: flex; flex-direction: column; flex: 1; }
+  .flight-details { margin-top: ${variant === 'full' ? s(60) : '0'}; }
+  .flight-top { display: flex; align-items: center; gap: ${variant === 'quadrant' ? s(12) : s(20)}; width: 100%; }
+  .view--half_horizontal .flight-top { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; align-items: center; column-gap: ${s(16)}; row-gap: ${s(2)}; }
   .view--half_horizontal .airline-logo { grid-column: 1; grid-row: 1; align-self: center; }
   .view--half_horizontal .flight-meta { grid-column: 3; grid-row: 1; }
-  .flight-meta { display: flex; flex-direction: column; gap: ${variant === 'quadrant' ? '3px' : '5px'}; align-items: flex-end; text-align: right; margin-left: auto; }
-  .airline-name { font-size: ${variant === 'quadrant' ? '18px' : variant === 'full' ? '30px' : '24px'}; font-weight: 700; letter-spacing: 0.2px; }
-  .flight-number { font-size: ${variant === 'quadrant' ? '26px' : variant === 'full' ? '44px' : '34px'}; font-weight: 800; }
-  .flight-aircraft { font-size: ${variant === 'quadrant' ? '14px' : variant === 'full' ? '20px' : '17px'}; font-weight: 500; color: #444; }
-  .flight-status { font-size: ${variant === 'quadrant' ? '16px' : variant === 'full' ? '24px' : '20px'}; font-weight: 600; }
-  .flight-route { display: flex; align-items: center; gap: 12px; width: 100%; font-size: ${variant === 'quadrant' ? '20px' : '28px'}; font-weight: 700; margin: ${variant === 'quadrant' ? '8px 0 5px' : '14px 0 8px'}; }
+  .flight-meta { display: flex; flex-direction: column; gap: ${variant === 'quadrant' ? s(3) : s(5)}; align-items: flex-end; text-align: right; margin-left: auto; }
+  .airline-name { font-size: ${variant === 'quadrant' ? s(18) : variant === 'full' ? s(30) : s(24)}; font-weight: 700; letter-spacing: 0.2px; }
+  .flight-number { font-size: ${variant === 'quadrant' ? s(26) : variant === 'full' ? s(44) : s(34)}; font-weight: 800; }
+  .flight-aircraft { font-size: ${variant === 'quadrant' ? s(14) : variant === 'full' ? s(20) : s(17)}; font-weight: 500; color: #444; }
+  .flight-status { font-size: ${variant === 'quadrant' ? s(16) : variant === 'full' ? s(24) : s(20)}; font-weight: 600; }
+  .flight-route { display: flex; align-items: center; gap: ${s(12)}; width: 100%; font-size: ${variant === 'quadrant' ? s(20) : s(28)}; font-weight: 700; margin: ${variant === 'quadrant' ? `${s(8)} 0 ${s(5)}` : `${s(14)} 0 ${s(8)}`}; }
   .view--half_vertical { display: flex; flex-direction: column; flex: 1; align-items: stretch; width: 100%; }
-  .view--half_vertical .flight-top { margin-bottom: 64px; }
-  .view--half_vertical .flight-details { margin-top: auto; display: flex; flex-direction: column; gap: 16px; }
-  .view--half_vertical .flight-stats { margin-top: 64px; font-size: 14px; gap: 10px; justify-content: space-between; }
+  .view--half_vertical .flight-top { margin-bottom: ${s(64)}; }
+  .view--half_vertical .flight-details { margin-top: auto; display: flex; flex-direction: column; gap: ${s(16)}; }
+  .view--half_vertical .flight-stats { margin-top: ${s(64)}; font-size: ${s(14)}; gap: ${s(10)}; justify-content: space-between; }
   .view--half_vertical .flight-route { width:100%; margin: 0; }
   .view--half_vertical .stat-item { display: flex; flex-direction: column; align-items: center; }
-  .view--half_vertical .stat-value { font-size: 16px; font-weight: 700; }
-  .view--half_horizontal .flight-top .flight-route { grid-column: 1 / -1; grid-row: 2; margin: 6px 0 0; font-size: 22px; }
-  .view--half_horizontal .flight-top .flight-stats { grid-column: 2; grid-row: 1; flex-direction: column; align-items: flex-start; justify-self: center; gap: 2px; font-size: 16px; margin-top: 0; }
+  .view--half_vertical .stat-value { font-size: ${s(16)}; font-weight: 700; }
+  .view--half_horizontal .flight-top .flight-route { grid-column: 1 / -1; grid-row: 2; margin: ${s(6)} 0 0; font-size: ${s(22)}; }
+  .view--half_horizontal .flight-top .flight-stats { grid-column: 2; grid-row: 1; flex-direction: column; align-items: flex-start; justify-self: center; gap: ${s(2)}; font-size: ${s(16)}; margin-top: 0; }
   .view--half_horizontal .flight-stat-aircraft { font-weight: 600; }
-  .view--half_horizontal .airline-name { font-size: 20px; }
-  .view--half_horizontal .flight-number { font-size: 30px; }
+  .view--half_horizontal .airline-name { font-size: ${s(20)}; }
+  .view--half_horizontal .flight-number { font-size: ${s(30)}; }
   .view--half_horizontal .flight-aircraft { display: none; }
-  .view--half_horizontal .flight-status { font-size: 18px; }
-  .view--half_horizontal .route-plane { font-size: 28px; }
-  .route-line { flex: 1; height: 2px; background: black; position: relative; }
-  .route-plane { font-size: ${variant === 'quadrant' ? '28px' : variant === 'full' ? '48px' : '36px'}; line-height: 1; }
-  .flight-stats { display: flex; ${variant === 'full' ? 'justify-content: space-between;' : `gap: ${variant === 'quadrant' ? '14px' : '26px'};`} font-size: ${variant === 'full' ? '24px' : variant === 'quadrant' ? '15px' : '20px'}; margin-top: ${variant === 'quadrant' ? '3px' : '7px'}; }
+  .view--half_horizontal .flight-status { font-size: ${s(18)}; }
+  .view--half_horizontal .route-plane { font-size: ${s(28)}; }
+  .route-line { flex: 1; height: ${s(2)}; background: black; position: relative; }
+  .route-plane { font-size: ${variant === 'quadrant' ? s(28) : variant === 'full' ? s(48) : s(36)}; line-height: 1; }
+  .flight-stats { display: flex; ${variant === 'full' ? 'justify-content: space-between;' : `gap: ${variant === 'quadrant' ? s(14) : s(26)};`} font-size: ${variant === 'full' ? s(24) : variant === 'quadrant' ? s(15) : s(20)}; margin-top: ${variant === 'quadrant' ? s(3) : s(7)}; }
   .stat-label { font-weight: 700; }
-  .airline-logo { width: 100%; max-width: ${logoWidth}; max-height: ${logoHeight}; object-fit: contain; }
+  .airline-logo { width: 100%; max-width: calc(${logoWidth} * var(--s, 1)); max-height: calc(${logoHeight} * var(--s, 1)); object-fit: contain; }
 </style>
 <div class="view view--${variant}">
   <div class="layout">
@@ -226,12 +232,17 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl:
 function renderEmptyMarkup(variant: MarkupVariant): string {
   const textSize = variant === 'quadrant' ? '20px' : '28px'
   return `
+<style>
+  /* TRMNL X scale-up: see renderMarkup for the rationale. */
+  .flight-empty { --s: 1; font-size: calc(${textSize} * var(--s, 1)); font-weight: 600; padding: calc(40px * var(--s, 1)) 0; }
+  .screen--lg .flight-empty { --s: 1.3; }
+</style>
 <div class="view view--${variant}">
   <div class="layout">
     <div class="columns">
       <div class="column">
         <div class="markdown" style="text-align:center;">
-          <div style="font-size: ${textSize}; font-weight: 600; padding: 40px 0;">
+          <div class="flight-empty">
             Configure flights in settings
           </div>
         </div>

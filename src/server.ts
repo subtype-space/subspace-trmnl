@@ -63,7 +63,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 server.use(
   '/public',
   (req, _res, next) => {
-    logger.info(`[STATIC] ${req.method} ${req.path}`)
+    logger.info(`${req.method} ${req.path}`)
     next()
   },
   helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }),
@@ -128,6 +128,7 @@ const httpServer = server.listen(PORT, () => {
 
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down gracefully')
+  httpServer.closeAllConnections()
   httpServer.close(() => {
     logger.info('Server closed')
     process.exit(0)

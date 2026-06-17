@@ -112,7 +112,7 @@ export class AeroClient {
   }
 
   async getFlightByNumberCached(flightNumber: string): Promise<AeroFlightContract | null> {
-    logger.debug(`[AERO] retrieving flight information for ${flightNumber}`)
+    logger.info(`[AERO] retrieving flight information for ${flightNumber}`)
     const now = Date.now()
     const cached = this.cache.get(flightNumber)
     if (cached && now - cached.at < this.getTtl(cached.status)) {

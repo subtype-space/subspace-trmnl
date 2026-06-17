@@ -144,11 +144,14 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
 
   return `
 <style>
-  .big-status { font-size: ${bigText}; font-weight: 700; letter-spacing: 2px; }
+  .content-element { --s: 1; }
+  .screen--lg .content-element { --s: 1.3; }
+
+  .big-status { font-size: calc(${bigText} * var(--s, 1)); font-weight: 700; letter-spacing: 2px; }
 
   .line-indicators {
       display: flex;
-      gap: 12px;
+      gap: calc(12px * var(--s, 1));
   }
 
   /* line colors */
@@ -161,14 +164,14 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
 
   .line-dot {
       position: relative;
-      width: 64px;
-      height: 64px;
+      width: calc(64px * var(--s, 1));
+      height: calc(64px * var(--s, 1));
       border-radius: 999px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
-      font-size: 28px;
+      font-size: calc(28px * var(--s, 1));
       color: white;
   }
 
@@ -177,12 +180,12 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
       position: absolute;
       bottom: -4px;
       right: -4px;
-      width: 24px;
-      height: 24px;
+      width: calc(24px * var(--s, 1));
+      height: calc(24px * var(--s, 1));
       border-radius: 999px;
       background: white;
       color: black;
-      font-size: 18px;
+      font-size: calc(18px * var(--s, 1));
       font-weight: 900;
       display: flex;
       align-items: center;
@@ -208,7 +211,7 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
           ${variant !== 'quadrant' ? `<span class="title">${escapeHtml(m.instanceName)} • ${escapeHtml(m.displayLine)}</span>` : ``}
           <div class="content-element" style="display: flex;flex-direction: column;align-items: center;justify-content: center;${variant === 'full' || variant === 'half_vertical' ? `gap: 12px;` : ``}">
           <div class="big-status">${escapeHtml(m.status)}</div>
-          ${showSubtitle ? `<div class="label mt-2" style="font-size: ${subtitleSize};">${escapeHtml(m.subtitleFinal)}</div>` : ``}
+          ${showSubtitle ? `<div class="label mt-2" style="font-size: calc(${subtitleSize} * var(--s, 1));">${escapeHtml(m.subtitleFinal)}</div>` : ``}
           ${m.dots ? `<div class="line-indicators" style="margin-top:24px;margin-bottom:20px;">${m.dots}</div>` : ``}
           </div>
         </div>

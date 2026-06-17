@@ -40,7 +40,7 @@ export const requireTrmnlAuth: RequestHandler = async (req: Request, res: Respon
   if (!(await isKnownTokenHash(tokenHash))) {
     logger.info('[AUTH] Unrecognized TRMNL token hash')
     logger.debug(tokenHash)
-    res.status(401).json({ error: 'Forbidden', message: 'Access Denied'})
+    res.status(401).json({ error: 'Unauthorized', message: 'Access Denied'})
     return
   }
 
