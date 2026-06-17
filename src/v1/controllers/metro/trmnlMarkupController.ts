@@ -144,7 +144,10 @@ function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
 
   return `
 <style>
-  .content-element { --s: 1; }
+  /* Custom classes don't inherit the framework's Inter font (only framework classes do), so they'd fall
+     back to the engine's default serif. Set it on the content root so the status text, line dots, and
+     alert badges all match the title bar / instance name. */
+  .content-element { --s: 1; font-family: "Inter Variable", Inter, "Helvetica Neue", Arial, sans-serif; }
   .screen--lg .content-element { --s: 1.3; }
 
   .big-status { font-size: calc(${bigText} * var(--s, 1)); font-weight: 700; letter-spacing: 2px; }
