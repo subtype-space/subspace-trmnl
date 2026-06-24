@@ -182,41 +182,42 @@ export function renderMarkup(
 // path tangent) at progressPct. Flown segment is solid, remaining is dashed.
 // Splitting the quadratic bezier at t via de Casteljau gives both halves exactly.
 function buildArcSvg(progressPct: number | null): string {
-  const P0 = { x: 34, y: 118 }
-  const P1 = { x: 300, y: -46 } // control above the viewBox to deepen the arc
-  const P2 = { x: 566, y: 118 }
-  const lerp = (a: { x: number; y: number }, b: { x: number; y: number }, r: number) => ({
-    x: a.x + (b.x - a.x) * r,
-    y: a.y + (b.y - a.y) * r,
-  })
+  const P0 = { x: 34, y: 100 }
+  const P1 = { x: 300, y: -8 } // control point sets the (gentle) arc height
+  const P2 = { x: 566, y: 100 }
+  type Pt = { x: number; y: number }
+  const lerp = (a: Pt, b: Pt, r: number): Pt => ({ x: a.x + (b.x - a.x) * r, y: a.y + (b.y - a.y) * r })
+  // de Casteljau split of the quadratic at tt -> handles describing the point + its sub-curve control
+  const split = (tt: number) => {
+    const a = lerp(P0, P1, tt)
+    const b = lerp(P1, P2, tt)
+    return { a, b, c: lerp(a, b, tt) }
+  }
 
   const t = progressPct != null ? Math.max(0, Math.min(1, progressPct / 100)) : 0
-  const A = lerp(P0, P1, t)
-  const B = lerp(P1, P2, t)
-  const C = lerp(A, B, t) // point on the curve at t — plane sits here
+  const mid = split(t) // mid.c = plane position
 
-  // Tangent direction of a quadratic bezier is proportional to (B - A)
-  const angle = (Math.atan2(B.y - A.y, B.x - A.x) * 180) / Math.PI
+  // Tangent direction of a quadratic bezier is proportional to (b - a)
+  const angle = (Math.atan2(mid.b.y - mid.a.y, mid.b.x - mid.a.x) * 180) / Math.PI
 
-  // Start the dotted remainder slightly ahead of the plane so the dots don't run under the glyph.
-  // |B'(t)| = 2|B-A| is the curve speed (px per unit t), so advancing ~one plane half-width is 30/speed in t.
-  const speed = 2 * Math.hypot(B.x - A.x, B.y - A.y)
-  const t2 = Math.min(t + (speed > 0 ? Math.min(30 / speed, 0.12) : 0.06), 1)
-  const A2 = lerp(P0, P1, t2)
-  const B2 = lerp(P1, P2, t2)
-  const C2 = lerp(A2, B2, t2)
+  // Leave a symmetric gap on both sides of the plane so the glyph never overlaps the route lines.
+  // |B'(t)| = 2|b-a| is the curve speed (px per unit t); ~one plane half-width is gapPx/speed in t.
+  const speed = 2 * Math.hypot(mid.b.x - mid.a.x, mid.b.y - mid.a.y)
+  const gapT = speed > 0 ? Math.min(32 / speed, 0.14) : 0.07
+  const back = split(Math.max(t - gapT, 0)) // flown (solid) ends here, just behind the tail
+  const fwd = split(Math.min(t + gapT, 1)) // remaining (dotted) starts here, just past the nose
 
   const n = (v: number) => v.toFixed(1)
-  const flownPath = t > 0.01 ? `M${P0.x},${P0.y} Q${n(A.x)},${n(A.y)} ${n(C.x)},${n(C.y)}` : ''
-  const remainingPath = t2 < 0.995 ? `M${n(C2.x)},${n(C2.y)} Q${n(B2.x)},${n(B2.y)} ${P2.x},${P2.y}` : ''
+  const flownPath = t - gapT > 0.01 ? `M${P0.x},${P0.y} Q${n(back.a.x)},${n(back.a.y)} ${n(back.c.x)},${n(back.c.y)}` : ''
+  const remainingPath = t + gapT < 0.99 ? `M${n(fwd.c.x)},${n(fwd.c.y)} Q${n(fwd.b.x)},${n(fwd.b.y)} ${P2.x},${P2.y}` : ''
 
   // The ✈ glyph (U+2708) rests pointing east (+x), so rotate by the tangent angle to align its nose with travel
-  return `<svg class="arc-svg" viewBox="0 0 600 142" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+  return `<svg class="arc-svg" viewBox="0 0 600 124" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
       ${remainingPath ? `<path d="${remainingPath}" fill="none" stroke="black" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 11" />` : ''}
       ${flownPath ? `<path d="${flownPath}" fill="none" stroke="black" stroke-width="5" stroke-linecap="round" />` : ''}
       <circle cx="${P0.x}" cy="${P0.y}" r="6" fill="black" />
       <circle cx="${P2.x}" cy="${P2.y}" r="6" fill="white" stroke="black" stroke-width="3" />
-      <g transform="translate(${n(C.x)},${n(C.y)}) rotate(${n(angle)})"><text text-anchor="middle" dominant-baseline="central" font-size="48" fill="black">✈</text></g>
+      <g transform="translate(${n(mid.c.x)},${n(mid.c.y)}) rotate(${n(angle)})"><text text-anchor="middle" dominant-baseline="central" font-size="48" fill="black">✈</text></g>
     </svg>`
 }
 
