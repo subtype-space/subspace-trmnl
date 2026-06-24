@@ -1,6 +1,16 @@
-import type { AeroFlightContract, AeroFlightStatus } from '../../types/aerodatabox/types.js'
+import type { AeroFlightContract, AeroFlightStatus, AeroLocation } from '../../types/aerodatabox/types.js'
 import type { FlightDisplayData } from '../../types/trmnl/flightTypes.js'
 import { calcProgress, formatHeading } from './formatters.js'
+
+// Resolve altitude in feet from location data.
+// The API sometimes returns feet=0 with a valid meter value, so we prefer
+// any non-zero value and convert meters as a fallback before trying pressureAltitude.
+function resolveAltFt(loc: AeroLocation): number | undefined {
+  const fromAlt = loc.altitude?.feet || (loc.altitude?.meter != null ? loc.altitude.meter * 3.28084 : undefined)
+  const fromPress =
+    loc.pressureAltitude?.feet || (loc.pressureAltitude?.meter != null ? loc.pressureAltitude.meter * 3.28084 : undefined)
+  return (fromAlt || fromPress) ?? (fromAlt ?? fromPress)
+}
 
 export function mapAeroStatus(status: AeroFlightStatus): string {
   switch (status) {
@@ -36,7 +46,7 @@ function refineInFlightStatus(flight: AeroFlightContract): string {
   const loc = flight.location
   if (!loc) return 'In Flight'
 
-  const altFeet = loc.altitude?.feet ?? loc.pressureAltitude?.feet
+  const altFeet = resolveAltFt(loc)
   if (altFeet == null) return 'In Flight'
 
   // On or near ground
@@ -164,7 +174,7 @@ export function buildFlightDisplayData(flight: AeroFlightContract): FlightDispla
   // Altitude
   let altitudeFt = '--'
   if (loc) {
-    const altFeet = loc.altitude?.feet ?? loc.pressureAltitude?.feet
+    const altFeet = resolveAltFt(loc)
     if (altFeet != null) {
       altitudeFt = altFeet < 500 ? 'Ground' : Math.round(altFeet).toLocaleString()
     }
