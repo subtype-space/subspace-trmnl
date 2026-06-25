@@ -13,7 +13,10 @@
   "scripts": {
     "build": "tsc && cp -r src/public build/public && cp package.json build/ && chmod 755 build/server.js",
     "start": "node build/server.js",
-    "prod": "./run.sh prod"
+    "prod": "./run.sh prod",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "files": [
     "build"
@@ -38,7 +41,8 @@
     "@types/express": "^5.0.1",
     "@types/node": "^22.14.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.9"
   },
   "prettier": {
     "semi": false,
