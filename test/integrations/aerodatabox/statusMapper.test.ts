@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { buildFlightDisplayData, mapAeroStatus } from './statusMapper.js'
-import type { AeroFlightContract, AeroFlightStatus, AeroLocation } from '../../types/aerodatabox/types.js'
+import { buildFlightDisplayData, mapAeroStatus } from '../../../src/integrations/aerodatabox/statusMapper.js'
+import type { AeroFlightContract, AeroFlightStatus, AeroLocation } from '../../../src/types/aerodatabox/types.js'
 
 // Minimal valid flight contract; override per-test.
 function makeFlight(overrides: Partial<AeroFlightContract> = {}): AeroFlightContract {

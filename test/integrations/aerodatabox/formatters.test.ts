@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { AIRLINE_NAMES, calcProgress, formatHeading, haversineKm, renderMarkup } from './formatters.js'
-import type { FlightDisplayData } from '../../types/trmnl/flightTypes.js'
+import { AIRLINE_NAMES, calcProgress, formatHeading, haversineKm, renderMarkup } from '../../../src/integrations/aerodatabox/formatters.js'
+import type { FlightDisplayData } from '../../../src/types/trmnl/flightTypes.js'
 
 describe('formatHeading', () => {
   it('returns -- when track is undefined', () => {
