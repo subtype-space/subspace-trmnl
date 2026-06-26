@@ -1,13 +1,17 @@
 {
   "name": "subspace-api",
-  "version": "1.17.3",
+  "version": "1.17.4",
   "description": "API service for subtype.space",
   "repository": {
     "type": "git",
-    "url": "ssh://git@ansible.subtype.internal:2424/subtype/subspace-api.git"
+    "url": "ssh://git@github.com:subtype-space/subspace-api.git"
   },
   "keywords": [
-    "API"
+    "API",
+    "subtype",
+    "AI",
+    "MCP",
+    "TRMNL"
   ],
   "type": "module",
   "scripts": {
@@ -16,7 +20,8 @@
     "prod": "./run.sh prod",
     "typecheck": "tsc -p tsconfig.test.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "preview": "npx tsx scripts/renderFlightPreview.ts"
   },
   "files": [
     "build"
@@ -39,8 +44,9 @@
     "@types/better-sqlite3": "^7.6.13",
     "@types/escape-html": "^1.0.4",
     "@types/express": "^5.0.1",
-    "@types/node": "^22.14.1",
+    "@types/node": "^22.20.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.22.4",
     "typescript": "^5.8.3",
     "vitest": "^4.1.9"
   },

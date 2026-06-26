@@ -34,7 +34,7 @@ export const AIRLINE_NAMES: Record<string, string> = {
   GB: 'ABX Air'
 }
 
-type MarkupVariant = 'full' | 'half_horizontal' | 'half_vertical' | 'quadrant'
+export type MarkupVariant = 'full' | 'half_horizontal' | 'half_vertical' | 'quadrant'
 
 export function formatHeading(track: number | undefined): string {
   if (typeof track !== 'number') return '--'
@@ -83,8 +83,18 @@ function escapeHtml(s: string) {
     .replaceAll("'", '&#39;')
 }
 
+/**
+ * This is the main function that returns the HTML to a TRMNL device.
+ * TRMNL requests that all variants are returned in the payload for all available markups.
+ *
+ * @param flight Metadata of the flight to display, or null to render the empty state
+ * @param variant Dynamically set font size and etc. based on variant
+ * @param _utcOffset Based on user, set and apply utc offset to show relevant time zones
+ * @param baseUrl The URL that hosts the public static images for flight corporation logos
+ * @returns A whole lotta HTML
+ */
 export function renderMarkup(
-  flights: FlightDisplayData[],
+  flight: FlightDisplayData | null,
   variant: MarkupVariant,
   _utcOffset: number,
   baseUrl: string
@@ -94,12 +104,12 @@ export function renderMarkup(
   const logoHeight =
     variant === 'full' ? '140px' : variant === 'half_vertical' ? '90px' : variant === 'half_horizontal' ? '100px' : '70px'
 
-  if (flights.length === 0) {
+  if (!flight) {
     return renderEmptyMarkup(variant)
   }
 
-  const lastUpdated = flights.length > 0 ? flights[0].lastUpdated : '--'
-  const flightCards = flights.map((f) => renderFlightCard(f, variant, baseUrl)).join('')
+  const lastUpdated = flight.lastUpdated
+  const flightCards = renderFlightCard(flight, variant, baseUrl)
 
   // TRMNL X helper
   const s = (px: number) => `calc(${px}px * var(--s, 1))`
@@ -112,7 +122,7 @@ export function renderMarkup(
   /* full variant: hero arc + stat tiles. Stretch the framework chain so the
      card can distribute its blocks top-to-bottom and fill the taller X screen. */
   .view--full, .view--full .layout, .view--full .columns, .view--full .column, .view--full .markdown { display: flex; flex-direction: column; flex: 1; width: 100%; }
-  .view--full .flight-card { justify-content: space-between; padding: ${s(20)} ${s(40)}; }
+  .view--full .flight-card { justify-content: center; gap: ${s(44)}; padding: ${s(20)} ${s(40)}; }
   .view--full .flight-top { align-items: center; }
   .flight-arc-wrap { display: flex; align-items: center; gap: ${s(10)}; width: 100%; }
   .arc-end { display: flex; flex-direction: column; align-items: center; min-width: ${s(96)}; }

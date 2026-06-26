@@ -57,7 +57,7 @@ describe('calcProgress', () => {
     expect(calcProgress(0, 5, 0, 0, 0, 10)).toBe(50)
   })
 
-  it('clamps overshoot to 100', () => {
+  it('cap progress to 100', () => {
     expect(calcProgress(0, 20, 0, 0, 0, 10)).toBe(100)
   })
 
@@ -94,13 +94,13 @@ const sampleFlight: FlightDisplayData = {
 
 describe('renderMarkup', () => {
   it('renders the empty-state prompt when there are no flights', () => {
-    const out = renderMarkup([], 'full', 0, 'https://example.com')
+    const out = renderMarkup(null, 'full', 0, 'https://example.com')
     expect(out).toContain('Configure flights')
     expect(out).toContain('Flight Tracker')
   })
 
   it('renders the full variant with a hero arc and stat tiles', () => {
-    const out = renderMarkup([sampleFlight], 'full', 0, 'https://example.com')
+    const out = renderMarkup(sampleFlight, 'full', 0, 'https://example.com')
     expect(out).toContain('view--full')
     expect(out).toContain('<svg') // great-circle arc
     expect(out).toContain('UA 1074') // formatted flight code
@@ -111,7 +111,7 @@ describe('renderMarkup', () => {
   })
 
   it('renders the flat route line with solid-flown / dotted-remaining on half_horizontal', () => {
-    const out = renderMarkup([sampleFlight], 'half_horizontal', 0, 'https://example.com')
+    const out = renderMarkup(sampleFlight, 'half_horizontal', 0, 'https://example.com')
     expect(out).toContain('view--half_horizontal')
     // assert on element usage, not the (always-present) CSS rule of the same name
     expect(out).toContain('class="route-line route-line-flown"')
@@ -119,13 +119,13 @@ describe('renderMarkup', () => {
   })
 
   it('marks both route segments dotted when progress is unknown', () => {
-    const out = renderMarkup([{ ...sampleFlight, progressPct: null }], 'half_horizontal', 0, 'https://example.com')
+    const out = renderMarkup({ ...sampleFlight, progressPct: null }, 'half_horizontal', 0, 'https://example.com')
     expect(out).not.toContain('class="route-line route-line-flown"')
     expect(out).toContain('class="route-line route-line-remaining"')
   })
 
   it('escapes HTML in the last-updated label', () => {
-    const out = renderMarkup([{ ...sampleFlight, lastUpdated: '<script>' }], 'full', 0, 'https://example.com')
+    const out = renderMarkup({ ...sampleFlight, lastUpdated: '<script>' }, 'full', 0, 'https://example.com')
     expect(out).not.toContain('<script>')
     expect(out).toContain('&lt;script&gt;')
   })

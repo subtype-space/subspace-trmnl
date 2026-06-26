@@ -23,7 +23,7 @@ describe('mapAeroStatus', () => {
     expect(mapAeroStatus('Departed')).toBe('In Flight')
   })
 
-  it('maps terminal and pre-flight states', () => {
+  it('maps terminal and pre-flight states and diversion', () => {
     expect(mapAeroStatus('Boarding')).toBe('Boarding')
     expect(mapAeroStatus('Arrived')).toBe('Arrived')
     expect(mapAeroStatus('Canceled')).toBe('Canceled')
@@ -41,7 +41,7 @@ describe('buildFlightDisplayData', () => {
     expect(buildFlightDisplayData(makeFlight()).flightIata).toBe('UA1074')
   })
 
-  it('reads route and airline codes from the contract', () => {
+  it('reads route and airline codes', () => {
     const d = buildFlightDisplayData(makeFlight())
     expect(d.depAirport).toBe('BOS')
     expect(d.arrAirport).toBe('SFO')
@@ -50,8 +50,7 @@ describe('buildFlightDisplayData', () => {
     expect(d.aircraftModel).toBe('Boeing 737 MAX 9')
   })
 
-  // Regression: API sometimes reports altitude in meters only (no .feet). It must be
-  // converted to feet, not dropped (which previously surfaced as a bogus "Ground").
+  // Regression: API sometimes reports altitude in meters only (no .feet)
   it('converts meters-only altitude to feet instead of showing Ground', () => {
     const loc: AeroLocation = { lat: 0, lon: 5, altitude: { meter: 11000 }, trueTrack: { deg: 270 } }
     const d = buildFlightDisplayData(makeFlight({ location: loc }))

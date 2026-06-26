@@ -56,12 +56,11 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
 
   if (flightNumbers.length === 0) {
     logger.info('[AERO] No flights configured')
-    const emptyModel: FlightDisplayData[] = []
     res.json({
-      markup: renderMarkup(emptyModel, 'full', utcOffset, baseUrl),
-      markup_half_horizontal: renderMarkup(emptyModel, 'half_horizontal', utcOffset, baseUrl),
-      markup_half_vertical: renderMarkup(emptyModel, 'half_vertical', utcOffset, baseUrl),
-      markup_quadrant: renderMarkup(emptyModel, 'quadrant', utcOffset, baseUrl),
+      markup: renderMarkup(null, 'full', utcOffset, baseUrl),
+      markup_half_horizontal: renderMarkup(null, 'half_horizontal', utcOffset, baseUrl),
+      markup_half_vertical: renderMarkup(null, 'half_vertical', utcOffset, baseUrl),
+      markup_quadrant: renderMarkup(null, 'quadrant', utcOffset, baseUrl),
       shared: '',
     })
     return
@@ -118,13 +117,11 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
     }
   }
 
-  const selected = [displayData]
-
   res.json({
-    markup: renderMarkup(selected, 'full', utcOffset, baseUrl),
-    markup_half_horizontal: renderMarkup(selected, 'half_horizontal', utcOffset, baseUrl),
-    markup_half_vertical: renderMarkup(selected, 'half_vertical', utcOffset, baseUrl),
-    markup_quadrant: renderMarkup(selected, 'quadrant', utcOffset, baseUrl),
+    markup: renderMarkup(displayData, 'full', utcOffset, baseUrl),
+    markup_half_horizontal: renderMarkup(displayData, 'half_horizontal', utcOffset, baseUrl),
+    markup_half_vertical: renderMarkup(displayData, 'half_vertical', utcOffset, baseUrl),
+    markup_quadrant: renderMarkup(displayData, 'quadrant', utcOffset, baseUrl),
     shared: '',
   })
 }
