@@ -126,11 +126,23 @@ const httpServer = server.listen(PORT, () => {
   logger.info('subspace API now listening on PORT:', config.api.port)
 })
 
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received, shutting down gracefully')
+/**
+ * Was having issues for the service taking too long to drain connections
+ * So we force stop after after a determinate amount of time
+ * @param signal The SIGXXX to intercept
+ */
+function shutdown(signal: string) {
+  logger.info(`${signal} received, shutting down gracefully`)
   httpServer.closeAllConnections()
   httpServer.close(() => {
     logger.info('Server closed')
     process.exit(0)
   })
-})
+  setTimeout(() => {
+    logger.warn('service took too long to shut down, killing...')
+    process.exit(1)
+  }, 8000).unref()
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT', () => shutdown('SIGINT'))

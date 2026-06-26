@@ -134,6 +134,14 @@ export function renderMarkup(
   .stat-tile-label { font-size: ${s(15)}; font-weight: 700; letter-spacing: 1.5px; }
   .stat-tile-value { font-size: ${s(26)}; font-weight: 800; }
 
+  /* TRMNL X (screen--lg): the taller screen leaves room for a larger logo and
+     header, so bump just those on the full variant (arc + tiles already fill the width). */
+  .screen--lg .view--full .airline-logo { max-width: ${s(370)}; max-height: ${s(165)}; }
+  .screen--lg .view--full .airline-name { font-size: ${s(34)}; }
+  .screen--lg .view--full .flight-number { font-size: ${s(50)}; }
+  .screen--lg .view--full .flight-aircraft { font-size: ${s(22)}; }
+  .screen--lg .view--full .flight-status { font-size: ${s(27)}; }
+
   .flight-card { margin: ${variant === 'full' ? '0' : variant === 'half_vertical' ? `${s(12)} 0 0` : variant === 'half_horizontal' ? `${s(8)} 0` : `${s(6)} ${s(8)}`}; padding: ${variant === 'full' ? `${s(12)} ${s(24)}` : '0'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; display: flex; flex-direction: column; flex: 1; }
   .flight-details { margin-top: ${variant === 'full' ? s(60) : '0'}; }
   .flight-top { display: flex; align-items: center; gap: ${variant === 'quadrant' ? s(12) : s(20)}; width: 100%; }

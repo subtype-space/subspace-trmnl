@@ -1,3 +1,5 @@
+// This is a helper script to generate mock HTML representative of TRMNL devices.
+// It should generate all forms, including TRMNL X dimensions
 import { renderMarkup } from "../src/integrations/aerodatabox/formatters.js";
 import { writeFileSync } from "node:fs";
 import { config } from '../src/config.js'
@@ -27,6 +29,13 @@ const SIZES: Record<string, [number, number]> = {
   half_horizontal: [800, 240],
   half_vertical:   [400, 480],
   quadrant:        [400, 240],
+}
+
+const xSIZES: Record<string, [number, number]> = {
+  full:            [1040, 780],
+  half_horizontal: [1040, 390],
+  half_vertical:   [520,  780],
+  quadrant:        [520,  390],
 }
 
 /**
@@ -65,13 +74,15 @@ const baseUrl = new URL(config.auth.mcpServerUrl).origin
 
 const variants = ['full', 'half_horizontal', 'half_vertical', 'quadrant'] as MarkupVariant[]
 const generatedVariants = variants.map(v => {
-    const [w, h] = SIZES[v]
-    return generateVariant(renderMarkup(sampleFlight, v, 0, baseUrl), v, w, h)
+  const [w, h] = SIZES[v]
+  return generateVariant(renderMarkup(sampleFlight, v, 0, baseUrl), v, w, h)
 }).join('')
 
-// TRMNL X: full variant on the larger screen (screen--lg drives --s: 1.3)
-const xFull = generateVariant(renderMarkup(sampleFlight, 'full', 0, baseUrl), 'full', 1040, 780, 'screen--lg')
+const generatedXVariants = variants.map(v => {
+  const [w, h] = xSIZES[v]
+  return generateVariant(renderMarkup(sampleFlight, v, 0, baseUrl), v, w, h, 'screen--lg')
+})
 
 
-writeFileSync('flight-preview.html', generatePage(generatedVariants + xFull))
+writeFileSync('flight-preview.html', generatePage(generatedVariants + generatedXVariants))
 
