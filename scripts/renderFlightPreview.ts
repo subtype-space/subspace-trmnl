@@ -81,7 +81,7 @@ const generatedVariants = variants.map(v => {
 const generatedXVariants = variants.map(v => {
   const [w, h] = xSIZES[v]
   return generateVariant(renderMarkup(sampleFlight, v, 0, baseUrl), v, w, h, 'screen--lg')
-})
+}).join('')
 
 
 writeFileSync('flight-preview.html', generatePage(generatedVariants + generatedXVariants))
