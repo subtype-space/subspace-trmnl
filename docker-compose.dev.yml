@@ -1,5 +1,6 @@
 services:
   subspace-api:
+    init: true
     build: ./
     image: subspace-api:dev
     container_name: subspace-api-dev
