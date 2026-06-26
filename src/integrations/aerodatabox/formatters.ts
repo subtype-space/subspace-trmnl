@@ -122,7 +122,7 @@ export function renderMarkup(
   /* full variant: hero arc + stat tiles. Stretch the framework chain so the
      card can distribute its blocks top-to-bottom and fill the taller X screen. */
   .view--full, .view--full .layout, .view--full .columns, .view--full .column, .view--full .markdown { display: flex; flex-direction: column; flex: 1; width: 100%; }
-  .view--full .flight-card { justify-content: center; gap: ${s(44)}; padding: ${s(20)} ${s(40)}; }
+  .view--full .flight-card { justify-content: space-between; padding: ${s(20)} ${s(40)}; }
   .view--full .flight-top { align-items: center; }
   .flight-arc-wrap { display: flex; align-items: center; gap: ${s(10)}; width: 100%; }
   .arc-end { display: flex; flex-direction: column; align-items: center; min-width: ${s(96)}; }
@@ -134,8 +134,11 @@ export function renderMarkup(
   .stat-tile-label { font-size: ${s(15)}; font-weight: 700; letter-spacing: 1.5px; }
   .stat-tile-value { font-size: ${s(26)}; font-weight: 800; }
 
-  /* TRMNL X (screen--lg): the taller screen leaves room for a larger logo and
-     header, so bump just those on the full variant (arc + tiles already fill the width). */
+  /* TRMNL X (screen--lg): the taller screen leaves room to breathe, so center the
+     blocks with a fixed gap (OG stays space-between — its content already fills the
+     shorter screen and a forced gap would overflow/clip the header), and bump just
+     the logo + header (arc + tiles already fill the width). */
+  .screen--lg .view--full .flight-card { justify-content: center; gap: ${s(44)}; }
   .screen--lg .view--full .airline-logo { max-width: ${s(370)}; max-height: ${s(165)}; }
   .screen--lg .view--full .airline-name { font-size: ${s(34)}; }
   .screen--lg .view--full .flight-number { font-size: ${s(50)}; }
