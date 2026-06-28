@@ -224,7 +224,7 @@ function buildArcSvg(progressPct: number | null): string {
   // Leave a symmetric gap on both sides of the plane so the glyph never overlaps the route lines.
   // |B'(t)| = 2|b-a| is the curve speed (px per unit t); ~one plane half-width is gapPx/speed in t.
   const speed = 2 * Math.hypot(mid.b.x - mid.a.x, mid.b.y - mid.a.y)
-  const gapT = speed > 0 ? Math.min(32 / speed, 0.14) : 0.07
+  const gapT = speed > 0 ? Math.min(42 / speed, 0.16) : 0.08
   const back = split(Math.max(t - gapT, 0)) // flown (solid) ends here, just behind the tail
   const fwd = split(Math.min(t + gapT, 1)) // remaining (dotted) starts here, just past the nose
 
@@ -236,9 +236,7 @@ function buildArcSvg(progressPct: number | null): string {
   return `<svg class="arc-svg" viewBox="0 0 600 124" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
       ${remainingPath ? `<path d="${remainingPath}" fill="none" stroke="black" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 11" />` : ''}
       ${flownPath ? `<path d="${flownPath}" fill="none" stroke="black" stroke-width="5" stroke-linecap="round" />` : ''}
-      <circle cx="${P0.x}" cy="${P0.y}" r="6" fill="black" />
-      <circle cx="${P2.x}" cy="${P2.y}" r="6" fill="white" stroke="black" stroke-width="3" />
-      <g transform="translate(${n(mid.c.x)},${n(mid.c.y)}) rotate(${n(angle)})"><text text-anchor="middle" dominant-baseline="central" font-size="48" fill="black">✈</text></g>
+      <g transform="translate(${n(mid.c.x)},${n(mid.c.y)}) rotate(${n(angle)})"><text x="0" y="-3" text-anchor="middle" dominant-baseline="central" font-size="64" fill="black">✈</text></g>
     </svg>`
 }
 
