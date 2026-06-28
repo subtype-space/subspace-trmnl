@@ -1,7 +1,7 @@
 // This is a helper script to generate mock HTML representative of TRMNL devices.
 // It should generate all forms, including TRMNL X dimensions
 import { renderMarkup } from "../src/integrations/aerodatabox/formatters.js";
-import { writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs"; // ignore typecheck error, typelinting is fine via CI
 import { config } from '../src/config.js'
 import type { FlightDisplayData } from "../src/types/trmnl/flightTypes.js";
 import type { MarkupVariant } from "../src/integrations/aerodatabox/formatters.js";
