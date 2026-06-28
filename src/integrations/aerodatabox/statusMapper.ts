@@ -1,10 +1,17 @@
+// This module focuses on refining the flight metadata returned by the API
+// Do some more data massaging to produce a FlightDisplayData object that's passed back to the renderer.
 import type { AeroFlightContract, AeroFlightStatus, AeroLocation } from '../../types/aerodatabox/types.js'
 import type { FlightDisplayData } from '../../types/trmnl/flightTypes.js'
 import { calcProgress, formatHeading } from './formatters.js'
 
+// Past this point along the route, a low-altitude flight is descending toward
+// arrival rather than still climbing out of departure.
+const DESCENT_PROGRESS_THRESHOLD = 50
+
 // Resolve altitude in feet from location data.
 // The API sometimes returns feet=0 with a valid meter value, so we prefer
 // any non-zero value and convert meters as a fallback before trying pressureAltitude.
+// TODO: Expose a FT vs Meter preference in the settings UI
 function resolveAltFt(loc: AeroLocation): number | undefined {
   const fromAlt = loc.altitude?.feet || (loc.altitude?.meter != null ? loc.altitude.meter * 3.28084 : undefined)
   const fromPress =
@@ -51,9 +58,19 @@ function refineInFlightStatus(flight: AeroFlightContract): string {
 
   // On or near ground
   if (altFeet < 500) return 'On Ground'
-  // Below 10,000 ft and we have arrival airport — likely approaching or departing
+  // Below 10,000 ft — could be climbing out of departure or descending into arrival
+  // Use progress along route to determine which status to use
   if (altFeet < 10000) {
     if (flight.status === 'Approaching') return 'Descending'
+    const progress = calcProgress(
+      loc.lat,
+      loc.lon,
+      flight.departure.airport.location?.lat,
+      flight.departure.airport.location?.lon,
+      flight.arrival.airport.location?.lat,
+      flight.arrival.airport.location?.lon
+    )
+    if (progress != null) return progress >= DESCENT_PROGRESS_THRESHOLD ? 'Descending' : 'Climbing'
     return 'Climbing'
   }
   return 'Cruising'
