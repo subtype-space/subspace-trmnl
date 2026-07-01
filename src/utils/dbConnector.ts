@@ -4,11 +4,11 @@
  * // TODO: implement postgres with support for rapid dev
  * also todo, stop switching back and forth on comment conventions
  */
+import { mkdirSync } from 'fs'
+import { dirname } from 'path'
 import Database from 'better-sqlite3'
 import { config } from '../config.js'
 import { logger } from './logger.js'
-import { mkdirSync } from 'fs'
-import { dirname } from 'path'
 const DB_PATH = config.trmnl.dbPath
 
 // to do - i dont like this in this file

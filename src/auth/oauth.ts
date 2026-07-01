@@ -11,20 +11,19 @@
  *
  * OAuth hard.
  */
-import { UserInfo, AuthInfo } from '../types/oauth/types.js'
 import { AsyncLocalStorage } from 'async_hooks'
+import * as jose from 'jose'
 import { RequestHandler, Request, Response, NextFunction } from 'express'
-import { config } from '../config.js'
-import { createOAuthURLs } from '../utils/generateOAuthURL.js'
 import { OAuthMetadata } from '@modelcontextprotocol/sdk/shared/auth.js'
-import { logger } from '../utils/logger.js'
 import { checkResourceAllowed } from '@modelcontextprotocol/sdk/shared/auth-utils.js'
 import { requireBearerAuth } from '@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js'
 import { getOAuthProtectedResourceMetadataUrl, mcpAuthMetadataRouter } from '@modelcontextprotocol/sdk/server/auth/router.js'
-import * as jose from 'jose'
-
 // requireBearerAuth is looking for instanceof error types, so we try to match and throw specific errors
 import { InsufficientScopeError, InvalidTokenError, ServerError } from '@modelcontextprotocol/sdk/server/auth/errors.js'
+import { config } from '../config.js'
+import { UserInfo, AuthInfo } from '../types/oauth/types.js'
+import { logger } from '../utils/logger.js'
+import { createOAuthURLs } from '../utils/generateOAuthURL.js'
 
 // JWKS cache for user token verification (X-User-Authorization)
 let jwks: jose.JWTVerifyGetKey | null = null

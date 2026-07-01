@@ -5,14 +5,4 @@ export type TrmnlMeta = {
   plugin_settings?: { instance_name?: string }
 }
 
-export type MetroMarkup = {
-  instanceName: string
-  displayLine: string
-  status: string
-  subtitleFinal: string
-  dots: string
-  totalIncidents: number
-  utcOffset: number
-}
-
 export type MarkupVariant = 'full' | 'half_horizontal' | 'half_vertical' | 'quadrant'

@@ -1,6 +1,6 @@
 import crypto from 'crypto'
-import { config } from '../../../config.js'
 import { RequestHandler } from 'express'
+import { config } from '../../../config.js'
 import { logger } from '../../../utils/logger.js'
 import { storeTrmnlToken } from '../../../utils/dbConnector.js'
 

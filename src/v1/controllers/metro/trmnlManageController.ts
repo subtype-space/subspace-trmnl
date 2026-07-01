@@ -1,8 +1,8 @@
 import { RequestHandler } from 'express'
-import { getSettingsByUuid, upsertSettings } from '../../../utils/dbConnector.js'
-import { logger } from '../../../utils/logger.js'
-import { wrapSettingsPage } from '../../../utils/settingsLayout.js'
 import escapeHtml from 'escape-html'
+import { logger } from '../../../utils/logger.js'
+import { getSettingsByUuid, upsertSettings } from '../../../utils/dbConnector.js'
+import { wrapSettingsPage } from '../../../utils/settingsLayout.js'
 
 // This controller is integrated with html markup - use send() over json()
 

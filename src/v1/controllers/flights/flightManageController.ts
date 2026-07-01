@@ -1,8 +1,8 @@
 import { RequestHandler } from 'express'
-import { getFlightSettingsByUuid, upsertFlightSettings } from '../../../utils/dbConnector.js'
-import { logger } from '../../../utils/logger.js'
-import { wrapSettingsPage } from '../../../utils/settingsLayout.js'
 import escapeHtml from 'escape-html'
+import { logger } from '../../../utils/logger.js'
+import { getFlightSettingsByUuid, upsertFlightSettings } from '../../../utils/dbConnector.js'
+import { wrapSettingsPage } from '../../../utils/settingsLayout.js'
 
 const FLIGHT_PATTERN = /^[A-Z0-9]{2,3}\d{1,4}$/
 

@@ -1,12 +1,12 @@
 import { RequestHandler } from 'express'
+import { config } from '../../../config.js'
+import type { FlightDisplayData } from '../../../types/trmnl/flightTypes.js'
 import { logger } from '../../../utils/logger.js'
 import { getFlightSettingsByUuid } from '../../../utils/dbConnector.js'
-import { config } from '../../../config.js'
-import { AeroClient } from '../../../integrations/aerodatabox/aeroClient.js'
-import { renderMarkup } from '../../../integrations/aerodatabox/formatters.js'
-import { buildFlightDisplayData } from '../../../integrations/aerodatabox/statusMapper.js'
-import type { FlightDisplayData } from '../../../types/trmnl/flightTypes.js'
 import { parseTrmnlMeta } from '../../../utils/trmnlMeta.js'
+import { AeroClient } from '../../../integrations/aerodatabox/aeroClient.js'
+import { buildFlightDisplayData } from '../../../integrations/aerodatabox/statusMapper.js'
+import { renderMarkup } from '../../../integrations/aerodatabox/renderer.js'
 
 const aeroClient = config.aerodatabox.apiKey ? new AeroClient(config.aerodatabox.apiKey, config.aerodatabox.provider) : null
 const rotationIndex = new Map<string, number>()

@@ -4,12 +4,11 @@
  * against their .well-known JWKS
  */
 import crypto from 'crypto'
-import { Request, Response, NextFunction, RequestHandler } from 'express'
-import { isKnownTokenHash, touchTrmnlToken } from '../utils/dbConnector.js'
-import { logger } from '../utils/logger.js'
-import { config } from '../config.js'
-import { getUserUuidByTokenHash } from '../utils/dbConnector.js'
 import * as jose from 'jose'
+import { Request, Response, NextFunction, RequestHandler } from 'express'
+import { config } from '../config.js'
+import { logger } from '../utils/logger.js'
+import { isKnownTokenHash, touchTrmnlToken, getUserUuidByTokenHash } from '../utils/dbConnector.js'
 
 let cachedIPs: Set<string> | null = null
 let cachedAtMs = 0

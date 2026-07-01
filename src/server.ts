@@ -9,7 +9,8 @@ import statusRouter from './v1/routers/statusRouter.js'
 import helmet from 'helmet'
 
 // OAuth implementation
-import { oauthMetadataRouter, authMiddleware, userAuthMiddleware } from './auth/oauth.js'
+import { oauthMetadataRouter, authMiddleware, userAuthMiddleware, runWithAuth } from './auth/oauth.js'
+import { AuthInfo } from './types/oauth/types.js'
 
 // MCP import shenanigans
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
@@ -18,8 +19,6 @@ import { registerTools } from './v1/mcp/registerTools.js'
 
 import { logAuthedIdentity, logIncomingAuth } from './utils/authLogger.js'
 import { rateLimiter } from './utils/rateLimiter.js'
-import { runWithAuth } from './auth/oauth.js'
-import { AuthInfo } from './types/oauth/types.js'
 
 logger.info('Starting up subspace-api!')
 

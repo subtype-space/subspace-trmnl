@@ -1,11 +1,11 @@
 import { RequestHandler } from 'express'
-import { logger } from '../../../utils/logger.js'
 import { config } from '../../../config.js'
+import { MetroIncident, MetroMarkup } from '../../../types/wmata/types.js'
+import { logger } from '../../../utils/logger.js'
 import { getSettingsByUuid } from '../../../utils/dbConnector.js'
-import { WmataClient } from '../../../integrations/wmata/wmataClient.js'
-import { MetroIncident } from '../../../types/wmata/types.js'
-import { MetroMarkup, MarkupVariant } from '../../../types/trmnl/types.js'
 import { parseTrmnlMeta } from '../../../utils/trmnlMeta.js'
+import { WmataClient } from '../../../integrations/wmata/wmataClient.js'
+import { renderMarkup } from '../../../integrations/wmata/renderer.js'
 
 const client = config.wmata.apiKey ? new WmataClient({ apiKey: config.wmata.apiKey }) : null
 
@@ -32,6 +32,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   if (!client) {
     logger.warn('[WMATA] WMATA API key not configured.')
     res.status(503).json({ error: 'Service Unavailable', message: 'WMATA monitoring not configured.'})
+    return
   }
 
   const meta = parseTrmnlMeta(trmnlRaw)
@@ -92,27 +93,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   // This "subtitle" is for the active line being shown
   const subtitleFinal = alertCount > 0 && !hasEmergency ? `${subtitle} • ${alertCount} alert(s)` : subtitle
 
-  const dots = selected
-    .map((l) => {
-      const b = disruption[l] ?? 0
-      const h = alert[l] ?? 0
-      if (b === 0 && h === 0) return ''
-
-      const isBad = b > 0
-      const symbol = isBad ? '‼' : '!'
-      const cls = isBad ? 'alert-bad' : 'alert-warn'
-
-      return `
-      <div class="line-dot line-${l}">
-        ${escapeHtml(l)}
-        <span class="alert ${cls}">${escapeHtml(symbol)}</span>
-      </div>
-    `.trim()
-    })
-    .filter(Boolean)
-    .join('')
-
-  const model: MetroMarkup = { instanceName, displayLine, status, subtitleFinal, dots, totalIncidents, utcOffset }
+  const model: MetroMarkup = { instanceName, displayLine, status, subtitleFinal, selectedLines: selected, disruption, alert, totalIncidents, utcOffset }
   res.json({
     markup: renderMarkup(model, 'full'),
     markup_half_horizontal: renderMarkup(model, 'half_horizontal'),
@@ -120,127 +101,6 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     markup_quadrant: renderMarkup(model, 'quadrant'),
     shared: '',
   })
-}
-
-function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
-  const bigText = variant === 'full' ? '92px' : variant === 'quadrant' ? '36px' : '48px'
-  const showSubtitle = variant === 'full' || variant === 'half_vertical'
-  const subtitleSize = variant === 'half_vertical' ? '24px' : '28px' // subtitle size needs to be modified on half vertical, not shown on hori or quad
-  const offset = Number(m.utcOffset) || 0
-
-  // Only for half vert set the title to refresh time, otherwise set total amount of alerts across the system
-  const bottomTitleBarTitle =
-    variant === 'half_vertical' || variant === 'quadrant'
-      ? `{{ "alert" | pluralize: ${escapeHtml(String(m.totalIncidents))}  }} • ${escapeHtml(m.displayLine)}`
-      : m.totalIncidents === 0
-        ? escapeHtml(m.instanceName)
-        : `{{ "alert" | pluralize: ${escapeHtml(String(m.totalIncidents))}  }} across WMATA`
-
-  // Dont set this for half vert
-  const bottomTitleBarInstance =
-    variant === 'half_vertical' || variant === 'quadrant'
-      ? `<span class="instance">{{ 'now' | date: '%s' | plus: ${offset} | date: '%H:%M' }}</span>`
-      : `<span class="instance">Refreshed at {{ 'now' | date: '%s' | plus: ${offset} | date: '%H:%M' }}</span>`
-
-  return `
-<style>
-  /* Custom classes don't inherit the framework's Inter font (only framework classes do), so they'd fall
-     back to the engine's default serif. Set it on the content root so the status text, line dots, and
-     alert badges all match the title bar / instance name. */
-  .content-element { --s: 1; font-family: "Inter Variable", Inter, "Helvetica Neue", Arial, sans-serif; }
-  .screen--lg .content-element { --s: 1.3; }
-
-  .big-status { font-size: calc(${bigText} * var(--s, 1)); font-weight: 700; letter-spacing: 2px; }
-
-  .line-indicators {
-      display: flex;
-      gap: calc(12px * var(--s, 1));
-  }
-
-  /* line colors */
-  .line-GR { background: #6B7280; }
-  .line-RD { background: #6B7280; }
-  .line-BL { background: #6B7280; }
-  .line-OR { background: #6B7280; }
-  .line-YL { background: #6B7280; }
-  .line-SV { background: #6B7280; }
-
-  .line-dot {
-      position: relative;
-      width: calc(64px * var(--s, 1));
-      height: calc(64px * var(--s, 1));
-      border-radius: 999px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: calc(28px * var(--s, 1));
-      color: white;
-  }
-
-  /* alert overlay */
-  .alert {
-      position: absolute;
-      bottom: -4px;
-      right: -4px;
-      width: calc(24px * var(--s, 1));
-      height: calc(24px * var(--s, 1));
-      border-radius: 999px;
-      background: white;
-      color: black;
-      font-size: calc(18px * var(--s, 1));
-      font-weight: 900;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-  }
-
-  .alert-warn {
-      background: white;
-      color: black;
-      border: 2px solid black;
-  }
-
-  .alert-bad {
-      background: black;
-      color: white;
-  }
-</style>
-<div class="view view--${variant}">
-  <div class="layout">
-    <div class="columns">
-      <div class="column">
-        <div class="markdown gap--large" style="text-align:center;">
-          ${variant !== 'quadrant' ? `<span class="title">${escapeHtml(m.instanceName)} • ${escapeHtml(m.displayLine)}</span>` : ``}
-          <div class="content-element" style="display: flex;flex-direction: column;align-items: center;justify-content: center;${variant === 'full' || variant === 'half_vertical' ? `gap: 12px;` : ``}">
-          <div class="big-status">${escapeHtml(m.status)}</div>
-          ${showSubtitle ? `<div class="label mt-2" style="font-size: calc(${subtitleSize} * var(--s, 1));">${escapeHtml(m.subtitleFinal)}</div>` : ``}
-          ${m.dots ? `<div class="line-indicators" style="margin-top:24px;margin-bottom:20px;">${m.dots}</div>` : ``}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="title_bar">
-  <img class="image" src="https://upload.wikimedia.org/wikipedia/commons/0/0a/WMATA_Metro_Logo_small.svg" />
-  <span class="title">${bottomTitleBarTitle}</span>
-  ${bottomTitleBarInstance}
-</div>
-`.trim()
-}
-
-////////////////////////
-// Helper methods below
-
-function escapeHtml(s: string) {
-  return s
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;')
 }
 
 const VALID_LINES = new Set(['RD', 'OR', 'SV', 'BL', 'YL', 'GR'])
@@ -308,7 +168,6 @@ function countCommuteIssuesByLine(incidents: MetroIncident[]) {
 
   return { disruption, alert }
 }
-
 
 function statusFromCount(count: number, crass: boolean) {
   if (count === 0) return { status: "YOU'RE FINE. ", subtitle: 'No active delays' }
