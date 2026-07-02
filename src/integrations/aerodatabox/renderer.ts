@@ -1,7 +1,19 @@
 import type { FlightDisplayData } from '../../types/trmnl/flightTypes.js'
 import type { MarkupVariant } from '../../types/trmnl/types.js'
 import { escapeHtml } from '../../utils/html.js'
-import { buildArcSvg, AIRLINE_NAMES } from './formatters.js'
+import { buildArcSvg, formatDuration, planeSvg, AIRLINE_NAMES } from './formatters.js'
+
+// If a departure/arrival deviates more than +-2 minutes from schedule, show the original
+// scheduled time as a "was HH:MM" anchor next to the actual time. Returns '' otherwise.
+function wasAnchor(delayMin: number | null, schedTime: string): string {
+  return delayMin != null && Math.abs(delayMin) > 2 && schedTime !== '--' ? `was ${escapeHtml(schedTime)}` : ''
+}
+
+// No-telemetry countdown: before wheels-up we count down to departure, after to arrival.
+function countdown(f: FlightDisplayData): { preDeparture: boolean; mins: number | null } {
+  const preDeparture = f.minsToDeparture != null && f.minsToDeparture > 0
+  return { preDeparture, mins: preDeparture ? f.minsToDeparture : f.minsRemaining }
+}
 
 /**
  * This is the main function that returns the HTML to a TRMNL device.
@@ -43,16 +55,23 @@ export function renderMarkup(
      card can distribute its blocks top-to-bottom and fill the taller X screen. */
   .view--full, .view--full .layout, .view--full .columns, .view--full .column, .view--full .markdown { display: flex; flex-direction: column; flex: 1; width: 100%; }
   .view--full .flight-card { justify-content: space-between; padding: ${s(20)} ${s(40)}; }
+  /* No live telemetry -> no tiles; center the remaining header + arc so the card doesn't
+     look top-heavy with an empty lower half. */
+  .view--full .flight-card--compact { justify-content: center; gap: ${s(56)}; }
   .view--full .flight-top { align-items: center; }
   .flight-arc-wrap { display: flex; align-items: center; gap: ${s(10)}; width: 100%; }
   .arc-end { display: flex; flex-direction: column; align-items: center; min-width: ${s(96)}; }
   .arc-code { font-size: ${s(40)}; font-weight: 800; line-height: 1; }
   .arc-time { font-size: ${s(18)}; font-weight: 600; color: #333; margin-top: ${s(4)}; }
+  .arc-sched { font-size: ${s(14)}; font-weight: 600; color: #666; margin-top: ${s(2)}; }
   .arc-svg { flex: 1 1 0; min-width: 0; height: auto; display: block; overflow: visible; }
   .stat-tiles { display: flex; gap: ${s(12)}; width: 100%; }
   .stat-tile { flex: 1; border: ${s(2)} solid black; border-radius: ${s(10)}; padding: ${s(10)} ${s(6)}; display: flex; flex-direction: column; align-items: center; gap: ${s(3)}; }
   .stat-tile-label { font-size: ${s(15)}; font-weight: 700; letter-spacing: 1.5px; }
   .stat-tile-value { font-size: ${s(26)}; font-weight: 800; }
+  /* Arrival on-time verdict tile — no label, word centered + uppercased so it reads as a status flag. */
+  .stat-tile--status { justify-content: center; }
+  .stat-tile--status .stat-tile-value { text-transform: uppercase; letter-spacing: 0.5px; }
 
   /* TRMNL X (screen--lg): the taller screen leaves room to breathe, so center the
      blocks with a fixed gap (OG stays space-between — its content already fills the
@@ -78,9 +97,9 @@ export function renderMarkup(
   .flight-status { font-size: ${variant === 'quadrant' ? s(16) : variant === 'full' ? s(24) : s(20)}; font-weight: 600; }
   .flight-route { display: flex; align-items: center; gap: ${s(12)}; width: 100%; font-size: ${variant === 'quadrant' ? s(20) : s(28)}; font-weight: 700; margin: ${variant === 'quadrant' ? `${s(8)} 0 ${s(5)}` : `${s(14)} 0 ${s(8)}`}; }
   .view--half_vertical { display: flex; flex-direction: column; flex: 1; align-items: stretch; width: 100%; }
-  .view--half_vertical .flight-top { margin-bottom: ${s(64)}; }
+  .view--half_vertical .flight-top { margin-bottom: ${s(36)}; }
   .view--half_vertical .flight-details { margin-top: auto; display: flex; flex-direction: column; gap: ${s(16)}; }
-  .view--half_vertical .flight-stats { margin-top: ${s(64)}; font-size: ${s(14)}; gap: ${s(10)}; justify-content: space-between; }
+  .view--half_vertical .flight-stats { margin-top: ${s(36)}; font-size: ${s(14)}; gap: ${s(10)}; justify-content: space-between; }
   .view--half_vertical .flight-route { width:100%; margin: 0; }
   .view--half_vertical .stat-item { display: flex; flex-direction: column; align-items: center; }
   .view--half_vertical .stat-value { font-size: ${s(16)}; font-weight: 700; }
@@ -96,6 +115,10 @@ export function renderMarkup(
   .route-line-flown { height: ${s(3)}; background: black; }
   .route-line-remaining { height: 0; background: none; border-top: ${s(3)} dotted black; }
   .route-plane { font-size: ${variant === 'quadrant' ? s(28) : variant === 'full' ? s(48) : s(36)}; line-height: 1; }
+  .route-plane .plane-icon { display: block; }
+  .route-end { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; }
+  .route-time { font-size: 0.6em; font-weight: 600; color: #333; margin-top: ${s(2)}; }
+  .route-sched { font-size: 0.5em; font-weight: 600; color: #666; }
   .flight-stats { display: flex; ${variant === 'full' ? 'justify-content: space-between;' : `gap: ${variant === 'quadrant' ? s(14) : s(26)};`} font-size: ${variant === 'full' ? s(24) : variant === 'quadrant' ? s(15) : s(20)}; margin-top: ${variant === 'quadrant' ? s(3) : s(7)}; }
   .stat-label { font-weight: 700; }
   .airline-logo { width: 100%; max-width: calc(${logoWidth} * var(--s, 1)); max-height: calc(${logoHeight} * var(--s, 1)); object-fit: contain; }
@@ -128,31 +151,43 @@ function renderFullCard(f: FlightDisplayData, baseUrl: string): string {
       ? `${airlineCode} ${f.flightIata.slice(airlineCode.length)}`
       : f.flightIata
 
-  const hasLiveData = f.altitudeFt !== '--' || f.speedMph !== '--' || f.heading !== '--'
   const altDisplay = `${escapeHtml(f.altitudeFt)}${f.altitudeFt !== '--' && f.altitudeFt !== 'Ground' ? ' ft' : ''}`
   const spdDisplay = `${escapeHtml(f.speedMph)}${f.speedMph !== '--' ? ' mph' : ''}`
 
-  const tiles = hasLiveData
+  // Check for live telemetry, if there is none, fallback to est mins remaining and progress complete
+  const hasLiveData = f.altitudeFt !== '--' || f.speedMph !== '--' || f.heading !== '--'
+  const hasFallback = f.minsToDeparture != null || f.minsRemaining != null || f.progressPct != null
+  const depSched = wasAnchor(f.depDelayMin, f.schedDep)
+  const arrSched = wasAnchor(f.delayMin, f.schedEta)
+  const cd = countdown(f)
+  const baseTiles = hasLiveData
     ? [
         { label: 'ALT', value: altDisplay },
         { label: 'SPD', value: spdDisplay },
         { label: 'HDG', value: escapeHtml(f.heading) },
-        { label: 'ETA', value: escapeHtml(f.eta) },
       ]
-    : [
-        { label: 'DEP', value: escapeHtml(f.depTime) },
-        { label: 'ETA', value: escapeHtml(f.eta) },
-      ]
+    : hasFallback
+      ? [
+          {
+            label: cd.preDeparture ? 'DEPARTS IN' : 'ARRIVING IN',
+            value: cd.mins != null ? escapeHtml(formatDuration(cd.mins)) : '--',
+          },
+          { label: 'TRIP', value: f.progressPct != null ? `${f.progressPct}%` : '--' },
+        ]
+      : []
 
-  const tilesHtml = tiles
-    .map(
-      (t) =>
-        `<div class="stat-tile"><span class="stat-tile-label">${t.label}</span><span class="stat-tile-value">${t.value}</span></div>`
-    )
+  const baseHtml = baseTiles
+    .map((t) => `<div class="stat-tile"><span class="stat-tile-label">${t.label}</span><span class="stat-tile-value">${t.value}</span></div>`)
     .join('')
+  // On-time verdict fills the (formerly V/S) 4th slot — a label-less status tile, shown whenever known.
+  const statusHtml = f.delayString
+    ? `<div class="stat-tile stat-tile--status"><span class="stat-tile-value">${escapeHtml(f.delayString)}</span></div>`
+    : ''
+  const tilesHtml = baseHtml + statusHtml
+  const showTiles = tilesHtml !== ''
 
   return `
-  <div class="flight-card">
+  <div class="flight-card${showTiles ? '' : ' flight-card--compact'}">
     <div class="flight-top">
       <img class="image-dither airline-logo" src="${logoUrl}" onerror="this.style.display='none'" />
       <div class="flight-meta">
@@ -166,16 +201,16 @@ function renderFullCard(f: FlightDisplayData, baseUrl: string): string {
       <div class="arc-end">
         <span class="arc-code">${escapeHtml(f.depAirport || '---')}</span>
         <span class="arc-time">${escapeHtml(f.depTime)}</span>
+        ${depSched ? `<span class="arc-sched">${depSched}</span>` : ''}
       </div>
       ${buildArcSvg(f.progressPct)}
       <div class="arc-end">
         <span class="arc-code">${escapeHtml(f.arrAirport || '---')}</span>
         <span class="arc-time">${escapeHtml(f.eta)}</span>
+        ${arrSched ? `<span class="arc-sched">${arrSched}</span>` : ''}
       </div>
     </div>
-    <div class="stat-tiles">
-      ${tilesHtml}
-    </div>
+    ${showTiles ? `<div class="stat-tiles">${tilesHtml}</div>` : ''}
   </div>`
 }
 
@@ -200,35 +235,41 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl:
   // Flown segment is solid only when we know progress; otherwise both sides dotted (position unknown)
   const leftLineClass = hasProgress ? 'route-line route-line-flown' : 'route-line route-line-remaining'
 
+  const depSched = wasAnchor(f.depDelayMin, f.schedDep)
+  const arrSched = wasAnchor(f.delayMin, f.schedEta)
   const routeHtml = showRoute
     ? `
     <div class="flight-route">
-      <span>${escapeHtml(f.depAirport || '---')}</span>
+      <span class="route-end"><span class="route-code">${escapeHtml(f.depAirport || '---')}</span><span class="route-time">${escapeHtml(f.depTime)}</span>${depSched ? `<span class="route-sched">${depSched}</span>` : ''}</span>
       <span class="${leftLineClass}" style="flex: ${leftFlex};"></span>
-      <span class="route-plane">✈</span>
+      <span class="route-plane">${planeSvg()}</span>
       <span class="route-line route-line-remaining" style="flex: ${rightFlex};"></span>
-      <span>${escapeHtml(f.arrAirport || '---')}</span>
+      <span class="route-end"><span class="route-code">${escapeHtml(f.arrAirport || '---')}</span><span class="route-time">${escapeHtml(f.eta)}</span>${arrSched ? `<span class="route-sched">${arrSched}</span>` : ''}</span>
     </div>`
     : ''
 
+  // Live telemetry with fallback to mins remaining and progress complete
   const hasLiveData = f.altitudeFt !== '--' || f.speedMph !== '--' || f.heading !== '--'
-  const statsHtml = showStats
-    ? hasLiveData
-      ? `
-    <div class="flight-stats">
-      ${variant === 'half_horizontal' ? `<span class="stat-item flight-stat-aircraft">${escapeHtml(f.aircraftModel)}</span>` : ''}
-      <span class="stat-item"><span class="stat-label">ALT:</span> <span class="stat-value">${escapeHtml(f.altitudeFt)}${f.altitudeFt !== '--' && f.altitudeFt !== 'Ground' ? ' ft' : ''}</span></span>
-      <span class="stat-item"><span class="stat-label">SPD:</span> <span class="stat-value">${escapeHtml(f.speedMph)}${f.speedMph !== '--' ? ' mph' : ''}</span></span>
-      <span class="stat-item"><span class="stat-label">HDG:</span> <span class="stat-value">${escapeHtml(f.heading)}</span></span>
-      <span class="stat-item"><span class="stat-label">ETA:</span> <span class="stat-value">${escapeHtml(f.eta)}</span></span>
-    </div>`
-      : `
-    <div class="flight-stats">
-      ${variant === 'half_horizontal' ? `<span class="stat-item flight-stat-aircraft">${escapeHtml(f.aircraftModel)}</span>` : ''}
-      <span class="stat-item"><span class="stat-label">DEP:</span> <span class="stat-value">${escapeHtml(f.depTime)}</span></span>
-      <span class="stat-item"><span class="stat-label">ETA:</span> <span class="stat-value">${escapeHtml(f.eta)}</span></span>
-    </div>`
-    : ''
+  const hasFallback = f.minsToDeparture != null || f.minsRemaining != null || f.progressPct != null
+  const cd = countdown(f)
+  const aircraftStat =
+    variant === 'half_horizontal' ? `<span class="stat-item flight-stat-aircraft">${escapeHtml(f.aircraftModel)}</span>` : ''
+  const stat = (label: string, value: string) =>
+    `<span class="stat-item"><span class="stat-label">${label}:</span> <span class="stat-value">${value}</span></span>`
+  let statsInner = ''
+  if (hasLiveData) {
+    statsInner = `${aircraftStat}
+      ${stat('ALT', `${escapeHtml(f.altitudeFt)}${f.altitudeFt !== '--' && f.altitudeFt !== 'Ground' ? ' ft' : ''}`)}
+      ${stat('SPD', `${escapeHtml(f.speedMph)}${f.speedMph !== '--' ? ' mph' : ''}`)}
+      ${stat('HDG', escapeHtml(f.heading))}`
+  } else if (hasFallback) {
+    statsInner = `${aircraftStat}
+      ${stat(cd.preDeparture ? 'DEP IN' : 'ARR IN', cd.mins != null ? escapeHtml(formatDuration(cd.mins)) : '--')}
+      ${stat('TRIP', f.progressPct != null ? `${f.progressPct}%` : '--')}`
+  } else {
+    statsInner = aircraftStat
+  }
+  const statsHtml = showStats && statsInner ? `<div class="flight-stats">${statsInner}</div>` : ''
 
   const routeBlock = showRoute ? routeHtml : ''
   const statsBlock = showStats ? statsHtml : ''

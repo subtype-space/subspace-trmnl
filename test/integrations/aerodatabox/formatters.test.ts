@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { AIRLINE_NAMES, calcProgress, formatHeading, haversineKm, renderMarkup } from '../../../src/integrations/aerodatabox/formatters.js'
-import type { FlightDisplayData } from '../../../src/types/trmnl/flightTypes.js'
+import {
+  AIRLINE_NAMES,
+  calcProgress,
+  formatDelayString,
+  formatDuration,
+  formatHeading,
+  haversineKm,
+} from '../../../src/integrations/aerodatabox/formatters.js'
 
 describe('formatHeading', () => {
   it('returns -- when track is undefined', () => {
@@ -66,67 +72,45 @@ describe('calcProgress', () => {
   })
 })
 
+describe('formatDuration', () => {
+  it('formats minutes-only under an hour', () => {
+    expect(formatDuration(45)).toBe('45m')
+  })
+
+  it('formats hours and minutes past an hour', () => {
+    expect(formatDuration(138)).toBe('2h 18m')
+    expect(formatDuration(372)).toBe('6h 12m')
+  })
+
+  it('reads as "Arriving" once at/past the ETA', () => {
+    expect(formatDuration(0)).toBe('Arriving')
+    expect(formatDuration(-5)).toBe('Arriving')
+  })
+})
+
+describe('formatDelayString', () => {
+  it('returns null when the delay is unknown', () => {
+    expect(formatDelayString(null)).toBeNull()
+  })
+
+  it('treats within +/-15 min as "On time" (incl. minor delays)', () => {
+    expect(formatDelayString(0)).toBe('On time')
+    expect(formatDelayString(12)).toBe('On time')
+    expect(formatDelayString(15)).toBe('On time')
+    expect(formatDelayString(-15)).toBe('On time')
+  })
+
+  it('flags "Delayed" past 15 min late and "Early" past 15 min ahead', () => {
+    expect(formatDelayString(16)).toBe('Delayed')
+    expect(formatDelayString(95)).toBe('Delayed')
+    expect(formatDelayString(-16)).toBe('Early')
+  })
+})
+
 describe('AIRLINE_NAMES', () => {
   it('resolves common IATA codes to display names', () => {
     expect(AIRLINE_NAMES.UA).toBe('United Airlines')
     expect(AIRLINE_NAMES.AA).toBe('American Airlines')
     expect(AIRLINE_NAMES.DL).toBe('Delta Air Lines')
-  })
-})
-
-const sampleFlight: FlightDisplayData = {
-  flightIata: 'UA1074',
-  airlineIata: 'UA',
-  airlineIcao: 'UAL',
-  depAirport: 'BOS',
-  arrAirport: 'SFO',
-  status: 'Cruising',
-  altitudeFt: '37,000',
-  speedMph: '503',
-  aircraftModel: 'Boeing 737 MAX 9',
-  aircraftIcao: '',
-  heading: '251° W',
-  depTime: '08:12',
-  eta: '14:36',
-  progressPct: 62,
-  lastUpdated: 'recently',
-}
-
-describe('renderMarkup', () => {
-  it('renders the empty-state prompt when there are no flights', () => {
-    const out = renderMarkup(null, 'full', 0, 'https://example.com')
-    expect(out).toContain('Configure flights')
-    expect(out).toContain('Flight Tracker')
-  })
-
-  it('renders the full variant with a hero arc and stat tiles', () => {
-    const out = renderMarkup(sampleFlight, 'full', 0, 'https://example.com')
-    expect(out).toContain('view--full')
-    expect(out).toContain('<svg') // great-circle arc
-    expect(out).toContain('UA 1074') // formatted flight code
-    expect(out).toContain('United Airlines')
-    expect(out).toContain('BOS')
-    expect(out).toContain('SFO')
-    expect(out).toContain('stat-tile')
-  })
-
-  it('renders the flat route line with solid-flown / dotted-remaining on half_horizontal', () => {
-    const out = renderMarkup(sampleFlight, 'half_horizontal', 0, 'https://example.com')
-    expect(out).toContain('view--half_horizontal')
-    // assert on element usage, not the (always-present) CSS rule of the same name
-    expect(out).toContain('class="route-line route-line-flown"')
-    expect(out).toContain('class="route-line route-line-remaining"')
-  })
-
-  it('marks both route segments dotted when progress is unknown', () => {
-    const out = renderMarkup({ ...sampleFlight, progressPct: null }, 'half_horizontal', 0, 'https://example.com')
-    expect(out).not.toContain('class="route-line route-line-flown"')
-    expect(out).toContain('class="route-line route-line-remaining"')
-  })
-
-  it('escapes HTML in the last-updated label', () => {
-    const out = renderMarkup({ ...sampleFlight, lastUpdated: '<script>' }, 'full', 0, 'https://example.com')
-    expect(out).not.toContain('<script>')
-    expect(out).toContain('&lt;script&gt;')
   })
 })

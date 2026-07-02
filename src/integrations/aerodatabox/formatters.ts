@@ -1,4 +1,5 @@
-
+// AI disclosure, file calculating the plane path, progress, and plane icon tilt based on percentage complete
+// was fully written by Claude. This is one of the files that had very little human writing.
 export const AIRLINE_NAMES: Record<string, string> = {
   UA: 'United Airlines',
   AA: 'American Airlines',
@@ -30,6 +31,42 @@ export const AIRLINE_NAMES: Record<string, string> = {
   CZ: 'China Southern',
   QF: 'Qantas',
   GB: 'ABX Air'
+}
+
+export function formatDelayString(delayMin: number | null): string | null {
+  if (delayMin == null) return null
+  if (delayMin > 15) return 'Delayed'
+  if (delayMin < -15) return 'Early'
+  return 'On time'
+}
+
+// Only used for fallback - format estimated time remaining as "XXh XXm" or "XXm"
+export function formatDuration(mins: number): string {
+  if (mins <= 0) return 'Arriving'
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return h > 0 ? `${h}h ${m}m` : `${m}m`
+}
+
+const PLANE_PATH =
+  'M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z'
+
+// Center the icon on the origin and rotate it to face east (+x): it's drawn nose-up in a
+// 0..24 box, so translate(-12,-12) centers it and rotate(90) turns it east. `scale` sizes it.
+function planeTransform(scale: number): string {
+  return `rotate(90) scale(${scale}) translate(-12 -12)`
+}
+
+// Plane path centered on the origin and pointing east (+x), ready to drop inside the arc's
+// translate+rotate group. `scale` matches the 24-unit icon to the arc's coordinate space.
+export function planeArcPath(scale: number): string {
+  return `<path d="${PLANE_PATH}" transform="${planeTransform(scale)}" fill="black" />`
+}
+
+// Standalone plane icon sized to the current font-size (1em), pointing east (+x) — used on
+// the flat half-variant route lines where travel is left-to-right (no extra rotation needed).
+export function planeSvg(): string {
+  return `<svg class="plane-icon" viewBox="-12 -12 24 24" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg"><path d="${PLANE_PATH}" transform="${planeTransform(1)}" fill="black" /></svg>`
 }
 
 export function formatHeading(track: number | undefined): string {
@@ -103,10 +140,10 @@ export function buildArcSvg(progressPct: number | null): string {
   const flownPath = t - gapT > 0.01 ? `M${P0.x},${P0.y} Q${n(back.a.x)},${n(back.a.y)} ${n(back.c.x)},${n(back.c.y)}` : ''
   const remainingPath = t + gapT < 0.99 ? `M${n(fwd.c.x)},${n(fwd.c.y)} Q${n(fwd.b.x)},${n(fwd.b.y)} ${P2.x},${P2.y}` : ''
 
-  // The ✈ glyph (U+2708) rests pointing east (+x), so rotate by the tangent angle to align its nose with travel
+  // The plane path is centered on the origin pointing east (+x), so rotate by the tangent angle to align its nose with travel
   return `<svg class="arc-svg" viewBox="0 0 600 124" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
       ${remainingPath ? `<path d="${remainingPath}" fill="none" stroke="black" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 11" />` : ''}
       ${flownPath ? `<path d="${flownPath}" fill="none" stroke="black" stroke-width="5" stroke-linecap="round" />` : ''}
-      <g transform="translate(${n(mid.c.x)},${n(mid.c.y)}) rotate(${n(angle)})"><text x="0" y="-3" text-anchor="middle" dominant-baseline="central" font-size="64" fill="black">✈</text></g>
+      <g transform="translate(${n(mid.c.x)},${n(mid.c.y)}) rotate(${n(angle)})">${planeArcPath(2.6)}</g>
     </svg>`
 }
