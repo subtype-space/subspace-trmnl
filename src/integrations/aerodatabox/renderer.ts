@@ -99,9 +99,6 @@ export function renderMarkup(
   .stat-tile { flex: 1; border: ${s(2)} solid black; border-radius: ${s(10)}; padding: ${s(10)} ${s(6)}; display: flex; flex-direction: column; align-items: center; gap: ${s(3)}; }
   .stat-tile-label { font-size: ${s(15)}; font-weight: 700; letter-spacing: 1.5px; }
   .stat-tile-value { font-size: ${s(26)}; font-weight: 800; }
-  /* Arrival on-time verdict tile — no label, word centered + uppercased so it reads as a status flag. */
-  .stat-tile--status { justify-content: center; }
-  .stat-tile--status .stat-tile-value { text-transform: uppercase; letter-spacing: 0.5px; }
 
   /* TRMNL X (screen--lg): the taller screen leaves room to breathe, so center the
      blocks with a fixed gap (OG stays space-between — its content already fills the
@@ -205,11 +202,7 @@ function renderFullCard(f: FlightDisplayData, baseUrl: string): string {
         `<div class="stat-tile"><span class="stat-tile-label">${tile.label}</span><span class="stat-tile-value">${tile.value}</span></div>`
     )
     .join('')
-  // On-time verdict fills the (formerly V/S) 4th slot — a label-less status tile, shown whenever known.
-  const statusHtml = f.delayString
-    ? `<div class="stat-tile stat-tile--status"><span class="stat-tile-value">${escapeHtml(f.delayString)}</span></div>`
-    : ''
-  const tilesHtml = baseHtml + statusHtml
+  const tilesHtml = baseHtml
   const showTiles = tilesHtml !== ''
 
   return `
@@ -220,7 +213,7 @@ function renderFullCard(f: FlightDisplayData, baseUrl: string): string {
         <span class="airline-name">${escapeHtml(airlineName)}</span>
         <span class="flight-number">${escapeHtml(flightCode)}</span>
         <span class="flight-aircraft">${escapeHtml(f.aircraftModel)}</span>
-        <span class="flight-status">${escapeHtml(f.status)}</span>
+        <span class="flight-status">${escapeHtml(f.status)}${f.delayString ? ` <span class="flight-adherence">· ${escapeHtml(f.delayString)}</span>` : ''}</span>
       </div>
     </div>
     <div class="flight-arc-wrap">
