@@ -15,6 +15,29 @@ function countdown(f: FlightDisplayData): { preDeparture: boolean; mins: number 
   return { preDeparture, mins: preDeparture ? f.minsToDeparture : f.minsRemaining }
 }
 
+// Terminal states: once the flight has landed the arrival countdown is meaningless
+// (it would read a stale "Arriving"), so the no-telemetry tile shows the landing instead.
+function isArrived(f: FlightDisplayData): boolean {
+  return f.status === 'Arrived' || f.status === 'Likely Arrived'
+}
+
+// The primary no-telemetry tile: departs-in / arrives-in while active, or the landed time once arrived.
+// `terse` picks the short labels (DEP IN / ARR IN) used on the space-constrained half variants.
+function progressTile(f: FlightDisplayData, terse: boolean): { label: string; value: string } {
+  if (isArrived(f)) {
+    return { label: 'ARRIVED', value: f.eta !== '--' ? escapeHtml(f.eta) : 'Landed' }
+  }
+  const countdownState = countdown(f)
+  const label = terse
+    ? countdownState.preDeparture
+      ? 'DEP IN'
+      : 'ARR IN'
+    : countdownState.preDeparture
+      ? 'DEPARTS IN'
+      : 'ARRIVING IN'
+  return { label, value: countdownState.mins != null ? escapeHtml(formatDuration(countdownState.mins)) : '--' }
+}
+
 /**
  * This is the main function that returns the HTML to a TRMNL device.
  * TRMNL requests that all variants are returned in the payload for all available markups.
@@ -159,7 +182,6 @@ function renderFullCard(f: FlightDisplayData, baseUrl: string): string {
   const hasFallback = f.minsToDeparture != null || f.minsRemaining != null || f.progressPct != null
   const depSched = wasAnchor(f.depDelayMin, f.schedDep)
   const arrSched = wasAnchor(f.delayMin, f.schedEta)
-  const cd = countdown(f)
   const baseTiles = hasLiveData
     ? [
         { label: 'ALT', value: altDisplay },
@@ -167,17 +189,14 @@ function renderFullCard(f: FlightDisplayData, baseUrl: string): string {
         { label: 'HDG', value: escapeHtml(f.heading) },
       ]
     : hasFallback
-      ? [
-          {
-            label: cd.preDeparture ? 'DEPARTS IN' : 'ARRIVING IN',
-            value: cd.mins != null ? escapeHtml(formatDuration(cd.mins)) : '--',
-          },
-          { label: 'TRIP', value: f.progressPct != null ? `${f.progressPct}%` : '--' },
-        ]
+      ? [progressTile(f, false), { label: 'TRIP', value: f.progressPct != null ? `${f.progressPct}%` : '--' }]
       : []
 
   const baseHtml = baseTiles
-    .map((t) => `<div class="stat-tile"><span class="stat-tile-label">${t.label}</span><span class="stat-tile-value">${t.value}</span></div>`)
+    .map(
+      (tile) =>
+        `<div class="stat-tile"><span class="stat-tile-label">${tile.label}</span><span class="stat-tile-value">${tile.value}</span></div>`
+    )
     .join('')
   // On-time verdict fills the (formerly V/S) 4th slot — a label-less status tile, shown whenever known.
   const statusHtml = f.delayString
@@ -251,7 +270,6 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl:
   // Live telemetry with fallback to mins remaining and progress complete
   const hasLiveData = f.altitudeFt !== '--' || f.speedMph !== '--' || f.heading !== '--'
   const hasFallback = f.minsToDeparture != null || f.minsRemaining != null || f.progressPct != null
-  const cd = countdown(f)
   const aircraftStat =
     variant === 'half_horizontal' ? `<span class="stat-item flight-stat-aircraft">${escapeHtml(f.aircraftModel)}</span>` : ''
   const stat = (label: string, value: string) =>
@@ -263,8 +281,9 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl:
       ${stat('SPD', `${escapeHtml(f.speedMph)}${f.speedMph !== '--' ? ' mph' : ''}`)}
       ${stat('HDG', escapeHtml(f.heading))}`
   } else if (hasFallback) {
+    const fallbackTile = progressTile(f, true)
     statsInner = `${aircraftStat}
-      ${stat(cd.preDeparture ? 'DEP IN' : 'ARR IN', cd.mins != null ? escapeHtml(formatDuration(cd.mins)) : '--')}
+      ${stat(fallbackTile.label, fallbackTile.value)}
       ${stat('TRIP', f.progressPct != null ? `${f.progressPct}%` : '--')}`
   } else {
     statsInner = aircraftStat

@@ -89,6 +89,24 @@ const scenarios: Scenario[] = [
     },
   },
   {
+    title: 'Arrived, no telemetry (ARRIVED landing time, not a stale "Arriving")',
+    flight: {
+      ...baseFlight,
+      status: 'Arrived',
+      altitudeFt: '--',
+      speedMph: '--',
+      heading: '--',
+      progressPct: 100,
+      minsRemaining: -312, // landed ~5h ago
+      depDelayMin: 13,
+      schedDep: '15:45',
+      depTime: '15:58',
+      delayMin: -56,
+      schedEta: '15:50',
+      eta: '14:54',
+    },
+  },
+  {
     title: 'Pre-flight, no live data (DEPARTS IN + TRIP)',
     flight: {
       ...baseFlight,

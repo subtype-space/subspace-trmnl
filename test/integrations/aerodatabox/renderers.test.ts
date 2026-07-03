@@ -207,6 +207,37 @@ describe('renderMarkup', () => {
     expect(halfPre).toContain('DEP IN:')
   })
 
+  it('shows ARRIVED (landing time) instead of a stale "Arriving" countdown once the flight has landed', () => {
+    // Regression: an Arrived flight has no telemetry but still carries progressPct/minsRemaining,
+    // so the fallback branch used to render "ARRIVING IN / Arriving" for a flight that landed hours ago.
+    const arrived = {
+      ...sampleFlight,
+      status: 'Arrived',
+      altitudeFt: '--',
+      speedMph: '--',
+      heading: '--',
+      progressPct: 100,
+      minsRemaining: -312, // arrived ~5h ago -> formatDuration would say "Arriving"
+      eta: '14:54',
+    }
+    const full = renderMarkup(arrived, 'full', 0, 'https://example.com')
+    expect(full).toContain('>ARRIVED<')
+    expect(full).toContain('>14:54<') // the actual landing time, not a countdown
+    expect(full).not.toContain('>ARRIVING IN<')
+    expect(full).not.toContain('>Arriving<')
+    expect(full).toContain('>TRIP<') // trip tile still shows completion alongside it
+
+    // half variants use the same terminal label, not the ARR IN countdown
+    const half = renderMarkup(arrived, 'half_horizontal', 0, 'https://example.com')
+    expect(half).toContain('ARRIVED:')
+    expect(half).not.toContain('ARR IN:')
+
+    // the inferred "Likely Arrived" state is treated the same
+    const likely = renderMarkup({ ...arrived, status: 'Likely Arrived' }, 'full', 0, 'https://example.com')
+    expect(likely).toContain('>ARRIVED<')
+    expect(likely).not.toContain('>Arriving<')
+  })
+
   it('escapes HTML in the last-updated label', () => {
     const out = renderMarkup({ ...sampleFlight, lastUpdated: '<script>' }, 'full', 0, 'https://example.com')
     expect(out).not.toContain('<script>')
