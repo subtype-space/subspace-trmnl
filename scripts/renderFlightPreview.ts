@@ -35,13 +35,13 @@ const baseFlight: FlightDisplayData = {
 }
 
 // Each scenario exercises a different schedule/data state: the on-time verdict (15-min rule),
-// the "was" anchors (any deviation >2 min), and the no-telemetry fallback (departs-in / arrives-in).
+// the "was" anchors (notable deviations >15 min only), and the no-telemetry fallback (departs-in / arrives-in).
 // eta/depTime are the actual times; schedEta/schedDep are the originals. adherence is derived below.
 type Scenario = { title: string; flight: FlightDisplayData }
 const scenarios: Scenario[] = [
   { title: 'On time (0)', flight: { ...baseFlight, delayMin: 0, schedEta: '14:36' } },
   {
-    title: 'Minor delay, still "On time" — 12 min (anchors show, <15-min threshold)',
+    title: 'Minor delay — 12 min (On time, no anchor: under the 15-min gate)',
     flight: { ...baseFlight, depDelayMin: 12, schedDep: '08:00', delayMin: 12, schedEta: '14:24' },
   },
   {
@@ -57,8 +57,12 @@ const scenarios: Scenario[] = [
     flight: { ...baseFlight, delayMin: -22, schedEta: '14:58' },
   },
   {
-    title: 'Late departure, early arrival (was 07:58 / 14:58)',
-    flight: { ...baseFlight, depDelayMin: 14, schedDep: '07:58', delayMin: -22, schedEta: '14:58' },
+    title: 'Late departure (20), early arrival (22) — both notable, both anchor',
+    flight: { ...baseFlight, depDelayMin: 20, schedDep: '07:52', delayMin: -22, schedEta: '14:58' },
+  },
+  {
+    title: 'Departed 26 late, arriving 10 early — origin anchors, arrival under the gate (On time)',
+    flight: { ...baseFlight, depDelayMin: 26, schedDep: '07:46', depTime: '08:12', delayMin: -10, schedEta: '14:46', eta: '14:36' },
   },
   {
     title: 'Descending into SFO (near arrival)',
