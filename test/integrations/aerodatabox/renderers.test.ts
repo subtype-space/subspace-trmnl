@@ -61,13 +61,13 @@ describe('renderMarkup', () => {
   })
 
   it('full variant tiles carry only live telemetry (no delay tile); delay lives in the arc anchor', () => {
-    const out = renderMarkup({ ...sampleFlight, delayMin: 14, schedEta: '14:22' }, 'full', 0, 'https://example.com')
+    const out = renderMarkup({ ...sampleFlight, delayMin: 22, schedEta: '14:14' }, 'full', 0, 'https://example.com')
     expect(out).toContain('>ALT<')
     expect(out).toContain('>SPD<')
     expect(out).toContain('>HDG<')
     expect(out).not.toContain('>ARR<') // no delay tile
-    expect(out).not.toContain('14m late') // no worded delta
-    expect(out).toContain('was 14:22') // scheduled anchor on the arc
+    expect(out).not.toContain('22m late') // no worded delta
+    expect(out).toContain('was 14:14') // scheduled anchor on the arc (notable, >15 min)
   })
 
   it('falls back to derived time-left + trip tiles when there is no live telemetry (no row of --)', () => {
@@ -123,47 +123,51 @@ describe('renderMarkup', () => {
     expect(half).toContain('plane-icon') // inline SVG on the flat route line
   })
 
-  it('shows the scheduled "was" anchor (two absolute clocks) only when the flight deviates', () => {
+  it('shows the scheduled "was" anchor only for notable (>15 min) deviations, not minor ones', () => {
     // assert on the rendered anchor text, not the (always-present) .route-sched CSS rule
-    // late: actual 14:36, scheduled 14:22
-    const late = renderMarkup({ ...sampleFlight, delayMin: 14, schedEta: '14:22' }, 'half_vertical', 0, 'https://example.com')
-    expect(late).toContain('>was 14:22<')
-    expect(late).not.toContain('14m late') // no delta / no math
+    // notably late (22 min): anchor shows the original scheduled clock
+    const late = renderMarkup({ ...sampleFlight, delayMin: 22, schedEta: '14:14' }, 'half_vertical', 0, 'https://example.com')
+    expect(late).toContain('>was 14:14<')
+    expect(late).not.toContain('22m late') // no delta / no math
 
-    // early: actual 14:36, scheduled 14:48 — still an absolute clock, no negative delta / word
-    const early = renderMarkup({ ...sampleFlight, delayMin: -12, schedEta: '14:48' }, 'half_vertical', 0, 'https://example.com')
-    expect(early).toContain('>was 14:48<')
+    // notably early (20 min): still an absolute clock, no negative delta / word
+    const early = renderMarkup({ ...sampleFlight, delayMin: -20, schedEta: '14:56' }, 'half_vertical', 0, 'https://example.com')
+    expect(early).toContain('>was 14:56<')
     expect(early).not.toContain('early')
 
-    // on-time (within window): no anchor even though schedEta is present
-    const onTime = renderMarkup({ ...sampleFlight, delayMin: 1, schedEta: '14:35' }, 'half_vertical', 0, 'https://example.com')
-    expect(onTime).not.toContain('>was ')
+    // minor deviation within the 15-min window: no anchor (the actual time already carries it) —
+    // a plane landing 10 min off isn't worth an extra line on an at-a-glance display
+    const minorLate = renderMarkup({ ...sampleFlight, delayMin: 10, schedEta: '14:26' }, 'half_vertical', 0, 'https://example.com')
+    expect(minorLate).not.toContain('>was ')
+    const minorEarly = renderMarkup({ ...sampleFlight, delayMin: -12, schedEta: '14:48' }, 'half_vertical', 0, 'https://example.com')
+    expect(minorEarly).not.toContain('>was ')
+
     // unknown schedule: no anchor
     const unknown = renderMarkup({ ...sampleFlight, delayMin: null, schedEta: '--' }, 'half_vertical', 0, 'https://example.com')
     expect(unknown).not.toContain('>was ')
   })
 
-  it('anchors departure and arrival independently (a late pushback shows "was" under the origin)', () => {
-    // Departed 14 late, arrived on time (made up the time en route): only the origin gets an anchor.
-    const depLate = { ...sampleFlight, depDelayMin: 14, schedDep: '07:58', delayMin: 0, schedEta: '14:36' }
+  it('anchors departure and arrival independently (each gated on its own >15 min deviation)', () => {
+    // Departed 22 late, arrived on time (made up the time en route): only the origin gets an anchor.
+    const depLate = { ...sampleFlight, depDelayMin: 22, schedDep: '07:50', delayMin: 0, schedEta: '14:36' }
     const full = renderMarkup(depLate, 'full', 0, 'https://example.com')
-    expect(full).toContain('was 07:58') // origin anchor
+    expect(full).toContain('was 07:50') // origin anchor
     expect(full).not.toContain('was 14:36') // arrival on time -> no anchor
     const half = renderMarkup(depLate, 'half_vertical', 0, 'https://example.com')
-    expect(half).toContain('>was 07:58<')
+    expect(half).toContain('>was 07:50<')
 
-    // Both deviate -> both anchors render.
-    const both = { ...sampleFlight, depDelayMin: 14, schedDep: '07:58', delayMin: 14, schedEta: '14:22' }
+    // Both deviate notably -> both anchors render.
+    const both = { ...sampleFlight, depDelayMin: 22, schedDep: '07:50', delayMin: 22, schedEta: '14:14' }
     const bothOut = renderMarkup(both, 'half_vertical', 0, 'https://example.com')
-    expect(bothOut).toContain('>was 07:58<')
-    expect(bothOut).toContain('>was 14:22<')
+    expect(bothOut).toContain('>was 07:50<')
+    expect(bothOut).toContain('>was 14:14<')
 
-    // Opposite directions (late pushback, early arrival) both anchor — the "was" is an absolute
-    // clock, so the sign of each delay is irrelevant to the display.
-    const mixed = { ...sampleFlight, depDelayMin: 14, schedDep: '07:58', delayMin: -10, schedEta: '14:46' }
-    const mixedOut = renderMarkup(mixed, 'full', 0, 'https://example.com')
-    expect(mixedOut).toContain('was 07:58') // late departure
-    expect(mixedOut).toContain('was 14:46') // early arrival
+    // The screenshot case: pushed back 26 late but arrives only 10 early -> origin anchors, the
+    // in-window arrival does not (10 < 15), even though the departure deviation is notable.
+    const departedLateArrivedClose = { ...sampleFlight, depDelayMin: 26, schedDep: '07:46', delayMin: -10, schedEta: '14:46' }
+    const mixedOut = renderMarkup(departedLateArrivedClose, 'full', 0, 'https://example.com')
+    expect(mixedOut).toContain('was 07:46') // notable late departure
+    expect(mixedOut).not.toContain('was 14:46') // minor early arrival -> gated out
   })
 
   it('shows the on-time verdict as the 4th full-card tile (label-less), and hides it when unknown', () => {

@@ -3,10 +3,17 @@ import type { MarkupVariant } from '../../types/trmnl/types.js'
 import { escapeHtml } from '../../utils/html.js'
 import { buildArcSvg, formatDuration, planeSvg, AIRLINE_NAMES } from './formatters.js'
 
-// If a departure/arrival deviates more than +-2 minutes from schedule, show the original
-// scheduled time as a "was HH:MM" anchor next to the actual time. Returns '' otherwise.
+// Only surface the scheduled "was HH:MM" anchor for *notable* deviations. The actual time is
+// already shown, so a plane landing 2-14 min off schedule isn't worth an extra line — that's
+// detail, not glance. This 15-min bar matches the On-time/Delayed/Early adherence threshold, so
+// an anchor appears exactly when the flight is off-schedule enough to earn a verdict. Departure
+// and arrival are gated independently (a late pushback can anchor without the on-time arrival).
+const ANCHOR_MIN_DEVIATION_MIN = 15
+
 function wasAnchor(delayMin: number | null, schedTime: string): string {
-  return delayMin != null && Math.abs(delayMin) > 2 && schedTime !== '--' ? `was ${escapeHtml(schedTime)}` : ''
+  return delayMin != null && Math.abs(delayMin) > ANCHOR_MIN_DEVIATION_MIN && schedTime !== '--'
+    ? `was ${escapeHtml(schedTime)}`
+    : ''
 }
 
 // No-telemetry countdown: before wheels-up we count down to departure, after to arrival.
