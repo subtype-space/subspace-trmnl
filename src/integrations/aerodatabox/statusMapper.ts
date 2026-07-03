@@ -130,6 +130,7 @@ function parseUtcMs(utcStr: string): number {
 }
 
 // Delay in minutes vs the scheduled time for a departure/arrival
+// AeroDepartureArrival is an object that represents either Departure or Arrival information
 function calcDelayMin(point: AeroDepartureArrival): number | null {
   const scheduledTimeUtc = point.scheduledTime?.utc
   const effectiveUtc = (point.runwayTime ?? point.revisedTime ?? point.predictedTime)?.utc
