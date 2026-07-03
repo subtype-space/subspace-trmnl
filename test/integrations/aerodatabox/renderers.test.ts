@@ -170,21 +170,22 @@ describe('renderMarkup', () => {
     expect(mixedOut).not.toContain('was 14:46') // minor early arrival -> gated out
   })
 
-  it('shows the on-time verdict as the 4th full-card tile (label-less), and hides it when unknown', () => {
-    // assert on the tile element, not the always-present .stat-tile--status CSS rule
+  it('shows the on-time verdict in the header status line (not a 4th tile), and hides it when unknown', () => {
     const delayed = renderMarkup({ ...sampleFlight, delayString: 'Delayed' }, 'full', 0, 'https://example.com')
-    expect(delayed).toContain('class="stat-tile stat-tile--status"')
-    expect(delayed).toContain('>Delayed<')
-    expect(delayed).toContain('>ALT<') // sits alongside the telemetry tiles
-    // unknown -> no status tile
+    // adherence rides in the header next to the flight phase, keeping the tile row a clean 3
+    expect(delayed).toContain('class="flight-adherence"')
+    expect(delayed).toContain('Delayed')
+    expect(delayed).not.toContain('stat-tile--status') // the old 4th tile is gone
+    expect(delayed).toContain('>ALT<') // uniform ALT/SPD/HDG telemetry row remains
+    // unknown -> no adherence in the header
     const unknown = renderMarkup({ ...sampleFlight, delayString: null }, 'full', 0, 'https://example.com')
-    expect(unknown).not.toContain('class="stat-tile stat-tile--status"')
+    expect(unknown).not.toContain('class="flight-adherence"')
   })
 
   it('does not surface delayString on half variants (the "was" anchors carry the delay there)', () => {
     const out = renderMarkup({ ...sampleFlight, delayString: 'Delayed' }, 'half_horizontal', 0, 'https://example.com')
-    expect(out).not.toContain('>Delayed<')
-    expect(out).not.toContain('class="stat-tile stat-tile--status"')
+    expect(out).not.toContain('flight-adherence')
+    expect(out).not.toContain('Delayed') // status is 'Cruising'; adherence never rendered on halves
   })
 
   it('counts down to departure (DEPARTS IN) pre-takeoff, then to arrival (ARRIVING IN)', () => {
