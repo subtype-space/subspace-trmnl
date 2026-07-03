@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from "express"
-import { logger } from "./logger.js"
+import { Request, Response, NextFunction } from 'express'
+import { logger } from './logger.js'
 
 export function logIncomingAuth(req: Request, _res: Response, next: NextFunction) {
   const ip = (req.headers["cf-connecting-ip"] as string) ?? req.ip

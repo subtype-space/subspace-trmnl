@@ -1,12 +1,15 @@
 // This is a helper script to generate mock HTML representative of TRMNL devices.
 // It should generate all forms, including TRMNL X dimensions
-import { renderMarkup } from "../src/integrations/aerodatabox/formatters.js";
+// This test is powered by Claude, thanks buddy
+import { renderMarkup } from '../src/integrations/aerodatabox/renderer.js'
+import { formatDelayString } from '../src/integrations/aerodatabox/formatters.js'
 import { writeFileSync } from "node:fs"; // ignore typecheck error, typelinting is fine via CI
 import { config } from '../src/config.js'
 import type { FlightDisplayData } from "../src/types/trmnl/flightTypes.js";
-import type { MarkupVariant } from "../src/integrations/aerodatabox/formatters.js";
+import type { MarkupVariant } from "../src/types/trmnl/types.js";
 
-const sampleFlight: FlightDisplayData = {
+// Base in-flight sample; scenarios below override just the fields that matter per case.
+const baseFlight: FlightDisplayData = {
   flightIata: 'UA1074',
   airlineIata: 'UA',
   airlineIcao: 'UAL',
@@ -18,11 +21,92 @@ const sampleFlight: FlightDisplayData = {
   aircraftModel: 'Boeing 737 MAX 9',
   aircraftIcao: '',
   heading: '251° W',
+  delayString: null, // filled per-scenario from delayMin below
   depTime: '08:12',
+  schedDep: '08:12',
+  depDelayMin: 0,
   eta: '14:36',
+  schedEta: '14:36',
+  delayMin: 0,
+  minsToDeparture: null, // departed (in-flight base); pre-flight scenario overrides
+  minsRemaining: 138,
   progressPct: 62,
   lastUpdated: 'recently',
 }
+
+// Each scenario exercises a different schedule/data state: the on-time verdict (15-min rule),
+// the "was" anchors (any deviation >2 min), and the no-telemetry fallback (departs-in / arrives-in).
+// eta/depTime are the actual times; schedEta/schedDep are the originals. adherence is derived below.
+type Scenario = { title: string; flight: FlightDisplayData }
+const scenarios: Scenario[] = [
+  { title: 'On time (0)', flight: { ...baseFlight, delayMin: 0, schedEta: '14:36' } },
+  {
+    title: 'Minor delay, still "On time" — 12 min (anchors show, <15-min threshold)',
+    flight: { ...baseFlight, depDelayMin: 12, schedDep: '08:00', delayMin: 12, schedEta: '14:24' },
+  },
+  {
+    title: 'Delayed — 35 min (was 07:32 / 14:01)',
+    flight: { ...baseFlight, depDelayMin: 35, schedDep: '07:37', delayMin: 35, schedEta: '14:01' },
+  },
+  {
+    title: 'Heavily delayed — 95 min (was 06:37 / 13:01)',
+    flight: { ...baseFlight, depDelayMin: 95, schedDep: '06:37', delayMin: 95, schedEta: '13:01' },
+  },
+  {
+    title: 'Early — arrives 22 min ahead (was 14:58)',
+    flight: { ...baseFlight, delayMin: -22, schedEta: '14:58' },
+  },
+  {
+    title: 'Late departure, early arrival (was 07:58 / 14:58)',
+    flight: { ...baseFlight, depDelayMin: 14, schedDep: '07:58', delayMin: -22, schedEta: '14:58' },
+  },
+  {
+    title: 'Descending into SFO (near arrival)',
+    flight: {
+      ...baseFlight,
+      status: 'Descending',
+      altitudeFt: '13,000',
+      speedMph: '340',
+      progressPct: 92,
+      minsRemaining: 18,
+      delayMin: 0,
+      schedEta: '14:36',
+    },
+  },
+  { title: 'Delay unknown', flight: { ...baseFlight, delayMin: null, schedEta: '--' } },
+  {
+    title: 'In flight, no telemetry (ARRIVING IN + TRIP, mid-route)',
+    flight: {
+      ...baseFlight,
+      status: 'In Flight',
+      altitudeFt: '--',
+      speedMph: '--',
+      heading: '--',
+      progressPct: 55,
+      minsRemaining: 140, // ~2h 20m to go
+      delayMin: 0,
+      schedEta: '14:36',
+    },
+  },
+  {
+    title: 'Pre-flight, no live data (DEPARTS IN + TRIP)',
+    flight: {
+      ...baseFlight,
+      status: 'Boarding',
+      altitudeFt: '--',
+      speedMph: '--',
+      heading: '--',
+      progressPct: 0,
+      minsToDeparture: 45, // departs in 45m
+      minsRemaining: 372, // 6h 12m until arrival
+      delayMin: null,
+      schedEta: '--',
+    },
+  },
+]
+
+// Derive the on-time verdict the same way the app does, so the preview stays honest.
+for (const s of scenarios) s.flight.delayString = formatDelayString(s.flight.delayMin)
 
 const SIZES: Record<string, [number, number]> = {
   full:            [800, 480],
@@ -53,6 +137,7 @@ const FRAMEWORK_JS = 'https://trmnl.com/js/latest/plugins.js'
  */
 function variantDoc(fragment: string, variant: string, w: number, h: number, screenClass: string): string {
   return `<!doctype html><html><head>
+    <meta charset="utf-8" />
     <link rel="stylesheet" href="${FRAMEWORK_CSS}" />
     <script src="${FRAMEWORK_JS}"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -82,31 +167,35 @@ function generateVariant(fragment: string, variant: string, w: number, h: number
   </figure>`
 }
 
-function generatePage(generatedVariant: string): string {
-  return `<!doctype html><html><head><style>
-    body { margin:24px; background:#e9e9ee; }
+function generatePage(sectionsHtml: string): string {
+  return `<!doctype html><html><head><meta charset="utf-8" /><style>
+    body { margin:24px; background:#e9e9ee; font-family: system-ui, -apple-system, sans-serif; }
     .grid { display:flex; flex-wrap:wrap; gap:22px; align-items:flex-start; }
-  </style></head><body>
-    <div class="grid">${generatedVariant}</div>
-  </body></html>`
+    section { margin-bottom:40px; }
+    h2 { color:#1a1a1a; font-size:18px; margin:0 0 14px; border-bottom:2px solid #bbb; padding-bottom:6px; }
+  </style></head><body>${sectionsHtml}</body></html>`
 }
 
 
 const baseUrl = new URL(config.auth.mcpServerUrl).origin
-
 const variants = ['full', 'half_horizontal', 'half_vertical', 'quadrant'] as MarkupVariant[]
-console.log('Generating OG TRMNL render')
-const generatedVariants = variants.map(v => {
-  const [w, h] = SIZES[v]
-  return generateVariant(renderMarkup(sampleFlight, v, 0, baseUrl), v, w, h, 'screen--og')
+
+// Render every variant for both OG and TRMNL X for a single flight.
+function renderScenarioGrid(flight: FlightDisplayData): string {
+  const og = variants.map(v => {
+    const [w, h] = SIZES[v]
+    return generateVariant(renderMarkup(flight, v, 0, baseUrl), v, w, h, 'screen--og')
+  }).join('')
+  const x = variants.map(v => {
+    const [w, h] = xSIZES[v]
+    return generateVariant(renderMarkup(flight, v, 0, baseUrl), v, w, h, 'screen--v2 screen--lg')
+  }).join('')
+  return og + x
+}
+
+const sections = scenarios.map(sc => {
+  console.log(`\nScenario: ${sc.title}`)
+  return `<section><h2>${sc.title}</h2><div class="grid">${renderScenarioGrid(sc.flight)}</div></section>`
 }).join('')
 
-
-console.log('Generating TRMNL X render')
-const generatedXVariants = variants.map(v => {
-  const [w, h] = xSIZES[v]
-  return generateVariant(renderMarkup(sampleFlight, v, 0, baseUrl), v, w, h, 'screen--v2 screen--lg')
-}).join('')
-
-
-writeFileSync('flight-preview.html', generatePage(generatedVariants + generatedXVariants))
+writeFileSync('flight-preview.html', generatePage(sections))

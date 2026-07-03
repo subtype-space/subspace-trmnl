@@ -1,8 +1,8 @@
 // This module focuses on refining the flight metadata returned by the API
 // Do some more data massaging to produce a FlightDisplayData object that's passed back to the renderer.
-import type { AeroFlightContract, AeroFlightStatus, AeroLocation } from '../../types/aerodatabox/types.js'
+import type { AeroDepartureArrival, AeroFlightContract, AeroFlightStatus, AeroLocation } from '../../types/aerodatabox/types.js'
 import type { FlightDisplayData } from '../../types/trmnl/flightTypes.js'
-import { calcProgress, formatHeading } from './formatters.js'
+import { calcProgress, formatDelayString, formatHeading } from './formatters.js'
 
 // Past this point along the route, a low-altitude flight is descending toward
 // arrival rather than still climbing out of departure.
@@ -120,9 +120,24 @@ function formatEta(flight: AeroFlightContract): string {
   return formatLocalTime(timeInfo)
 }
 
+function formatScheduled(point: AeroDepartureArrival): string {
+  return formatLocalTime(point.scheduledTime)
+}
+
 // Parse UTC time string from API (handles "2026-02-11 08:28Z" format with space instead of T)
 function parseUtcMs(utcStr: string): number {
   return new Date(utcStr.replace(' ', 'T')).getTime()
+}
+
+// Delay in minutes vs the scheduled time for a departure/arrival
+function calcDelayMin(point: AeroDepartureArrival): number | null {
+  const scheduledTimeUtc = point.scheduledTime?.utc
+  const effectiveUtc = (point.runwayTime ?? point.revisedTime ?? point.predictedTime)?.utc
+  if (!scheduledTimeUtc || !effectiveUtc) return null
+  const scheduledMs = parseUtcMs(scheduledTimeUtc)
+  const effectiveMs = parseUtcMs(effectiveUtc)
+  if (isNaN(scheduledMs) || isNaN(effectiveMs)) return null
+  return Math.round((effectiveMs - scheduledMs) / 60_000)
 }
 
 // Get best arrival time as UTC ms for comparison
@@ -158,6 +173,7 @@ const ACTIVE_STATUSES: AeroFlightStatus[] = ['EnRoute', 'Departed', 'Approaching
 const PREFLIGHT_STATUSES: AeroFlightStatus[] = ['Expected', 'CheckIn', 'Boarding', 'GateClosed', 'Delayed']
 const LIKELY_ARRIVED_BUFFER_MS = 30 * 60 * 1000 // 30 minutes
 
+// Builds the gigantic object that the renderer uses to display the flight tile
 export function buildFlightDisplayData(flight: AeroFlightContract): FlightDisplayData {
   const loc = flight.location
   const isActive = ACTIVE_STATUSES.includes(flight.status)
@@ -208,11 +224,24 @@ export function buildFlightDisplayData(flight: AeroFlightContract): FlightDispla
   // Heading
   const heading = formatHeading(loc?.trueTrack?.deg)
 
-  // Departure time (airport local)
+  // Departure (actual/revised) + scheduled "was" anchor + delay
   const depTime = formatDepTime(flight)
+  const schedDep = formatScheduled(flight.departure)
+  const depDelayMin = calcDelayMin(flight.departure)
 
-  // ETA
+  // Arrival (actual/revised) + scheduled "was" anchor + delay
   const eta = formatEta(flight)
+  const schedEta = formatScheduled(flight.arrival)
+  const delayMin = calcDelayMin(flight.arrival)
+
+
+  let delayString = formatDelayString(delayMin)
+  if (delayString && (status === 'Delayed' || status === 'Canceled' || status === 'Diverted')) delayString = null
+
+  // Countdowns (from now) — power the no-telemetry fallback tile (departs-in before wheels-up, arrives-in after)
+  const departureMs = getDepartureUtcMs(flight)
+  const minsToDeparture = departureMs != null ? Math.round((departureMs - Date.now()) / 60_000) : null
+  const minsRemaining = arrivalMs != null ? Math.round((arrivalMs - Date.now()) / 60_000) : null
 
   // Last updated — prefer location reportedAtUtc (live telemetry) over flight-level lastUpdatedUtc
   let lastUpdated = '--'
@@ -267,8 +296,15 @@ export function buildFlightDisplayData(flight: AeroFlightContract): FlightDispla
     aircraftModel,
     aircraftIcao: '',
     heading,
+    delayString,
     depTime,
+    schedDep,
+    depDelayMin,
     eta,
+    schedEta,
+    delayMin,
+    minsToDeparture,
+    minsRemaining,
     progressPct,
     lastUpdated,
   }

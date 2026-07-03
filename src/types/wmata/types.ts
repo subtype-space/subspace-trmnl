@@ -21,3 +21,14 @@ export type RailPrediction = {
   Min: string
 }
 
+export type MetroMarkup = {
+  instanceName: string
+  displayLine: string
+  status: string
+  subtitleFinal: string
+  selectedLines: string[]
+  disruption: Record<string, number>
+  alert: Record<string, number>
+  totalIncidents: number
+  utcOffset: number
+}

@@ -1,6 +1,6 @@
 import rateLimit, { RateLimitRequestHandler } from 'express-rate-limit'
-import { logger } from './logger.js'
 import { Request, Response } from 'express'
+import { logger } from './logger.js'
 import { getTRMNLIPs } from '../auth/trmnlAuth.js'
 
 let ips: Set<string> = new Set()
