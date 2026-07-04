@@ -86,3 +86,5 @@ If creating a new release, be sure to ask the user if they wish to create one. T
 Major version bump example: 1.5.5 -> 2.0.0 | 2.5.3 -> 3.0.0
 Minor version bump example: 1.5.5 -> 1.6.0 | 2.9.3 -> 2.10.0
 Patch version bump example: 1.5.5 -> 1.5.6 | 1.9.9 -> 1.9.10
+
+When bumping the version on the v1 branch, use `npm version <patch|minor|major> --no-git-tag-version` instead of hand-editing the `version` field in `package.json`. This updates `package.json` and `package-lock.json` together so their `version` fields never drift — a PR check (`.github/workflows/pr-check.yml`) fails the build if they disagree. Commit both files, then tag and push per the flow above.
