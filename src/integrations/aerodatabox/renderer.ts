@@ -32,6 +32,9 @@ function isArrived(f: FlightDisplayData): boolean {
 // `terse` picks the short labels (DEP IN / ARR IN) used on the space-constrained half variants.
 function progressTile(f: FlightDisplayData, terse: boolean): { label: string; value: string } {
   if (isArrived(f)) {
+    // bit of a misnomer. eta resolves to actual times in priority:
+    // runwayTime > revisedTime > predictedTime > scheduledTime
+    // We just show 'landed' as a fallback case. Shouldn't really happen though
     return { label: 'ARRIVED', value: f.eta !== '--' ? escapeHtml(f.eta) : 'Landed' }
   }
   const countdownState = countdown(f)

@@ -51,6 +51,9 @@ function renderSettingsPage(opts: {
         <p class="hint section-gap">
           Live telemetry (speed, altitude, heading) may be unavailable for flights in areas with sparse ADS-B receiver coverage, such as over the Atlantic.
         </p>
+        <p class="hint section-gap">
+          Flights that use a code-share flight number may have difficulties resolving the corrrect aircraft. If you notice this issue, try using the flight number of the airline that is actually operating the flight.
+        </p>
       </div>
 
       <button class="submit-btn" type="submit">Save settings</button>

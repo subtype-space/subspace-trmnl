@@ -77,6 +77,14 @@ Optional:
 - `LOG_LEVEL` - Logging level (default: info)
 - `TRMNL_DB_PATH` - SQLite database path
 
+## Flight tracker API economics (as of July 2026)
+
+The flight tracker runs on AeroDataBox via api.market ($15/mo, 24k units). Each lookup is ~2 units and we sit around 55-60% of quota at 180 installs, so there's room to roughly double before needing the next tier. Revisit at ~85% sustained usage — upgrade the AeroDataBox tier, don't switch providers. TRMNL revenue (~$32/mo) covers the API cost.
+
+We evaluated the Flightradar24 API and passed on it. Their API (unlike their website) has no schedule or status data — no scheduled times, delays, or cancellations — and at 8 credits per flight we'd have zero quota headroom. Their 60k credit Explorer promo also shrinks to 30k after Dec 31, 2026, and credit top-ups require an active subscription, so there's no cheap standalone option. If schedule coverage ever becomes the real problem, compare against FlightAware AeroAPI or OAG, not FR24.
+
+Data quality note: `CanceledUncertain` from AeroDataBox usually means "no live data attached" (their marketing-number-to-callsign mapping breaks on regional/codeshare flights, e.g. UA4012), not a confirmed cancellation. aeroClient logs these occurrences — check the logs before assuming flights are actually being canceled.
+
 ## Release strategy
 
 If on the dev branch, do not create tags or push tags to this branch. Tags should ideally only be created on the v1 branch.
@@ -86,3 +94,5 @@ If creating a new release, be sure to ask the user if they wish to create one. T
 Major version bump example: 1.5.5 -> 2.0.0 | 2.5.3 -> 3.0.0
 Minor version bump example: 1.5.5 -> 1.6.0 | 2.9.3 -> 2.10.0
 Patch version bump example: 1.5.5 -> 1.5.6 | 1.9.9 -> 1.9.10
+
+When bumping the version on the v1 branch, use `npm version <patch|minor|major> --no-git-tag-version` instead of hand-editing the `version` field in `package.json`. This updates `package.json` and `package-lock.json` together so their `version` fields never drift — a PR check (`.github/workflows/pr-check.yml`) fails the build if they disagree. Commit both files, then tag and push per the flow above.
