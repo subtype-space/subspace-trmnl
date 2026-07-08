@@ -107,7 +107,13 @@ export class AeroClient {
       const flights = (await res.json()) as AeroFlightContract[]
       if (!Array.isArray(flights) || flights.length === 0) return null
 
-      return this.pickBestFlight(flights)
+      const best = this.pickBestFlight(flights)
+      // Trying to debug code-share flight numbers since AeroDataBox isn't returning
+      // Determining percentage of userbase that is seeing this error
+      if (best?.status === 'CanceledUncertain') {
+        logger.info(`[AERO] Possible codeShare flight. CanceledUncertain for ${flightNumber} (lastUpdated: ${best.lastUpdatedUtc ?? 'unknown'})`)
+      }
+      return best
     })
   }
 
