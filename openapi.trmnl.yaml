@@ -1,0 +1,516 @@
+openapi: 3.0.3
+info:
+  title: subspace-api — TRMNL plugin endpoints
+  description: >
+    OAuth install flow, markup rendering, settings management, and uninstall webhooks
+    for the TRMNL "Is my metro commute screwed?" and flight tracker plugins.
+  version: 1.18.5
+servers:
+  - url: https://api.subtype.space/v1/trmnl
+
+components:
+  securitySchemes:
+    trmnlBearer:
+      type: http
+      scheme: bearer
+      description: SHA-256 hash of this token is checked against known installed TRMNL access tokens.
+
+  parameters:
+    uuidQuery:
+      name: uuid
+      in: query
+      required: true
+      schema:
+        type: string
+      description: TRMNL user_uuid for this plugin installation.
+    jwtQuery:
+      name: jwt
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Short-lived TRMNL-signed JWT (RS256) authorizing access to the settings page. sub must match uuid.
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+    OkResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+
+    TrmnlUserPayload:
+      type: object
+      description: TRMNL webhook payload envelope sent on install_success and markup calls.
+      required: [user_uuid]
+      properties:
+        user_uuid:
+          type: string
+        trmnl:
+          type: string
+          description: >
+            JSON-encoded TRMNL screen/user metadata blob (parsed via JSON.parse by parseTrmnlMeta).
+            Sent as a plain string since form-urlencoded has no native object encoding; shape is opaque/TRMNL-defined.
+
+    InstallSuccessPayload:
+      type: object
+      properties:
+        user:
+          type: object
+          required: [uuid]
+          properties:
+            uuid:
+              type: string
+            plugin_setting_id:
+              type: integer
+
+    UninstallPayload:
+      type: object
+      required: [user_uuid]
+      properties:
+        user_uuid:
+          type: string
+
+    MarkupResponse:
+      type: object
+      properties:
+        markup:
+          type: string
+        markup_half_horizontal:
+          type: string
+        markup_half_vertical:
+          type: string
+        markup_quadrant:
+          type: string
+        shared:
+          type: string
+          enum: ['']
+
+    MetroManageForm:
+      type: object
+      required: [uuid, primaryLine]
+      properties:
+        uuid:
+          type: string
+        jwt:
+          type: string
+        primaryLine:
+          type: string
+          enum: [RD, BL, OR, SV, GR, YL]
+        lines:
+          description: Zero or more secondary line codes to watch (checkbox group).
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+                enum: [RD, BL, OR, SV, GR, YL]
+        crass:
+          type: string
+          enum: ['1']
+          description: Present/'1' when crass-language mode is enabled.
+
+    FlightManageForm:
+      type: object
+      required: [uuid]
+      properties:
+        uuid:
+          type: string
+        jwt:
+          type: string
+        flightNumbers:
+          type: string
+          description: Comma-separated flight numbers, e.g. "UA804, DL123". Max 4, each matching ^[A-Z0-9]{2,3}\d{1,4}$.
+
+    RailPredictionResponse:
+      type: object
+      properties:
+        Trains:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        cached:
+          type: boolean
+
+paths:
+  /metro/install:
+    get:
+      summary: OAuth callback — exchanges TRMNL install code for an access token
+      operationId: metroInstall
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema: { type: string }
+        - name: installation_callback_url
+          in: query
+          required: true
+          schema: { type: string, format: uri }
+          description: Must be an https:// URL on trmnl.com/usetrmnl.com.
+      responses:
+        '302':
+          description: Redirect back to the TRMNL callback URL on success.
+        '400':
+          description: Missing/invalid token or callback URL.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '502':
+          description: TRMNL token exchange failed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /metro/install_success:
+    post:
+      summary: Binds a TRMNL user UUID to the installed access token and seeds default settings
+      operationId: metroInstallSuccess
+      security: [{ trmnlBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InstallSuccessPayload' }
+      responses:
+        '200':
+          description: Bound successfully.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OkResponse' }
+        '400':
+          description: Missing user.uuid.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401':
+          description: Missing/invalid bearer token.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /metro/markup:
+    post:
+      summary: Renders the DC Metro commute-status screen markup for a TRMNL device
+      operationId: metroMarkup
+      security: [{ trmnlBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: '#/components/schemas/TrmnlUserPayload' }
+      responses:
+        '200':
+          description: Rendered markup variants.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarkupResponse' }
+        '400':
+          description: Missing user_uuid.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401':
+          description: Missing/invalid bearer token.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '503':
+          description: WMATA integration not configured.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /metro/uninstall:
+    post:
+      summary: Revokes a user's metro plugin binding
+      operationId: metroUninstall
+      security: [{ trmnlBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: '#/components/schemas/UninstallPayload' }
+          application/json:
+            schema: { $ref: '#/components/schemas/UninstallPayload' }
+      responses:
+        '200':
+          description: Uninstalled.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OkResponse' }
+        '400':
+          description: Missing user_uuid.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401':
+          description: Missing/invalid bearer token or UUID not bound.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /metro/manage:
+    get:
+      summary: Renders the HTML settings page for the metro plugin
+      operationId: metroManageGet
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/uuidQuery'
+        - $ref: '#/components/parameters/jwtQuery'
+      responses:
+        '200':
+          description: Settings page HTML.
+          content:
+            text/html:
+              schema: { type: string }
+        '400':
+          description: Missing uuid.
+          content:
+            text/plain:
+              schema: { type: string }
+        '401':
+          description: Missing/invalid/expired TRMNL JWT.
+          content:
+            text/plain:
+              schema: { type: string }
+        '403':
+          description: JWT subject does not match uuid.
+          content:
+            text/plain:
+              schema: { type: string }
+    post:
+      summary: Saves metro plugin settings (primary line, watched lines, crass mode)
+      operationId: metroManagePost
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: '#/components/schemas/MetroManageForm' }
+      responses:
+        '302':
+          description: Redirect back to TRMNL or the settings page.
+        '400':
+          description: Missing/invalid uuid or primaryLine.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401':
+          description: Missing/invalid/expired TRMNL JWT (JWT/uuid are read from the body here).
+          content:
+            text/plain:
+              schema: { type: string }
+
+  /metro/rail-prediction:
+    get:
+      summary: WMATA rail arrival predictions for one or more station codes
+      operationId: metroRailPrediction
+      description: Restricted to known TRMNL worker IPs (or bypassed via config) rather than bearer auth.
+      security: []
+      parameters:
+        - name: stations
+          in: query
+          required: true
+          schema: { type: string }
+          description: Comma-separated WMATA station codes, or "All".
+      responses:
+        '200':
+          description: Predictions retrieved (possibly cached).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RailPredictionResponse' }
+        '400':
+          description: No station codes provided.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '403':
+          description: Caller IP is not a recognized TRMNL worker IP.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '502':
+          description: WMATA upstream error.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /flights/install:
+    get:
+      summary: OAuth callback — exchanges TRMNL install code for an access token (flight tracker)
+      operationId: flightsInstall
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema: { type: string }
+        - name: installation_callback_url
+          in: query
+          required: true
+          schema: { type: string, format: uri }
+      responses:
+        '302':
+          description: Redirect back to the TRMNL callback URL on success.
+        '400':
+          description: Missing/invalid token or callback URL.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '502':
+          description: TRMNL token exchange failed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /flights/install_success:
+    post:
+      summary: Binds a TRMNL user UUID to the installed access token for the flight tracker plugin
+      operationId: flightsInstallSuccess
+      security: [{ trmnlBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InstallSuccessPayload' }
+      responses:
+        '200':
+          description: Bound successfully.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OkResponse' }
+        '400':
+          description: Missing user.uuid.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401':
+          description: Missing/invalid bearer token.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /flights/markup:
+    post:
+      summary: Renders the flight-tracker screen markup for a TRMNL device
+      operationId: flightsMarkup
+      security: [{ trmnlBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: '#/components/schemas/TrmnlUserPayload' }
+      responses:
+        '200':
+          description: Rendered markup variants.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarkupResponse' }
+        '400':
+          description: Missing user_uuid.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401':
+          description: Missing/invalid bearer token.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '503':
+          description: AeroDataBox integration not configured.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /flights/uninstall:
+    post:
+      summary: Revokes a user's flight tracker plugin binding
+      operationId: flightsUninstall
+      security: [{ trmnlBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: '#/components/schemas/UninstallPayload' }
+          application/json:
+            schema: { $ref: '#/components/schemas/UninstallPayload' }
+      responses:
+        '200':
+          description: Uninstalled.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OkResponse' }
+        '400':
+          description: Missing user_uuid.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401':
+          description: Missing/invalid bearer token or UUID not bound.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /flights/manage:
+    get:
+      summary: Renders the HTML settings page for the flight tracker plugin
+      operationId: flightsManageGet
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/uuidQuery'
+        - $ref: '#/components/parameters/jwtQuery'
+      responses:
+        '200':
+          description: Settings page HTML.
+          content:
+            text/html:
+              schema: { type: string }
+        '400':
+          description: Missing uuid.
+          content:
+            text/plain:
+              schema: { type: string }
+        '401':
+          description: Missing/invalid/expired TRMNL JWT.
+          content:
+            text/plain:
+              schema: { type: string }
+        '403':
+          description: JWT subject does not match uuid.
+          content:
+            text/plain:
+              schema: { type: string }
+    post:
+      summary: Saves flight tracker settings (flight numbers, max 4)
+      operationId: flightsManagePost
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: '#/components/schemas/FlightManageForm' }
+      responses:
+        '302':
+          description: Redirect back to TRMNL or the settings page.
+        '400':
+          description: Missing uuid, invalid flight number(s), or more than 4 flights.
+          content:
+            text/html:
+              schema: { type: string }
+        '401':
+          description: Missing/invalid/expired TRMNL JWT (JWT/uuid are read from the body here).
+          content:
+            text/plain:
+              schema: { type: string }
