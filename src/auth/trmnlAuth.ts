@@ -24,11 +24,13 @@ const sha256 = (v: string) => crypto.createHash('sha256').update(v).digest('hex'
 // This is all middleware
 // Do not apply the same type of oauth here
 export const requireTrmnlAuth: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
-  logger.info('[AUTH] TRMNL Auth MW - checking for TRMNL credentials')
+  logger.info(`[AUTH] TRMNL Auth MW - checking for TRMNL credentials - ${req.originalUrl}`)
 
   const auth = req.headers.authorization
   if (!auth || typeof auth !== 'string' || !auth.toLowerCase().startsWith('bearer ')) {
-    logger.warn('[AUTH] - TRMNL No auth header detected or is invalid')
+    logger.warn(
+      `[AUTH] - TRMNL No auth header detected or is invalid - ${req.originalUrl} - user_uuid: ${readUuid(req) ?? 'none'}`
+    )
     res.status(401).json({error: 'Unauthorized', message: 'Missing authorization'})
     return
   }
@@ -37,7 +39,7 @@ export const requireTrmnlAuth: RequestHandler = async (req: Request, res: Respon
   const tokenHash = sha256(auth.slice(7).trim())
 
   if (!(await isKnownTokenHash(tokenHash))) {
-    logger.info('[AUTH] Unrecognized TRMNL token hash')
+    logger.info(`[AUTH] Unrecognized TRMNL token hash - ${req.originalUrl}`)
     logger.debug(tokenHash)
     res.status(401).json({ error: 'Unauthorized', message: 'Access Denied'})
     return
@@ -65,14 +67,14 @@ export const requireTrmnlUuidMatch: RequestHandler = async (req: Request, res: R
   // tokenHash "should" be the access token we get from TRMNL that gets hashed - it gets binded to a UUID
   const tokenHash = (req as any).trmnl?.tokenHash as string | undefined
   if (!tokenHash) {
-    logger.warn('[AUTH] No token provided')
+    logger.warn(`[AUTH] No token provided - ${req.originalUrl}`)
     res.status(401).json({ error: 'Unauthorized', message: 'missing trmnl auth context' })
     return
   }
 
   const uuid = readUuid(req)
   if (!uuid) {
-    logger.warn('[AUTH] Missing UUID')
+    logger.warn(`[AUTH] Missing UUID - ${req.originalUrl}`)
     res.status(400).json({ error: 'Bad Request', message: 'missing uuid' })
     return
   }
@@ -80,13 +82,13 @@ export const requireTrmnlUuidMatch: RequestHandler = async (req: Request, res: R
   const bound = await getUserUuidByTokenHash(tokenHash)
   if (!bound) {
     // IMPORTANT: do not bind here; install_success is the place to bind.
-    logger.warn('[AUTH] UUID not bound')
+    logger.warn(`[AUTH] UUID not bound - ${req.originalUrl}`)
     res.status(401).json({ error: 'Unauthorized', message: 'uuid_not_bound' })
     return
   }
 
   if (bound !== uuid) {
-    logger.warn('[AUTH] token/uuid mismatch for ', tokenHash)
+    logger.warn(`[AUTH] token/uuid mismatch for ${tokenHash} - ${req.originalUrl}`)
     res.status(401).json({ error: 'Unauthorized', message: 'Unauthorized access' })
     return
   }
