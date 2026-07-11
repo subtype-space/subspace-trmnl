@@ -36,10 +36,12 @@ export const requireTrmnlAuth: RequestHandler = async (req: Request, res: Respon
   }
 
   // Strip 'Bearer ' and only hash token
+  // Bearer token is unique to user + plugin - the users `access_token`
+  // we must persist this token as it we'll use it to authenticate the screen generation requests from TRMNL
   const tokenHash = sha256(auth.slice(7).trim())
 
   if (!(await isKnownTokenHash(tokenHash))) {
-    logger.info(`[AUTH] Unrecognized TRMNL token hash - ${req.originalUrl}`)
+    logger.warn(`[AUTH] Unrecognized TRMNL token hash - ${req.originalUrl}`)
     logger.debug(tokenHash)
     res.status(401).json({ error: 'Unauthorized', message: 'Access Denied'})
     return
@@ -88,7 +90,9 @@ export const requireTrmnlUuidMatch: RequestHandler = async (req: Request, res: R
   }
 
   if (bound !== uuid) {
-    logger.warn(`[AUTH] token/uuid mismatch for ${tokenHash} - ${req.originalUrl}`)
+    logger.warn(
+      `[AUTH] token/uuid mismatch for ${tokenHash} - bound=${bound} presented=${uuid} - ${req.originalUrl}`
+    )
     res.status(401).json({ error: 'Unauthorized', message: 'Unauthorized access' })
     return
   }
