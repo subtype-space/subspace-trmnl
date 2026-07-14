@@ -79,6 +79,8 @@ export async function storeTrmnlToken(tokenHash: string) {
   ).run(tokenHash, Date.now())
 }
 
+// access tokens are sha256 hashed before storage in DB for security
+// this checks if we've seen this hash before
 export async function isKnownTokenHash(tokenHash: string): Promise<boolean> {
   const db = getDb()
   logger.debug('[ DB ] Check if we know this incoming token hash')
@@ -95,6 +97,7 @@ export async function isKnownTokenHash(tokenHash: string): Promise<boolean> {
   return !!row && row.revoked_at == null
 }
 
+// Update the last_seen_at timestamp for a given token hash
 export async function touchTrmnlToken(tokenHash: string) {
   const db = getDb()
   logger.info('[ DB ] Refreshing user token')
@@ -107,6 +110,7 @@ export async function touchTrmnlToken(tokenHash: string) {
   ).run(Date.now(), tokenHash)
 }
 
+// based on the access token (unique to user + plugin, hashed) get the user uuid that's bound to it, if any
 export function getUserUuidByTokenHash(tokenHash: string): string | null {
   const db = getDb()
   logger.info('[ DB ] Retrieving UUID for hash: ', tokenHash)
@@ -123,7 +127,8 @@ export function getUserUuidByTokenHash(tokenHash: string): string | null {
   return row?.user_uuid ?? null
 }
 
-// bind once: only set if currently null/empty
+// Holding a valid, recognized access token is the actual proof of identity here (see requireTrmnlAuth),
+// so a fresh install_success call is trusted to (re)bind the uuid rather than being locked to whatever was first recorded.
 export function bindUserUuidToToken(tokenHash: string, userUuid: string) {
   const db = getDb()
   logger.info(`[ DB ] Binding user to ${tokenHash}`)
@@ -132,11 +137,11 @@ export function bindUserUuidToToken(tokenHash: string, userUuid: string) {
     update trmnl_connections
     set user_uuid = ?
     where access_token_hash = ?
-      and (user_uuid is null or user_uuid = '')
   `
   ).run(userUuid, tokenHash)
 }
 
+// remove outdated hashed access tokens from the database (revoked or stale)
 export function pruneStaleTokens() {
   const db = getDb()
   const now = Date.now()
