@@ -21,7 +21,8 @@
     "typecheck": "tsc -p tsconfig.test.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "preview": "npx tsx scripts/renderFlightPreview.ts"
+    "preview": "npx tsx scripts/renderFlightPreview.ts",
+    "trmnl:query": "npx tsx scripts/trmnlQuery.ts"
   },
   "files": [
     "build"

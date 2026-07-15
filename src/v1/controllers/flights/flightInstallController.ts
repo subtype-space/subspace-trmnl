@@ -7,6 +7,8 @@ import { storeTrmnlToken } from '../../../utils/dbConnector.js'
 const sha256 = (v: string) => crypto.createHash('sha256').update(v).digest('hex')
 
 const flightInstallController: RequestHandler = async (req, res): Promise<void> => {
+  logger.info('[TRMNL] Incoming flight install request!')
+  logger.debug('[TRMNL] Request debug:', { query: req.query, body: req.body })
   const token = req.query.code as string | undefined
   const callback = req.query.installation_callback_url as string
 
@@ -30,6 +32,7 @@ const flightInstallController: RequestHandler = async (req, res): Promise<void> 
     return
   }
 
+  logger.debug('[TRMNL] Exchanging token for access token...')
   const trmnlResp = await fetch('https://trmnl.com/oauth/token', {
     method: 'POST',
     headers: {
