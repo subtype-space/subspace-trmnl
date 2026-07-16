@@ -100,7 +100,7 @@ export async function isKnownTokenHash(tokenHash: string): Promise<boolean> {
 // Update the last_seen_at timestamp for a given token hash
 export async function touchTrmnlToken(tokenHash: string) {
   const db = getDb()
-  logger.info('[ DB ] Refreshing user token')
+  logger.debug('[ DB ] Refreshing user token')
   db.prepare(
     `
     update trmnl_connections
@@ -113,7 +113,7 @@ export async function touchTrmnlToken(tokenHash: string) {
 // based on the access token (unique to user + plugin, hashed) get the user uuid that's bound to it, if any
 export function getUserUuidByTokenHash(tokenHash: string): string | null {
   const db = getDb()
-  logger.info('[ DB ] Retrieving UUID for hash: ', tokenHash)
+  logger.debug('[ DB ] Retrieving UUID for hash: ', tokenHash)
   const row = db
     .prepare(
       `
@@ -183,9 +183,10 @@ export async function revokeByUserUuid(userUuid: string) {
   ).run(Date.now(), userUuid)
 }
 
+// TODO: Refactor this
 export async function getSettingsByUuid(userUuid: string): Promise<TrmnlSettings | null> {
   const db = getDb()
-  logger.info(`[ DB ] Getting settings for ${userUuid}`)
+  logger.info(`[ DB ] Getting WMATA settings for UUID: ${userUuid}`)
   const row = db
     .prepare(
       `
@@ -243,9 +244,10 @@ export async function upsertSettings(input: TrmnlSettings) {
 }
 
 // Flight settings
+// TODO: Refactor this
 export async function getFlightSettingsByUuid(userUuid: string): Promise<TrmnlFlightSettings | null> {
   const db = getDb()
-  logger.info(`[ DB ] Getting flight settings for ${userUuid}`)
+  logger.info(`[ DB ] Getting flight settings for UUID: ${userUuid}`)
   const row = db
     .prepare(
       `
