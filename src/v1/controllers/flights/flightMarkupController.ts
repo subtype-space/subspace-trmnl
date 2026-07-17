@@ -73,7 +73,6 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
 
   let displayData: FlightDisplayData
   try {
-    logger.info(`[AERO] Fetching data for ${flightNumber})`)
     const aeroFlight = await aeroClient.getFlightByNumberCached(flightNumber)
 
     if (!aeroFlight) {
