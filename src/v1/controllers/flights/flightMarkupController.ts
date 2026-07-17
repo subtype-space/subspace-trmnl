@@ -73,6 +73,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
 
   let displayData: FlightDisplayData
   try {
+    logger.info(`[FLGHT] Fetching data for ${flightNumber})`)
     const aeroFlight = await aeroClient.getFlightByNumberCached(flightNumber)
 
     if (!aeroFlight) {
@@ -138,4 +139,6 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
     markup_quadrant: renderMarkup(displayData, 'quadrant', utcOffset, baseUrl),
     shared: '',
   })
+
+  logger.info(`[FLGHT] Served markup for ${flightNumber} to user ${userUuid}`)
 }

@@ -103,9 +103,9 @@ export const requireTrmnlUuidMatch: RequestHandler = async (req: Request, res: R
   next()
 }
 
+// checks if the request is coming from a TRMNL worker IP address. If not, it returns a 403 Forbidden response
 export const trmnlAuthByIP: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
-  logger.info('[AUTH] Check TRMNL authentication')
-
+  logger.debug('[AUTH] Checking if request is coming from a TRMNL worker IP address')
   try {
     if (TRMNL_IP_ALLOW_BYPASS) {
       logger.warn('[AUTH] Bypassing TRMNL worker IP check')
