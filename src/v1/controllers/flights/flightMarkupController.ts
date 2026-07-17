@@ -23,20 +23,20 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
   const userUuid = req.body?.user_uuid as string | undefined
   const trmnlRaw = req.body?.trmnl
 
-  logger.debug('[FLGHT] Incoming markup request: ', { tokenHash, userUuid, trmnlRaw })
+  logger.debug('[AERO] Incoming markup request: ', { tokenHash, userUuid, trmnlRaw })
   if (!tokenHash) {
     res.status(500).json({ error: 'Bad Request', message: 'missing trmnl auth context' })
     return
   }
 
   if (typeof userUuid !== 'string' || !userUuid) {
-    logger.debug('[FLGHT] UUID was not provided. Will not render.')
+    logger.debug('[AERO] UUID was not provided. Will not render.')
     res.status(400).json({ error: 'Bad Request', message: 'missing user_uuid' })
     return
   }
 
   if (!aeroClient) {
-    logger.warn('[FLGHT] AeroDataBox API key not configured')
+    logger.warn('[AERO] AeroDataBox API key not configured')
     res.status(503).json({ error: 'Service Unavailable', message: 'Service Unavailable :(' })
     return
   }
@@ -73,7 +73,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
 
   let displayData: FlightDisplayData
   try {
-    logger.info(`[FLGHT] Fetching data for ${flightNumber})`)
+    logger.info(`[AERO] Fetching data for ${flightNumber})`)
     const aeroFlight = await aeroClient.getFlightByNumberCached(flightNumber)
 
     if (!aeroFlight) {
@@ -105,7 +105,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
       displayData = buildFlightDisplayData(aeroFlight)
     }
   } catch (e) {
-    logger.warn(`[FLGHT] Failed to fetch data for ${flightNumber}`, String(e))
+    logger.warn(`[AERO] Failed to fetch data for ${flightNumber}`, String(e))
     displayData = {
       flightIata: flightNumber,
       airlineIata: airlineCode,
@@ -140,5 +140,5 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
     shared: '',
   })
 
-  logger.info(`[FLGHT] Served markup for ${flightNumber} to user ${userUuid}`)
+  logger.info(`[AERO] Served markup for ${flightNumber} to user ${userUuid}`)
 }

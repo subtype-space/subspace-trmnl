@@ -74,12 +74,12 @@ export const flightManageGetController: RequestHandler = async (req, res) => {
   const uuid = req.query.uuid as string | undefined
   const jwt = req.query.jwt as string | undefined
   if (!uuid) {
-    logger.warn('[FLGHT] Missing UUID in request for settings page')
+    logger.warn('[AERO] Missing UUID in request for settings page')
     res.status(400).send('Bad Request - missing UUID')
     return
   }
 
-  logger.info('[FLGHT] Displaying plugin settings page')
+  logger.info('[AERO] Displaying plugin settings page')
   const settings = await getFlightSettingsByUuid(uuid)
 
   res.type('text/html').send(
@@ -101,7 +101,7 @@ export const flightManagePostController: RequestHandler = async (req, res) => {
 
   const jwt = req.body?.jwt ?? ''
 
-  logger.info('[FLGHT] Saving user flight settings')
+  logger.info('[AERO] Saving user flight settings')
   const raw = req.body?.flightNumbers
   const rawStr = typeof raw === 'string' ? raw : ''
 
@@ -141,7 +141,7 @@ export const flightManagePostController: RequestHandler = async (req, res) => {
   }
 
   const flightNumbers = flights.join(',')
-  logger.debug(`[FLGHT] ${uuid} updated flights to ${flightNumbers}`)
+  logger.debug(`[AERO] ${uuid} updated flights to ${flightNumbers}`)
 
   await upsertFlightSettings({ user_uuid: uuid, flight_numbers: flightNumbers })
 

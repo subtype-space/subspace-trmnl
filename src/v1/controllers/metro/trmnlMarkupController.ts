@@ -30,7 +30,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   }
 
   if (!client) {
-    logger.warn('[WMATA] WMATA API key not configured.')
+    logger.warn('[MTRO] WMATA API key not configured.')
     res.status(503).json({ error: 'Service Unavailable', message: 'WMATA monitoring not configured.'})
     return
   }
@@ -58,7 +58,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
     incidents = await client!.getIncidentsCached()
     logger.debug('[TRMNL] WMATA incidents fetched', { count: incidents.length })
   } catch (e) {
-    logger.warn('[WMATA] incidents fetch failed', String(e))
+    logger.warn('[MTRO] incidents fetch failed', String(e))
   }
 
   const totalIncidents = incidents.length

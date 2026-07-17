@@ -34,7 +34,7 @@ export class WmataClient {
       method: 'GET',
       headers: { api_key: this.apiKey },
     })
-    logger.debug(`[WMATA] Performing call for ${url}`)
+    logger.debug(`[MTRO] Performing call for ${url}`)
     if (!res.ok) {
       logger.warn(`Unable to retrieve WMATA response. Got ${res.status} - ${res.statusText}`)
       throw new Error(`WMATA API Error: ${res.status} ${res.statusText}`)
@@ -47,7 +47,7 @@ export class WmataClient {
     if (stationCodes.length === 0) return []
     // WMATA expects comma-separated station codes in the path
     const joined = stationCodes.map(encodeURIComponent).join(',')
-    logger.info(`[WMATA] Retrieving predictions for ${joined}`)
+    logger.info(`[MTRO] Retrieving predictions for ${joined}`)
     const data = await this.getJson<RailPredictionResponse>(
       `https://api.wmata.com/StationPrediction.svc/json/GetPrediction/${joined}`
     )
@@ -95,7 +95,7 @@ export class WmataClient {
 
   // Hydrate cache with any missing stations
   private async fetchMissingStations(missing: string[]): Promise<(code: string) => RailPrediction[]> {
-    logger.debug(`[WMATA] Fetching missing stations: [${missing.join(',')}]`)
+    logger.debug(`[MTRO] Fetching missing stations: [${missing.join(',')}]`)
     const trains = await this.getRailPredictions(missing)
     const grouped = new Map<string, RailPrediction[]>()
     for (const t of trains ?? []) {
@@ -115,7 +115,7 @@ export class WmataClient {
   ///////////////////////
 
   async getIncidents(): Promise<MetroIncident[]> {
-    logger.info('[WMATA] Retrieving WMATA incidents')
+    logger.info('[MTRO] Retrieving WMATA incidents')
     const data = await this.getJson<MetroIncidentResponse>('https://api.wmata.com/Incidents.svc/json/Incidents')
     return data.Incidents
   }
@@ -123,13 +123,13 @@ export class WmataClient {
   async getIncidentsCached(): Promise<MetroIncident[]> {
     const now = Date.now()
     if (this.cachedIncidents && now - this.cachedAtMs < this.INCIDENTS_TTL_MS) {
-      logger.debug('[WMATA] Cache hit for incidents')
+      logger.debug('[MTRO] Cache hit for incidents')
       return this.cachedIncidents
     }
 
     if (this.inFlight) return this.inFlight
 
-    logger.debug('[WMATA] Cache miss for incidents — fetching')
+    logger.debug('[MTRO] Cache miss for incidents — fetching')
     this.inFlight = (async () => {
       const fresh = await this.getIncidents()
       this.cachedIncidents = fresh
@@ -139,7 +139,7 @@ export class WmataClient {
     })().catch((err) => {
       this.inFlight = null
       if (this.cachedIncidents) {
-        logger.warn('[WMATA] Fetch failed, returning stale cache:', String(err))
+        logger.warn('[MTRO] Fetch failed, returning stale cache:', String(err))
         return this.cachedIncidents
       }
       throw err
