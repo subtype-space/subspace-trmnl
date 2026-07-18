@@ -17,7 +17,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { registerTools } from './v1/mcp/registerTools.js'
 
-import { logAuthedIdentity, logIncomingAuth } from './utils/authLogger.js'
+import { logAuthedIdentity, logIncomingIP } from './utils/authLogger.js'
 import { rateLimiter } from './utils/rateLimiter.js'
 
 logger.info('Starting up subspace-api!')
@@ -74,7 +74,7 @@ server.use('/v1/trmnl', rateLimiter, trmnlRouter)
 
 server.all(
   '/mcp',
-  logIncomingAuth,
+  logIncomingIP,
   authMiddleware,
   userAuthMiddleware, // BFF pattern: verify X-User-Authorization for defense-in-depth
   rateLimiter,

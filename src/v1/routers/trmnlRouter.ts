@@ -11,12 +11,12 @@ import flightInstallController from '../controllers/flights/flightInstallControl
 import { flightInstallSuccessController } from '../controllers/flights/flightInstallSuccessController.js'
 import { flightMarkupController } from '../controllers/flights/flightMarkupController.js'
 import { flightManageGetController, flightManagePostController } from '../controllers/flights/flightManageController.js'
-import { logIncomingAuth } from '../../utils/authLogger.js'
+import { logIncomingIP } from '../../utils/authLogger.js'
 const router = express.Router()
 
 // Should be mounted at /trmnl, so <api endpoint>/v1/trmnl/install and etc.
 
-router.use(logIncomingAuth)
+router.use(logIncomingIP)
 
 // metro handles free rail prediction and "Is my wmata commute screwed?" plugin
 router.get('/metro/install', trmnlInstallController)
