@@ -34,7 +34,7 @@ export const trmnlInstallSuccessController: RequestHandler = async (req, res) =>
 
     })
   }
-  logger.info('[TRMNL] install success for uuid', { userUuid })
+  logger.info('[TRML] install success for uuid', { userUuid })
   res.status(200).json({ ok: true })
 }
 

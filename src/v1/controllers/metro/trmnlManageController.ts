@@ -125,12 +125,12 @@ export const trmnlManageGetController: RequestHandler = async (req, res) => {
   const uuid = req.query.uuid as string | undefined
   const jwt = req.query.jwt as string | undefined
   if (!uuid) {
-    logger.warn('[TRMNL] Missing UUID in request for settings page')
+    logger.warn('[TRML] Missing UUID in request for settings page')
     res.status(400).send('Bad Request - missing UUID')
     return
   }
 
-  logger.info('[TRMNL] Displaying plugin settings page')
+  logger.info('[TRML] Displaying plugin settings page')
   const settings = await getSettingsByUuid(uuid)
   const primary = (settings as any)?.primary_line ?? 'RD'
   const lines = new Set(settings?.lines ? settings.lines.split(',').filter(Boolean) : ALL_LINES.filter((l) => l !== primary))
@@ -156,7 +156,7 @@ export const trmnlManagePostController: RequestHandler = async (req, res) => {
     return
   }
 
-  logger.info('[TRMNL] Saving user settings')
+  logger.info('[TRML] Saving user settings')
   const rawLines = req.body?.lines
   const primaryLine = req.body?.primaryLine
   if (typeof primaryLine !== 'string' || !ALL_LINES.includes(primaryLine as Line)) {
@@ -167,7 +167,7 @@ export const trmnlManagePostController: RequestHandler = async (req, res) => {
   const filtered = linesArr.map((s) => s.trim().toUpperCase()).filter((l) => l && l !== primaryLine)
   const lines = filtered.join(',')
   const crassLevel = req.body?.crass === '1' ? 1 : 0
-  logger.debug(`[TRMNL] ${uuid} updated user settings to ${primaryLine} - ${lines} - ${crassLevel ? 'enabled' : 'disabled'}`)
+  logger.debug(`[TRML] ${uuid} updated user settings to ${primaryLine} - ${lines} - ${crassLevel ? 'enabled' : 'disabled'}`)
 
   await upsertSettings({ user_uuid: uuid, primary_line: primaryLine, lines, crass_level: crassLevel })
 

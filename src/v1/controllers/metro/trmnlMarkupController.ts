@@ -17,14 +17,14 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   const userUuid = req.body?.user_uuid as string | undefined
   const trmnlRaw = req.body?.trmnl
 
-  logger.debug('[TRMNL] Incoming markup request: ', { tokenHash, userUuid, trmnlRaw })
+  logger.debug('[TRML] Incoming markup request: ', { tokenHash, userUuid, trmnlRaw })
   if (!tokenHash) {
     res.status(500).json({ error: 'Bad Request', message: 'missing trmnl auth context' })
     return
   }
 
   if (typeof userUuid !== 'string' || !userUuid) {
-    logger.debug('[TRMNL] UUID was not provided. Will not render.')
+    logger.debug('[TRML] UUID was not provided. Will not render.')
     res.status(400).json({ error: 'Bad Request', message: 'missing user_uuid' })
     return
   }
@@ -56,7 +56,7 @@ export const trmnlMarkupController: RequestHandler = async (req, res) => {
   let incidents: MetroIncident[] = []
   try {
     incidents = await client!.getIncidentsCached()
-    logger.debug('[TRMNL] WMATA incidents fetched', { count: incidents.length })
+    logger.debug('[TRML] WMATA incidents fetched', { count: incidents.length })
   } catch (e) {
     logger.warn('[MTRO] incidents fetch failed', String(e))
   }

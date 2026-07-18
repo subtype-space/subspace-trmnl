@@ -49,7 +49,7 @@ const trmnlInstallController: RequestHandler = async (req, res): Promise<void> =
   const raw = await trmnlResp.text()
 
   if (!trmnlResp.ok) {
-    logger.warn('[TRMNL] token exchange failed', raw)
+    logger.warn('[TRML] token exchange failed', raw)
     res.status(502).json({ error: 'Bad Gateway', message: 'trmnl_exchange_failed' })
     return
   }
@@ -70,11 +70,11 @@ const trmnlInstallController: RequestHandler = async (req, res): Promise<void> =
   }
 
   const hash = sha256(access_token)
-  logger.info('[TRMNL] Storing hashed access token...')
+  logger.info('[TRML] Storing hashed access token...')
   logger.debug(hash)
   await storeTrmnlToken(hash)
 
-  logger.debug('[TRMNL] Redirecting user back to', url.toString())
+  logger.debug('[TRML] Redirecting user back to', url.toString())
   res.redirect(url.toString())
   return
 }
