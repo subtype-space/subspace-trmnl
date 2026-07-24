@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { renderMarkup } from '../../../src/integrations/aerodatabox/renderer.js'
-import type { FlightDisplayData } from '../../../src/types/trmnl/flightTypes.js'
+import type { FlightDisplayData } from '../../../src/types/aerodatabox/types.js'
 
 // A live, on-schedule in-flight sample; spread + override per test.
 const sampleFlight: FlightDisplayData = {
