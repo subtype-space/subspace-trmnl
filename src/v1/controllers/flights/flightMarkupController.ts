@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express'
 import { config } from '../../../config.js'
-import type { FlightDisplayData } from '../../../types/trmnl/flightTypes.js'
+import type { FlightDisplayData } from '../../../types/aerodatabox/types.js'
 import { logger } from '../../../utils/logger.js'
 import { getFlightSettingsByUuid } from '../../../utils/dbConnector.js'
 import { parseTrmnlMeta } from '../../../utils/trmnlMeta.js'

@@ -43,7 +43,7 @@ export const rateLimiter: RateLimitRequestHandler = rateLimit({
       return 60
     }
     logger.info(`Rate limit check for ${key ? 'authenticated' : 'anon'} - ${ip}`)
-    logger.info(`${req.method} ${req.originalUrl} auth=${Boolean((req as any).authInfo)} ip=${ip}`)
+    logger.info(`${req.method} ${req.originalUrl} auth=${Boolean((req as any).authInfo)}`)
     return key ? 60 : 10
   },
   keyGenerator: (req: Request) => {

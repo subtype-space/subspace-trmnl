@@ -1,7 +1,6 @@
 // This module focuses on refining the flight metadata returned by the API
 // Do some more data massaging to produce a FlightDisplayData object that's passed back to the renderer.
-import type { AeroDepartureArrival, AeroFlightContract, AeroFlightStatus, AeroLocation } from '../../types/aerodatabox/types.js'
-import type { FlightDisplayData } from '../../types/trmnl/flightTypes.js'
+import type { AeroDepartureArrival, AeroFlightContract, AeroFlightStatus, AeroLocation, FlightDisplayData } from '../../types/aerodatabox/types.js'
 import { calcProgress, formatDelayString, formatHeading } from './formatters.js'
 
 // Past this point along the route, a low-altitude flight is descending toward
