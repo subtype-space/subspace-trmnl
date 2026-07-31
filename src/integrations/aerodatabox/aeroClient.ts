@@ -30,7 +30,8 @@ export class AeroClient {
   private readonly NOT_FOUND_TTL_MS = 55 * 60 * 1000 
 
   // API queue system
-  private readonly MIN_INTERVAL_MS = 1100
+  // 60k unit / 2 req-s api.market tier as of July 2026 (up from 24k / 1 req-s) - 10% buffer under the 2 req/s ceiling
+  private readonly MIN_INTERVAL_MS = 550
   private lastCallAt = 0
   private processing = false
   private readonly queue: Array<() => void> = []
@@ -55,7 +56,7 @@ export class AeroClient {
     })
   }
 
-  // flight API limits 1 req/s, at most 2 req/s
+  // flight API limits 2 req/s on the current tier
   private async processQueue(): Promise<void> {
     if (this.processing) return
     this.processing = true
