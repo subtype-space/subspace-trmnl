@@ -7,7 +7,7 @@ export function parseTrmnlMeta(raw: unknown): TrmnlMeta | null {
     try {
       return JSON.parse(raw) as TrmnlMeta
     } catch {
-      logger.warn('[TRMNL] Failed to parse trmnl metadata JSON')
+      logger.warn('[TRML] Failed to parse trmnl metadata JSON')
     }
   }
   return null

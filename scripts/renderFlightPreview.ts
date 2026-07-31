@@ -5,7 +5,7 @@ import { renderMarkup } from '../src/integrations/aerodatabox/renderer.js'
 import { formatDelayString } from '../src/integrations/aerodatabox/formatters.js'
 import { writeFileSync } from "node:fs"; // ignore typecheck error, typelinting is fine via CI
 import { config } from '../src/config.js'
-import type { FlightDisplayData } from "../src/types/trmnl/flightTypes.js";
+import type { FlightDisplayData } from "../src/types/aerodatabox/types.js";
 import type { MarkupVariant } from "../src/types/trmnl/types.js";
 
 // Base in-flight sample; scenarios below override just the fields that matter per case.

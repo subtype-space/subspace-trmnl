@@ -13,7 +13,7 @@ function normalizeStationCodes(codes: string[]) {
 
 export const trmnlStationPrediction: RequestHandler = async (req, res) => {
   try {
-    logger.debug('[WMATA] Received rail prediction request')
+    logger.debug('[MTRO] Received rail prediction request')
 
     const raw = req.query.stations
     const stationsStr = Array.isArray(raw) ? raw.join(',') : (raw as string | undefined)

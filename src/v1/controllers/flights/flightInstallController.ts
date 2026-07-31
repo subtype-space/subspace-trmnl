@@ -7,8 +7,8 @@ import { storeTrmnlToken } from '../../../utils/dbConnector.js'
 const sha256 = (v: string) => crypto.createHash('sha256').update(v).digest('hex')
 
 const flightInstallController: RequestHandler = async (req, res): Promise<void> => {
-  logger.info('[TRMNL] Incoming flight install request!')
-  logger.debug('[TRMNL] Request debug:', { query: req.query, body: req.body })
+  logger.info('[TRML] Incoming flight install request!')
+  logger.debug('[TRML] Request debug:', { query: req.query, body: req.body })
   const token = req.query.code as string | undefined
   const callback = req.query.installation_callback_url as string
 
@@ -32,7 +32,7 @@ const flightInstallController: RequestHandler = async (req, res): Promise<void> 
     return
   }
 
-  logger.debug('[TRMNL] Exchanging token for access token...')
+  logger.debug('[TRML] Exchanging token for access token...')
   const trmnlResp = await fetch('https://trmnl.com/oauth/token', {
     method: 'POST',
     headers: {
@@ -49,7 +49,7 @@ const flightInstallController: RequestHandler = async (req, res): Promise<void> 
   const raw = await trmnlResp.text()
 
   if (!trmnlResp.ok) {
-    logger.warn('[TRMNL] token exchange failed', raw)
+    logger.warn('[TRML] token exchange failed', raw)
     res.status(502).json({ error: 'Bad Gateway', message: 'trmnl_exchange_failed' })
     return
   }
@@ -69,11 +69,11 @@ const flightInstallController: RequestHandler = async (req, res): Promise<void> 
   }
 
   const hash = sha256(access_token)
-  logger.info('[TRMNL] Storing hashed access token...')
+  logger.info('[TRML] Storing hashed access token...')
   logger.debug(hash)
   await storeTrmnlToken(hash)
 
-  logger.debug('[TRMNL] Redirecting user back to', url.toString())
+  logger.debug('[TRML] Redirecting user back to', url.toString())
   res.redirect(url.toString())
   return
 }
