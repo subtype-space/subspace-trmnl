@@ -22,7 +22,7 @@ export class WmataClient {
   // don't hardcode a stop/exit
   constructor(opts: { apiKey: string }) {
     if (!opts.apiKey) {
-      logger.error('Unable to start subspace-api - missing WMATA API KEY')
+      logger.error('Unable to start subspace-trmnl - missing WMATA API KEY')
       throw new Error('WMATA apiKey is required')
     }
 

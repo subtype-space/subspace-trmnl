@@ -33,12 +33,12 @@ jobs:
         run: |
           if [[ "${GITHUB_REF_NAME}" == v* ]]; then
             docker buildx build \
-              -t ghcr.io/${{ github.repository_owner }}/subspace-api:${{ github.ref_name }} \
-              -t ghcr.io/${{ github.repository_owner }}/subspace-api:latest \
+              -t ghcr.io/${{ github.repository_owner }}/subspace-trmnl:${{ github.ref_name }} \
+              -t ghcr.io/${{ github.repository_owner }}/subspace-trmnl:latest \
               --push .
           else
             docker buildx build \
-              -t ghcr.io/${{ github.repository_owner }}/subspace-api:${{ github.ref_name }}-rc \
+              -t ghcr.io/${{ github.repository_owner }}/subspace-trmnl:${{ github.ref_name }}-rc \
               --push .
           fi
 

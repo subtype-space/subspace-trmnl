@@ -2,7 +2,7 @@ stages:
   - build
 
 variables:
-  IMAGE_NAME: ghcr.io/subtype-space/subspace-api
+  IMAGE_NAME: ghcr.io/subtype-space/subspace-trmnl
 
 build-and-push:
   stage: build

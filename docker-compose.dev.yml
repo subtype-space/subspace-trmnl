@@ -1,9 +1,9 @@
 services:
-  subspace-api:
+  subspace-trmnl:
     init: true
     build: ./
-    image: subspace-api:dev
-    container_name: subspace-api-dev
+    image: subspace-trmnl:dev
+    container_name: subspace-trmnl-dev
     restart: always
     ports:
       - 9595:9595
@@ -17,12 +17,12 @@ services:
       - api
     labels:
       - 'traefik.enable=true'
-      - 'traefik.http.routers.subspace-api.rule=Host(`api.subtype.space`)'
-      - 'traefik.http.routers.subspace-api.entrypoints=websecure'
-      - 'traefik.http.routers.subspace-api.tls=true'
-      - 'traefik.http.routers.subspace-api.tls.certresolver=cloudflare'
+      - 'traefik.http.routers.subspace-trmnl.rule=Host(`trmnl.subtype.space`)'
+      - 'traefik.http.routers.subspace-trmnl.entrypoints=websecure'
+      - 'traefik.http.routers.subspace-trmnl.tls=true'
+      - 'traefik.http.routers.subspace-trmnl.tls.certresolver=cloudflare'
       - 'traefik.docker.network=proxy'
-      - 'traefik.http.routers.subspace-api.middlewares=secureHeaders@file, generic-csp@file'
+      - 'traefik.http.routers.subspace-trmnl.middlewares=secureHeaders@file, generic-csp@file'
 
 networks:
   proxy:

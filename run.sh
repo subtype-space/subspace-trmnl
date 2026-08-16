@@ -7,7 +7,7 @@ BRANCH=${2:-v1}
 LATEST_RELEASE="v1"
 
 downContainers() {
-  echo "🧹 Ensuring all subspace-api containers are stopped..."
+  echo "🧹 Ensuring all subspace-trmnl containers are stopped..."
   docker compose down || true
   docker compose -f docker-compose.dev.yml down || true
 }
@@ -15,7 +15,7 @@ downContainers() {
 case "$MODE" in
   prod)
     echo "📦 Pulling latest image from GitHub Container Registry..."
-    echo "🚀 Starting subspace-api in '$MODE' mode"
+    echo "🚀 Starting subspace-trmnl in '$MODE' mode"
     docker compose pull && downContainers && docker compose up -d
     ;;
 
@@ -28,7 +28,7 @@ case "$MODE" in
     echo "🔧 Building $BRANCH build locally..."
     docker compose -f docker-compose.dev.yml build
     downContainers
-    echo "🚀 Starting subspace-api in '$MODE' mode (branch: $BRANCH)..."
+    echo "🚀 Starting subspace-trmnl in '$MODE' mode (branch: $BRANCH)..."
     docker compose -f docker-compose.dev.yml up -d
     ;;
 
@@ -36,7 +36,7 @@ case "$MODE" in
     echo "🔧 Building development locally..."
     docker compose -f docker-compose.dev.yml build
     downContainers
-    echo "🚀 Starting subspace-api in '$MODE' mode"
+    echo "🚀 Starting subspace-trmnl in '$MODE' mode"
     docker compose -f docker-compose.dev.yml up -d
   ;;
 
