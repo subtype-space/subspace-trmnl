@@ -199,7 +199,7 @@ function generatePage(sectionsHtml: string): string {
 }
 
 
-const baseUrl = new URL(config.auth.mcpServerUrl).origin
+const baseUrl = new URL(config.api.publicBaseUrl).origin
 const variants = ['full', 'half_horizontal', 'half_vertical', 'quadrant'] as MarkupVariant[]
 
 // Render every variant for both OG and TRMNL X for a single flight.

@@ -29,47 +29,30 @@ docker compose pull && docker compose up -d
 
 ## Architecture
 
-### Dual-Purpose Server
-The server (`src/server.ts`) runs both:
-1. **Express REST API** - Traditional HTTP endpoints
-2. **Stateless MCP Server** - Model Context Protocol server using `@modelcontextprotocol/sdk` with StreamableHTTPServerTransport
+### TRMNL Plugin Backend
+The server (`src/server.ts`) is an Express REST API serving TRMNL e-ink plugins (DC Metro rail predictions, flight tracker).
 
 ### Directory Structure
-- `src/v1/` - Versioned API (routers, controllers, MCP tool implementations)
-- `src/auth/` - OAuth/authentication (oauth.ts for MCP bearer auth, trmnlAuth.ts for TRMNL plugin auth)
-- `src/integrations/` - External API clients (WMATA metro)
+- `src/v1/` - Versioned API (routers, controllers)
+- `src/auth/` - TRMNL plugin auth (`trmnlAuth.ts`, hash-based tokens stored in SQLite)
+- `src/integrations/` - External API clients (WMATA metro, AeroDataBox flights)
 - `src/types/` - TypeScript type definitions
 - `src/utils/` - Shared utilities (logger, database, rate limiter)
-
-### Authentication Flow
-- MCP endpoint (`/mcp`) uses OAuth 2.0 token introspection with a Keycloak-based auth server
-- The auth middleware (`src/auth/oauth.ts`) validates bearer tokens by calling the introspection endpoint
-- TRMNL plugin uses hash-based token validation stored in SQLite
-
-### MCP Tools
-Tools are registered in `src/v1/mcp/registerTools.ts`:
-- `get-alerts` - NWS weather alerts by state
-- `get-forecast` - Weather forecast by coordinates
-- `get-stock` - Stock quotes via yahoo-finance2
-- `get-wmata-incidents` - DC Metro rail incidents
-- `get-wmata-station-info` - Metro station arrival predictions
 
 ### Database
 Uses better-sqlite3 for local persistence (SQLite). Database initialization and queries are in `src/utils/dbConnector.ts`. The DB path defaults to `./trmnl.sqlite` or can be set via `TRMNL_DB_PATH` env var.
 
 ### Key Routes
-- `/mcp` - MCP server endpoint (requires OAuth)
-- `/mcp/health` - MCP health check
 - `/health` - API health check
-- `/v1/trmnl/*` - TRMNL plugin endpoints for DC Metro widget
-- `/discord/token` - Discord OAuth token exchange
+- `/v1/trmnl/*` - TRMNL plugin endpoints (DC Metro, flight tracker)
+
+### Deprecated: MCP server + Keycloak OAuth
+`deprecated/` holds the old MCP tool server (weather, stock, WMATA-as-MCP-tools) and the Keycloak OAuth resource-server code that protected it, moved out of `src/` on 2026-08-16 because nothing was calling it — see git history for context. `tsconfig.json` only includes `src/**/*`, so this folder isn't built. Kept as a reference rather than deleted; restoring it means restoring `config.auth` in `src/config.ts` too.
 
 ## Environment Variables
 
 Required for core functionality:
-- `API_CLIENT_ID`, `API_CLIENT_SECRET` - OAuth client credentials for token introspection
-- `AUTH_SERVER_URL`, `AUTH_REALM` - Keycloak authentication server
-- `MCP_SERVER_URL` - Resource server URL for audience validation
+- `PUBLIC_BASE_URL` - Public origin this service is reached at (used to build absolute URLs in TRMNL markup, e.g. airline logo banners)
 - `WMATA_PRIMARY_KEY` - WMATA API key for metro data
 
 Optional:

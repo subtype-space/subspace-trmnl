@@ -1,16 +1,13 @@
 {
-  "name": "subspace-api",
+  "name": "subspace-trmnl",
   "version": "1.18.9",
-  "description": "API service for subtype.space",
+  "description": "TRMNL plugin service for subtype.space",
   "repository": {
     "type": "git",
-    "url": "ssh://git@github.com:subtype-space/subspace-api.git"
+    "url": "ssh://git@github.com:subtype-space/subspace-trmnl.git"
   },
   "keywords": [
-    "API",
     "subtype",
-    "AI",
-    "MCP",
     "TRMNL"
   ],
   "type": "module",
@@ -30,23 +27,19 @@
   "author": "subtype",
   "license": "ISC",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.26.0",
     "better-sqlite3": "^12.5.0",
     "dotenv": "^16.5.0",
     "escape-html": "^1.0.3",
     "express": "^5.2.1",
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.1.0",
-    "jose": "^6.0.10",
-    "yahoo-finance2": "^2.13.3",
-    "zod": "^3.24.2"
+    "jose": "^6.0.10"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/escape-html": "^1.0.4",
     "@types/express": "^5.0.1",
     "@types/node": "^22.20.0",
-    "ts-node": "^10.9.2",
     "tsx": "^4.22.4",
     "typescript": "^5.8.3",
     "vitest": "^4.1.9"

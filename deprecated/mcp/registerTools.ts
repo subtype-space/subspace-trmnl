@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { getAlerts, getForecast } from './weather.js'
 import { getStockDetails } from './stocks.js'
 import { getIncidents, getStationInfo } from './metro.js'
-import { logger } from '../../utils/logger.js'
+import { logger } from '../../src/utils/logger.js'
 
 
 type SimpleToolRegistrar = {

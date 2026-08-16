@@ -1,5 +1,5 @@
 import yahooFinance from 'yahoo-finance2'
-import { logger } from '../../utils/logger.js'
+import { logger } from '../../src/utils/logger.js'
 
 type StockQuoteDetailed = {
   name: string

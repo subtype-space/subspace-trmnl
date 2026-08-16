@@ -1,5 +1,5 @@
 // By this point, all required env vars should be validated by oauthEnv.ts
-import { logger } from './logger.js'
+import { logger } from '../src/utils/logger.js'
 
 // Generate OAuth URLs for introspection, auth, and token endpoint given an auth and realm
 export function createOAuthURLs(opts: { authServerUrl: string; realm: string }) {

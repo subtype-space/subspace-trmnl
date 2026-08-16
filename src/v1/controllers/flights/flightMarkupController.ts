@@ -52,7 +52,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
     .filter(Boolean)
     .slice(0, 4)
 
-  const baseUrl = new URL(config.auth.mcpServerUrl).origin
+  const baseUrl = new URL(config.api.publicBaseUrl).origin
 
   if (flightNumbers.length === 0) {
     logger.info('[AERO] No flights configured')

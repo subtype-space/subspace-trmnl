@@ -20,10 +20,10 @@ import { requireBearerAuth } from '@modelcontextprotocol/sdk/server/auth/middlew
 import { getOAuthProtectedResourceMetadataUrl, mcpAuthMetadataRouter } from '@modelcontextprotocol/sdk/server/auth/router.js'
 // requireBearerAuth is looking for instanceof error types, so we try to match and throw specific errors
 import { InsufficientScopeError, InvalidTokenError, ServerError } from '@modelcontextprotocol/sdk/server/auth/errors.js'
-import { config } from '../config.js'
-import { UserInfo, AuthInfo } from '../types/oauth/types.js'
-import { logger } from '../utils/logger.js'
-import { createOAuthURLs } from '../utils/generateOAuthURL.js'
+import { config } from '../src/config.js'
+import { UserInfo, AuthInfo } from './types-oauth/types.js'
+import { logger } from '../src/utils/logger.js'
+import { createOAuthURLs } from './generateOAuthURL.js'
 
 // JWKS cache for user token verification (X-User-Authorization)
 let jwks: jose.JWTVerifyGetKey | null = null

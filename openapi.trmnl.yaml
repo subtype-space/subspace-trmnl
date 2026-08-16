@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: subspace-api — TRMNL plugin endpoints
+  title: subspace-trmnl — TRMNL plugin endpoints
   description: >
     OAuth install flow, markup rendering, settings management, and uninstall webhooks
     for the TRMNL "Is my metro commute screwed?" and flight tracker plugins.

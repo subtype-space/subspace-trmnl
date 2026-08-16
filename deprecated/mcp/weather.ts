@@ -1,4 +1,4 @@
-import { logger } from '../../utils/logger.js'
+import { logger } from '../../src/utils/logger.js'
 
 // Prob best to move to eventual utils folder since MCP does not directly interact with this
 // but uses it as helper methods.

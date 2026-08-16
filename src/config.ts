@@ -12,18 +12,10 @@ export const config = {
     api: {
         port:           Number(process.env.PORT) || 9595,
         logLevel:       (process.env.LOG_LEVEL || 'info').toLowerCase(),
-        activeVersion:  process.env.ACTIVE_VERSION || 'v1'
-    },
-    auth: {
-        // These configs are keycloak focused
-        // mcpServerUrl dictates what the MCP backend should be listening for, hostname-wise
-        mcpServerUrl:   required('MCP_SERVER_URL'),
-        // In order to perform token introspection, you need to integrate into an IdP of your choice
-        authServerUrl:  required('AUTH_SERVER_URL'),
-        realm:          required('AUTH_REALM'),
-        // This API server should have it's own OpenID client
-        clientId:       required('API_CLIENT_ID'),
-        clientSecret:   required('API_CLIENT_SECRET')
+        activeVersion:  process.env.ACTIVE_VERSION || 'v1',
+        // Public origin this service is reached at, e.g. https://trmnl.subtype.space
+        // Used to build absolute URLs (airline logo banners, etc.) in TRMNL markup responses
+        publicBaseUrl:  required('PUBLIC_BASE_URL')
     },
     trmnl: {
         // Bypass checking the TRMNL worker IP address
