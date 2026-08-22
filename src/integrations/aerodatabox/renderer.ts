@@ -1,6 +1,6 @@
 import type { FlightDisplayData } from '../../types/aerodatabox/types.js'
 import type { MarkupVariant } from '../../types/trmnl/types.js'
-import { escapeHtml } from '../../utils/html.js'
+import escapeHtml from 'escape-html'
 import { buildArcSvg, formatDuration, planeSvg, AIRLINE_NAMES } from './formatters.js'
 
 // Only surface the scheduled "was HH:MM" anchor for *notable* deviations. The actual time is

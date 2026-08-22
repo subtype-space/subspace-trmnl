@@ -104,7 +104,6 @@ export type FlightDisplayData = {
   altitudeFt: string
   speedMph: string
   aircraftModel: string
-  aircraftIcao: string
   heading: string
   delayString: string | null // delayed/early/ontime
   depTime: string // HH:MM actual/revised departure time in departure airport's local time

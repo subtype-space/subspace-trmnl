@@ -13,7 +13,6 @@ const sampleFlight: FlightDisplayData = {
   altitudeFt: '37,000',
   speedMph: '503',
   aircraftModel: 'Boeing 737 MAX 9',
-  aircraftIcao: '',
   heading: '251° W',
   delayString: null,
   depTime: '08:12',
