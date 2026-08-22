@@ -18,8 +18,6 @@ export class WmataClient {
   private readonly stationInFlight = new Map<string, Promise<RailPrediction[]>>()
   private readonly STATION_TTL_MS = 60 * 1000 // 1 minute
 
-  // todo - technically the trmnl (aero and wmata) are optional endpoints
-  // don't hardcode a stop/exit
   constructor(opts: { apiKey: string }) {
     if (!opts.apiKey) {
       logger.error('Unable to start subspace-trmnl - missing WMATA API KEY')

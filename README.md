@@ -46,6 +46,10 @@ These are required if you are running TRMNL plugins (metro or flight tracker).
 | `TRMNL_DB_PATH` | No | Path to SQLite database file (default: `./trmnl.sqlite`) |
 | `TRMNL_IP_ALLOW_PRIVATE` | No | Set to `true` to bypass TRMNL worker IP allowlist check (useful for local dev) |
 
+# Releases
+NOTE: Releases are performed by an agent following instructions in CLAUDE.md. It is just easier to let it handle it and perform tag maintenance and cleanup.
+All developer updates should be performed in the `dev` branch. Pull requests should be opened against the current active version (such as `v1`). Once merged into the active version branch, a tag must be pushed to that branch to "cut" a release.
+
 # AI Disclosure
 Parts of this project were assisted with Claude Code by having it provide examples for implementation.
 Some parts of the codebase were refactored by Claude Code suggestion to improve efficiency.
@@ -53,6 +57,9 @@ Unless noted, the code base was largely written by hand. Some parts of implement
 Some parts for the TRMNL Flight Tracker logic regarding calculations were assisted by LLM, as with information display, but not generated out of thin air.
 
 It is subspace's responsibility to examine the output of these LLMs for accuracy, implementation detail, and direction.
+
+# Appendix
+Code styling (specifically comment styling) is all over the place. It's not an AI artifact, just laziness with Intellisense and having too much fun with `/**` documentation.
 
 # Disclaimer & Fair Use
 
