@@ -10,6 +10,7 @@ const ALLOWED_CALLBACK_HOSTS = new Set(['usetrmnl.com', 'www.usetrmnl.com', 'trm
 /**
  * Builds the install controller shared by the metro and flights plugins: exchange the
  * TRMNL-issued code for an access token, hash it, and redirect back to the callback URL.
+ * This gets used by the individual install controllers, think of this like a template
  * @param clientId TRMNL client_id for this plugin
  * @param clientSecret TRMNL client_secret for this plugin
  * @param logTag log prefix, e.g. '[TRML]' or '[AERO]'
