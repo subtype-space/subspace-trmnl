@@ -43,7 +43,7 @@ server.use(
   express.static(path.join(__dirname, 'public'), { maxAge: '7d' })
 )
 
-server.use('/health', rateLimiter, express.json(), statusRouter)
+server.use('/health', rateLimiter, statusRouter)
 server.use('/v1/trmnl', rateLimiter, trmnlRouter)
 
 server.use((err: any, _req: any, res: any, _next: any) => {

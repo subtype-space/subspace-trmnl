@@ -1,6 +1,6 @@
 import { MetroMarkup } from '../../types/wmata/types.js'
 import { MarkupVariant } from '../../types/trmnl/types.js'
-import { escapeHtml } from '../../utils/html.js'
+import escapeHtml from 'escape-html'
 
 export function renderMarkup(m: MetroMarkup, variant: MarkupVariant): string {
   const bigText = variant === 'full' ? '92px' : variant === 'quadrant' ? '36px' : '48px'

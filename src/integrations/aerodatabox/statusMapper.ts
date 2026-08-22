@@ -294,7 +294,6 @@ export function buildFlightDisplayData(flight: AeroFlightContract): FlightDispla
     altitudeFt,
     speedMph,
     aircraftModel,
-    aircraftIcao: '',
     heading,
     delayString,
     depTime,
