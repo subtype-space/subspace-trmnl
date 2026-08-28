@@ -179,13 +179,10 @@ export const trmnlManagePostController: RequestHandler = async (req, res) => {
 
   await upsertSettings({ user_uuid: uuid, primary_line: primaryLine, lines, crass_level: crassLevel })
 
-  const settings = await getSettingsByUuid(uuid)
-  const pluginSettingId = settings?.plugin_setting_id
-
-  if (pluginSettingId) {
-    res.redirect(`https://trmnl.com/plugin_settings/${pluginSettingId}/edit?force_refresh=true`)
-    return
-  }
+  // Land back on our own page (with the "Settings saved" banner) instead of bouncing
+  // straight to trmnl.com — a save with no visible confirmation reads as broken.
+  // getSettingsByUuid.plugin_setting_id in the GET handler still supplies the
+  // "← Back to TRMNL" link below the confirmation.
 
   const jwt = req.body?.jwt
   const jwtParam = typeof jwt === 'string' && jwt ? `&jwt=${encodeURIComponent(jwt)}` : ''
