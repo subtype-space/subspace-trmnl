@@ -152,14 +152,10 @@ export const flightManagePostController: RequestHandler = async (req, res) => {
 
   await upsertFlightSettings({ user_uuid: uuid, flight_numbers: flightNumbers })
 
-  const updatedSettings = await getFlightSettingsByUuid(uuid)
-  const pluginSettingId = updatedSettings?.plugin_setting_id
-
-  if (pluginSettingId) {
-    res.redirect(`https://trmnl.com/plugin_settings/${pluginSettingId}/edit?force_refresh=true`)
-    return
-  }
-
+  // Land back on our own page (with the "Settings saved" banner) instead of bouncing
+  // straight to trmnl.com — a save with no visible confirmation reads as broken.
+  // getFlightSettingsByUuid.plugin_setting_id in the GET handler still supplies the
+  // "← Back to TRMNL" link below the confirmation.
   const jwtParam = typeof jwt === 'string' && jwt ? `&jwt=${encodeURIComponent(jwt)}` : ''
   res.redirect(`/v1/trmnl/flights/manage?uuid=${encodeURIComponent(uuid)}${jwtParam}&saved=1`)
 }
