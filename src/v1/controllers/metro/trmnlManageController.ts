@@ -25,9 +25,14 @@ function renderPage(opts: {
   lines: Set<string>
   crass: boolean
   pluginSettingId?: number | null
+  saved?: boolean
 }): string {
   const safeUuid = escapeHtml(opts.uuid)
   const safeJwt = escapeHtml(opts.jwt)
+
+  const successHtml = opts.saved
+    ? `<p class="success">Settings saved.</p>`
+    : ''
 
   const primaryRadios = ALL_LINES.map((l) => {
     const meta = LINE_META[l]
@@ -61,6 +66,8 @@ function renderPage(opts: {
     <form method="POST" action="/v1/trmnl/metro/manage">
       <input type="hidden" name="uuid" value="${safeUuid}"/>
       <input type="hidden" name="jwt" value="${safeJwt}"/>
+
+      ${successHtml}
 
       <div class="card">
         <div class="field-label">Primary line to monitor</div>
@@ -144,6 +151,7 @@ export const trmnlManageGetController: RequestHandler = async (req, res) => {
       lines,
       crass,
       pluginSettingId: settings?.plugin_setting_id,
+      saved: req.query.saved === '1',
     })
   )
 }
@@ -181,5 +189,5 @@ export const trmnlManagePostController: RequestHandler = async (req, res) => {
 
   const jwt = req.body?.jwt
   const jwtParam = typeof jwt === 'string' && jwt ? `&jwt=${encodeURIComponent(jwt)}` : ''
-  res.redirect(`/v1/trmnl/metro/manage?uuid=${encodeURIComponent(uuid)}${jwtParam}`)
+  res.redirect(`/v1/trmnl/metro/manage?uuid=${encodeURIComponent(uuid)}${jwtParam}&saved=1`)
 }

@@ -59,6 +59,7 @@ Optional:
 - `PORT` - Server port (default: 9595)
 - `LOG_LEVEL` - Logging level (default: info)
 - `TRMNL_DB_PATH` - SQLite database path
+- `ASSET_CACHE_BUST` - Append `?v=<app version>` to static asset URLs (airline logo banners) so a deploy busts the 7-day `maxAge` cache instead of waiting it out (default: false)
 
 ## Flight tracker API economics (as of July 2026)
 

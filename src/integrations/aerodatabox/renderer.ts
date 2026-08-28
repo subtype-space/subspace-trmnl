@@ -3,6 +3,16 @@ import type { MarkupVariant } from '../../types/trmnl/types.js'
 import escapeHtml from 'escape-html'
 import { buildArcSvg, formatDuration, planeSvg, AIRLINE_NAMES } from './formatters.js'
 
+// Airline logo banners are static and long-cached (see server.ts maxAge). The caller
+// passes `assetVersion` (gated behind ASSET_CACHE_BUST in config) when it wants the URL
+// tagged so a deploy busts the cache instead of waiting out the maxAge window. Deliberately
+// not importing config.js here — this module is exercised directly in tests without the
+// server's required env vars set, and config.js throws at import time without them.
+function buildLogoUrl(baseUrl: string, airlineIcao: string, assetVersion?: string): string {
+  const url = `${baseUrl}/public/radarbox_banners/${encodeURIComponent(airlineIcao)}.png`
+  return assetVersion ? `${url}?v=${encodeURIComponent(assetVersion)}` : url
+}
+
 // Only surface the scheduled "was HH:MM" anchor for *notable* deviations. The actual time is
 // already shown, so a plane landing 2-14 min off schedule isn't worth an extra line — that's
 // detail, not glance. This 15-min bar matches the On-time/Delayed/Early adherence threshold, so
@@ -56,13 +66,15 @@ function progressTile(f: FlightDisplayData, terse: boolean): { label: string; va
  * @param variant Dynamically set font size and etc. based on variant
  * @param _utcOffset Based on user, set and apply utc offset to show relevant time zones
  * @param baseUrl The URL that hosts the public static images for flight corporation logos
+ * @param assetVersion When set, appended as a `?v=` query param on logo URLs to bust the static asset cache
  * @returns A whole lotta HTML
  */
 export function renderMarkup(
   flight: FlightDisplayData | null,
   variant: MarkupVariant,
   _utcOffset: number,
-  baseUrl: string
+  baseUrl: string,
+  assetVersion?: string
 ): string {
   const logoWidth =
     variant === 'full' ? '320px' : variant === 'half_vertical' ? '200px' : variant === 'half_horizontal' ? '220px' : '160px'
@@ -74,7 +86,7 @@ export function renderMarkup(
   }
 
   const lastUpdated = flight.lastUpdated
-  const flightCards = renderFlightCard(flight, variant, baseUrl)
+  const flightCards = renderFlightCard(flight, variant, baseUrl, assetVersion)
 
   // TRMNL X helper
   const s = (px: number) => `calc(${px}px * var(--s, 1))`
@@ -172,8 +184,8 @@ export function renderMarkup(
 `.trim()
 }
 
-function renderFullCard(f: FlightDisplayData, baseUrl: string): string {
-  const logoUrl = `${baseUrl}/public/radarbox_banners/${encodeURIComponent(f.airlineIcao)}.png`
+function renderFullCard(f: FlightDisplayData, baseUrl: string, assetVersion?: string): string {
+  const logoUrl = buildLogoUrl(baseUrl, f.airlineIcao, assetVersion)
   const airlineCode = f.airlineIata || ''
   const airlineName = AIRLINE_NAMES[airlineCode] ?? (airlineCode || f.flightIata)
   const flightCode =
@@ -236,10 +248,10 @@ function renderFullCard(f: FlightDisplayData, baseUrl: string): string {
   </div>`
 }
 
-function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl: string): string {
-  if (variant === 'full') return renderFullCard(f, baseUrl)
+function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl: string, assetVersion?: string): string {
+  if (variant === 'full') return renderFullCard(f, baseUrl, assetVersion)
 
-  const logoUrl = `${baseUrl}/public/radarbox_banners/${encodeURIComponent(f.airlineIcao)}.png`
+  const logoUrl = buildLogoUrl(baseUrl, f.airlineIcao, assetVersion)
   const showStats = variant !== 'quadrant'
   const showRoute = true
   const embedRouteInTop = variant === 'half_horizontal'

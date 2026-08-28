@@ -12,7 +12,7 @@
   ],
   "type": "module",
   "scripts": {
-    "build": "tsc && cp -r src/public build/public && cp package.json build/ && chmod 755 build/server.js",
+    "build": "rm -rf build && tsc && cp -r src/public build/public && cp package.json build/ && chmod 755 build/server.js",
     "start": "node build/server.js",
     "prod": "./run.sh prod",
     "typecheck": "tsc -p tsconfig.test.json",
