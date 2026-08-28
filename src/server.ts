@@ -40,7 +40,7 @@ server.use(
     next()
   },
   helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }),
-  express.static(path.join(__dirname, 'public'), { maxAge: '1m' })
+  express.static(path.join(__dirname, 'public'), { maxAge: '7d' })
 )
 
 server.use('/health', rateLimiter, statusRouter)
