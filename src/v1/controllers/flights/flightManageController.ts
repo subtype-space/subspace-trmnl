@@ -12,12 +12,17 @@ function renderSettingsPage(opts: {
   flightNumbers: string
   pluginSettingId?: number | null
   error?: string
+  saved?: boolean
 }): string {
   const safeUuid = escapeHtml(opts.uuid)
   const safeJwt = escapeHtml(opts.jwt)
 
   const errorHtml = opts.error
     ? `<p class="error">${escapeHtml(opts.error)}</p>`
+    : ''
+
+  const successHtml = opts.saved
+    ? `<p class="success">Settings saved.</p>`
     : ''
 
   const backLink = opts.pluginSettingId
@@ -41,6 +46,7 @@ function renderSettingsPage(opts: {
           spellcheck="false"
         />
         ${errorHtml}
+        ${successHtml}
         <p class="hint">
           Enter up to 4 flight numbers separated by commas — e.g. <strong>UA804, DL123</strong>.
           IATA (UA804) and ICAO (UAL804) formats are both accepted.
@@ -88,6 +94,7 @@ export const flightManageGetController: RequestHandler = async (req, res) => {
       jwt: jwt ?? '',
       flightNumbers: settings?.flight_numbers ?? '',
       pluginSettingId: settings?.plugin_setting_id,
+      saved: req.query.saved === '1',
     })
   )
 }
@@ -154,5 +161,5 @@ export const flightManagePostController: RequestHandler = async (req, res) => {
   }
 
   const jwtParam = typeof jwt === 'string' && jwt ? `&jwt=${encodeURIComponent(jwt)}` : ''
-  res.redirect(`/v1/trmnl/flights/manage?uuid=${encodeURIComponent(uuid)}${jwtParam}`)
+  res.redirect(`/v1/trmnl/flights/manage?uuid=${encodeURIComponent(uuid)}${jwtParam}&saved=1`)
 }

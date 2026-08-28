@@ -93,6 +93,17 @@ export const SETTINGS_CSS = `
     border: 1px solid rgba(239,68,68,0.2);
   }
 
+  .success {
+    font-size: 12px;
+    color: #22c55e;
+    font-weight: 600;
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: rgba(34,197,94,0.08);
+    border-radius: 5px;
+    border: 1px solid rgba(34,197,94,0.2);
+  }
+
   .option-list { display: flex; flex-direction: column; gap: 6px; }
 
   .option-item {
