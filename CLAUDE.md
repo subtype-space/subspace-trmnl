@@ -69,6 +69,8 @@ We evaluated the Flightradar24 API and passed on it. Their API (unlike their web
 
 Data quality note: `CanceledUncertain` from AeroDataBox usually means "no live data attached" (their marketing-number-to-callsign mapping breaks on regional/codeshare flights, e.g. UA4012), not a confirmed cancellation. aeroClient logs these occurrences — check the logs before assuming flights are actually being canceled.
 
+Airline logo banners (`/public/radarbox_banners/*.png`) missing on a rendered TRMNL screen is very likely **Cloudflare hotlink protection**, not a bug in `renderer.ts` or the AeroDataBox lookup. TRMNL's rendering pipeline fetches these images server-side (no browser `Referer` header) to dither them for e-ink, so hotlink protection blocks the fetch silently — no error surfaces anywhere in our logs, and the generated `<img src>` tests fine with a plain `curl`. Static asset `maxAge`/cache TTL is unrelated and won't fix this; check the Cloudflare hotlink protection setting for the zone first.
+
 ## Release strategy
 
 If on the dev branch, do not create tags or push tags to this branch. Tags should ideally only be created on the v1 branch.
