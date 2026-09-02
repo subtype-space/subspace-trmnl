@@ -13,11 +13,8 @@ function buildLogoUrl(baseUrl: string, airlineIcao: string, assetVersion?: strin
   return assetVersion ? `${url}?v=${encodeURIComponent(assetVersion)}` : url
 }
 
-// Only surface the scheduled "was HH:MM" anchor for *notable* deviations. The actual time is
-// already shown, so a plane landing 2-14 min off schedule isn't worth an extra line — that's
-// detail, not glance. This 15-min bar matches the On-time/Delayed/Early adherence threshold, so
-// an anchor appears exactly when the flight is off-schedule enough to earn a verdict. Departure
-// and arrival are gated independently (a late pushback can anchor without the on-time arrival).
+// Display a small 'anchor' label when the flight is off schedule by
+// a configurable amount of minutes
 const ANCHOR_MIN_DEVIATION_MIN = 15
 
 function wasAnchor(delayMin: number | null, schedTime: string): string {
@@ -67,6 +64,8 @@ function progressTile(f: FlightDisplayData, terse: boolean): { label: string; va
  * @param _utcOffset Based on user, set and apply utc offset to show relevant time zones
  * @param baseUrl The URL that hosts the public static images for flight corporation logos
  * @param assetVersion When set, appended as a `?v=` query param on logo URLs to bust the static asset cache
+ * @param emptyMessage Text shown when flight is null. Defaults to the "go configure" prompt -
+ * pass a different message when the empty state is actually a failure to read settings, not a genuinely empty configuration.
  * @returns A whole lotta HTML
  */
 export function renderMarkup(
@@ -74,7 +73,8 @@ export function renderMarkup(
   variant: MarkupVariant,
   _utcOffset: number,
   baseUrl: string,
-  assetVersion?: string
+  assetVersion?: string,
+  emptyMessage?: string
 ): string {
   const logoWidth =
     variant === 'full' ? '320px' : variant === 'half_vertical' ? '200px' : variant === 'half_horizontal' ? '220px' : '160px'
@@ -82,7 +82,7 @@ export function renderMarkup(
     variant === 'full' ? '140px' : variant === 'half_vertical' ? '90px' : variant === 'half_horizontal' ? '100px' : '70px'
 
   if (!flight) {
-    return renderEmptyMarkup(variant)
+    return renderEmptyMarkup(variant, emptyMessage)
   }
 
   const lastUpdated = flight.lastUpdated
@@ -327,7 +327,7 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl:
   </div>`
 }
 
-function renderEmptyMarkup(variant: MarkupVariant): string {
+function renderEmptyMarkup(variant: MarkupVariant, message = 'Configure flights in settings'): string {
   const textSize = variant === 'quadrant' ? '20px' : '28px'
   return `
 <style>
@@ -341,7 +341,7 @@ function renderEmptyMarkup(variant: MarkupVariant): string {
       <div class="column">
         <div class="markdown" style="text-align:center;">
           <div class="flight-empty">
-            Configure flights in settings
+            ${escapeHtml(message)}
           </div>
         </div>
       </div>

@@ -18,6 +18,33 @@ function nextRotationIndex(userUuid: string, count: number): number {
   return next
 }
 
+// used for rendering the fallback state, or nothing configured, or unknown flight
+function emptyFlightDisplay(flightNumber: string, airlineCode: string, status: string): FlightDisplayData {
+  return {
+    flightIata: flightNumber,
+    airlineIata: airlineCode,
+    airlineIcao: '',
+    depAirport: '',
+    arrAirport: '',
+    status,
+    altitudeFt: '--',
+    speedMph: '--',
+    aircraftModel: '--',
+    heading: '--',
+    delayString: null,
+    depTime: '--',
+    schedDep: '--',
+    depDelayMin: null,
+    eta: '--',
+    schedEta: '--',
+    delayMin: null,
+    minsToDeparture: null,
+    minsRemaining: null,
+    progressPct: null,
+    lastUpdated: '--',
+  }
+}
+
 export const flightMarkupController: RequestHandler = async (req, res) => {
   const tokenHash = (req as any).trmnl?.tokenHash as string | undefined
   const userUuid = req.body?.user_uuid as string | undefined
@@ -45,7 +72,16 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
 
   const utcOffset = Number(meta?.user?.utc_offset ?? 0)
 
-  const settings = await getFlightSettingsByUuid(userUuid)
+  let settings
+  let settingsUnavailable = false
+  try {
+    settings = await getFlightSettingsByUuid(userUuid)
+  } catch (e) {
+    // Degrade to the empty-state markup if the DB read fails
+    logger.warn(`[AERO] Failed to read flight settings for ${userUuid}`, String(e))
+    settings = null
+    settingsUnavailable = true
+  }
   const flightNumbers = (settings?.flight_numbers ?? '')
     .split(',')
     .map((s) => s.trim().toUpperCase())
@@ -55,12 +91,13 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
   const baseUrl = new URL(config.api.publicBaseUrl).origin
 
   if (flightNumbers.length === 0) {
-    logger.info('[AERO] No flights configured')
+    const emptyMessage = settingsUnavailable ? 'Temporarily unavailable - try again shortly' : 'Configure flights in settings'
+    logger.info(settingsUnavailable ? '[AERO] Flight settings unavailable' : '[AERO] No flights configured')
     res.json({
-      markup: renderMarkup(null, 'full', utcOffset, baseUrl, config.api.assetVersion),
-      markup_half_horizontal: renderMarkup(null, 'half_horizontal', utcOffset, baseUrl, config.api.assetVersion),
-      markup_half_vertical: renderMarkup(null, 'half_vertical', utcOffset, baseUrl, config.api.assetVersion),
-      markup_quadrant: renderMarkup(null, 'quadrant', utcOffset, baseUrl, config.api.assetVersion),
+      markup: renderMarkup(null, 'full', utcOffset, baseUrl, config.api.assetVersion, emptyMessage),
+      markup_half_horizontal: renderMarkup(null, 'half_horizontal', utcOffset, baseUrl, config.api.assetVersion, emptyMessage),
+      markup_half_vertical: renderMarkup(null, 'half_vertical', utcOffset, baseUrl, config.api.assetVersion, emptyMessage),
+      markup_quadrant: renderMarkup(null, 'quadrant', utcOffset, baseUrl, config.api.assetVersion, emptyMessage),
       shared: '',
     })
     return
@@ -74,59 +111,10 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
   let displayData: FlightDisplayData
   try {
     const aeroFlight = await aeroClient.getFlightByNumberCached(flightNumber)
-
-    if (!aeroFlight) {
-      displayData = {
-        flightIata: flightNumber,
-        airlineIata: airlineCode,
-        airlineIcao: '',
-        depAirport: '',
-        arrAirport: '',
-        status: 'Flight not found',
-        altitudeFt: '--',
-        speedMph: '--',
-        aircraftModel: '--',
-        heading: '--',
-        delayString: null,
-        depTime: '--',
-        schedDep: '--',
-        depDelayMin: null,
-        eta: '--',
-        schedEta: '--',
-        delayMin: null,
-        minsToDeparture: null,
-        minsRemaining: null,
-        progressPct: null,
-        lastUpdated: '--',
-      }
-    } else {
-      displayData = buildFlightDisplayData(aeroFlight)
-    }
+    displayData = aeroFlight ? buildFlightDisplayData(aeroFlight) : emptyFlightDisplay(flightNumber, airlineCode, 'Flight not found')
   } catch (e) {
     logger.warn(`[AERO] Failed to fetch data for ${flightNumber}`, String(e))
-    displayData = {
-      flightIata: flightNumber,
-      airlineIata: airlineCode,
-      airlineIcao: '',
-      depAirport: '',
-      arrAirport: '',
-      status: 'Data unavailable',
-      altitudeFt: '--',
-      speedMph: '--',
-      aircraftModel: '--',
-      heading: '--',
-      delayString: null,
-      depTime: '--',
-      schedDep: '--',
-      depDelayMin: null,
-      eta: '--',
-      schedEta: '--',
-      delayMin: null,
-      minsToDeparture: null,
-      minsRemaining: null,
-      progressPct: null,
-      lastUpdated: '--',
-    }
+    displayData = emptyFlightDisplay(flightNumber, airlineCode, 'Data unavailable')
   }
 
   res.json({
