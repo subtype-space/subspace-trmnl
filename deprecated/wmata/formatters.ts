@@ -1,5 +1,5 @@
-// src/integrations/wmata/formatters.ts
-import type { RailPrediction, MetroIncident } from '../../types/wmata/types.js'
+// deprecated/wmata/formatters.ts — only used by deprecated/mcp/metro.ts, unused by src/
+import type { RailPrediction, MetroIncident } from '../../src/types/wmata/types.js'
 
 export function formatRailPredictionData(predicitonData: RailPrediction[]): string {
   if (predicitonData.length === 0) {

@@ -12,6 +12,8 @@ function required(name: string): string {
   return v
 }
 
+export const version = appVersion
+
 export const config = {
     api: {
         port:           Number(process.env.PORT) || 9595,

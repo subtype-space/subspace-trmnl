@@ -1,7 +1,7 @@
 import { logger } from '../../src/utils/logger.js'
 import { config } from '../../src/config.js'
 import { WmataClient } from '../../src/integrations/wmata/wmataClient.js'
-import { formatIncidents, formatRailPredictionData } from '../../src/integrations/wmata/formatters.js'
+import { formatIncidents, formatRailPredictionData } from '../wmata/formatters.js'
 
 const client = new WmataClient({ apiKey: config.wmata.apiKey })
 
