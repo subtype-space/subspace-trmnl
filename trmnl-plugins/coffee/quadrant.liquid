@@ -1,4 +1,11 @@
-{% comment %} 400x240 (520x390 on X) — no room for the ingredient list, a count stands in for it.
+{% comment %} 400x240 (520x390 on X) — OG has no room for the ingredient list, a count stands in
+  for it there, always. X's bigger panel (screen--lg) has room to show the real list instead, but
+  falls back to the same count if a recipe ever gets too long for even X's extra room — 4 is the
+  most ingredients any current recipe has (Irish Coffee), so this is "show everything we have
+  today, guard against a longer one later" rather than an arbitrary cutoff. Liquid renders
+  identically for both screen sizes (see shared.liquid's --s scaling), so both the list and the
+  count are always rendered here and shared.liquid's CSS picks which one is visible per screen
+  size via the .coffee-meta--quadrant/.ingredients-fit/.screen--lg selectors.
   See full.liquid for how title_fit/count_scale work; target_w is this variant's real measured
   column width. Only div.layout + div.title_bar are authored here — TRMNL's platform injects the
   view/view--quadrant wrapper itself. {% endcomment %}
@@ -9,12 +16,15 @@
 {% assign gap_px = 34 | times: cs | round %}
 {% assign subtitle_px = 15 | times: cs | round %}
 {% assign cup_scale = 1.6 | times: cs %}
+{% assign meta_class = 'coffee-meta coffee-meta--quadrant' %}
+{% if ingredients.size <= 4 %}{% assign meta_class = meta_class | append: ' ingredients-fit' %}{% endif %}
 <div class="layout layout--row">
   <div class="coffee-content flex flex--row portrait:flex--col flex--center-x flex--center-y w--full h--full" style="gap:calc({{ gap_px }}px * var(--s, 1))">
     {% render "cup", ingredients: ingredients, total_ml: total_ml, scale: cup_scale %}
-    <div class="coffee-meta">
+    <div class="{{ meta_class }}">
       <h3 class="coffee-title" style="--fs:{{ title_px }}">{{ name }}</h3>
-      <div class="coffee-subtitle" style="--fs:{{ subtitle_px }}">{{ ingredients.size }} ingredient{% if ingredients.size > 1 %}s{% endif %}</div>
+      <div class="coffee-count" style="--fs:{{ subtitle_px }}">{{ ingredients.size }} ingredient{% if ingredients.size > 1 %}s{% endif %}</div>
+      {% render "ingredient_list", ingredients: ingredients, text_size: subtitle_px %}
     </div>
   </div>
 </div>
