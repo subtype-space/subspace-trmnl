@@ -7,6 +7,18 @@
   .screen--lg .coffee-content { --s: 1.3; }
   .coffee-title--center { text-align: center; } /* half_vertical only — row layouts stay left-aligned, matching the list below them */
 
+  {% comment %} quadrant only: OG's panel never has room for the ingredient list, so it always
+    shows a count instead. X's bigger panel (screen--lg) shows the real list, but only while it
+    still fits (.ingredients-fit, set in quadrant.liquid) — an unusually long recipe falls back to
+    the same count X would otherwise never show. Liquid renders the same markup for both screen
+    sizes (both the list and the count are always in the DOM — see quadrant.liquid), so this is a
+    pure CSS toggle rather than a server-side device check. Scoped to .coffee-meta--quadrant so it
+    doesn't touch the always-shown .ingredients list in full/half_vertical/half_horizontal. {% endcomment %}
+  .coffee-meta--quadrant .coffee-count { display: block; }
+  .coffee-meta--quadrant .ingredients { display: none; }
+  .screen--lg .coffee-meta--quadrant.ingredients-fit .ingredients { display: block; }
+  .screen--lg .coffee-meta--quadrant.ingredients-fit .coffee-count { display: none; }
+
   {% comment %} Chef's inline-styles check is a flat string count of 8 property names across the
     whole file — comments included, and it doesn't distinguish an actual style="" attribute from
     the same word appearing in a normal CSS rule. So beyond not writing those 8 names inline, the
