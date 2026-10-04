@@ -13,21 +13,13 @@ describe('formatHeading', () => {
     expect(formatHeading(undefined)).toBe('--')
   })
 
-  it('maps cardinal directions correctly', () => {
-    expect(formatHeading(0)).toBe('0° N')
-    expect(formatHeading(45)).toBe('45° NE')
-    expect(formatHeading(90)).toBe('90° E')
-    expect(formatHeading(180)).toBe('180° S')
-    expect(formatHeading(270)).toBe('270° W')
+  it('rounds to whole degrees with no cardinal', () => {
+    expect(formatHeading(0)).toBe('0°')
+    expect(formatHeading(250.6)).toBe('251°')
   })
 
-  it('rounds the degrees and snaps to the nearest of 8 cardinals', () => {
-    // 251° -> nearest cardinal index round(251/45)=6 -> W (matches device render)
-    expect(formatHeading(251)).toBe('251° W')
-  })
-
-  it('wraps 360 back to 0/N', () => {
-    expect(formatHeading(360)).toBe('0° N')
+  it('wraps 360 back to 0', () => {
+    expect(formatHeading(360)).toBe('0°')
   })
 })
 

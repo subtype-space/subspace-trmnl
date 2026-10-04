@@ -31,18 +31,17 @@ type Deviation = { delta: string; sched: string }
 function deviation(delayMin: number | null, schedTime: string): Deviation | null {
   if (delayMin == null || Math.abs(delayMin) <= ANCHOR_MIN_DEVIATION_MIN || schedTime === '--') return null
   const amount = formatDuration(Math.abs(delayMin))
-  return { delta: `${amount} ${delayMin > 0 ? 'late' : 'early'}`, sched: `sched ${escapeHtml(schedTime)}` }
+  return { delta: `${amount} ${delayMin > 0 ? 'late' : 'early'}`, sched: `was ${escapeHtml(schedTime)}` }
 }
 
-// How much of the deviation each variant has room for under the airport code:
-// stacked (delta + sched on two lines), inline (one line), or terse (delta only).
-type DeviationLayout = 'stacked' | 'inline' | 'terse'
+// How much of the deviation fits under the airport code: the full variant's arc has room for
+// stacked (delta + sched on two lines); the compact route line only fits terse (delta only).
+type DeviationLayout = 'stacked' | 'terse'
 
 function deviationHtml(dev: Deviation | null, layout: DeviationLayout, prefix: 'arc' | 'route'): string {
   if (!dev) return ''
   const delta = `<span class="${prefix}-delta">${dev.delta}</span>`
   if (layout === 'terse') return delta
-  if (layout === 'inline') return `<span class="${prefix}-delta">${dev.delta} <span class="${prefix}-dim">· ${dev.sched}</span></span>`
   return `${delta}<span class="${prefix}-sched">${dev.sched}</span>`
 }
 
@@ -88,6 +87,11 @@ function telemetryParts(f: FlightDisplayData, includeHeading: boolean): string[]
   if (f.speedMph !== '--') parts.push(`${escapeHtml(f.speedMph)} mph`)
   if (includeHeading && f.heading !== '--') parts.push(escapeHtml(f.heading))
   return parts
+}
+
+// Each reading gets its own span, spaced by the container's gap rather than a separator glyph.
+function telemetrySpans(parts: string[]): string {
+  return parts.map((p) => `<span>${p}</span>`).join('')
 }
 
 // Departed but not yet landed: the remaining route switches from dotted (planned) to solid gray.
@@ -173,7 +177,7 @@ export function renderMarkup(
   .info-primary--past .info-value { font-size: ${s(22)}; font-weight: 700; }
   .info-label { font-size: ${s(15)}; font-weight: 700; letter-spacing: 1.5px; }
   .info-value { font-size: ${s(30)}; font-weight: 800; }
-  .info-telemetry { font-size: ${s(18)}; font-weight: 600; margin-left: auto; white-space: nowrap; }
+  .info-telemetry { font-size: ${s(18)}; font-weight: 600; margin-left: auto; white-space: nowrap; display: inline-flex; gap: ${s(20)}; }
 
   /* TRMNL X (screen--lg): same centered block (the --s scale already grows the gaps);
      bump just the logo + header, since the arc + info row already fill the width. */
@@ -182,6 +186,9 @@ export function renderMarkup(
   .screen--lg .view--full .flight-number { font-size: ${s(56)}; }
   .screen--lg .view--full .flight-aircraft { font-size: ${s(19)}; }
   .screen--lg .view--full .flight-status { font-size: ${s(30)}; }
+  /* The landed row is quieter on OG, but on X it was lost in the extra height. */
+  .screen--lg .view--full .info-primary--past .info-label { font-size: ${s(15)}; }
+  .screen--lg .view--full .info-primary--past .info-value { font-size: ${s(28)}; }
 
   .flight-card { margin: ${variant === 'full' ? '0' : variant === 'half_vertical' ? `${s(12)} 0 0` : variant === 'half_horizontal' ? `${s(8)} 0` : `${s(6)} ${s(8)}`}; padding: ${variant === 'full' ? `${s(12)} ${s(24)}` : '0'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; display: flex; flex-direction: column; flex: 1; }
   .flight-details { margin-top: ${variant === 'full' ? s(60) : '0'}; }
@@ -206,13 +213,17 @@ export function renderMarkup(
   .view--half_vertical .flight-stats { justify-content: space-between; align-items: baseline; margin-top: 0; }
   .view--half_vertical .flight-route { width:100%; margin: 0; }
   .view--half_horizontal .flight-top .flight-route { grid-column: 1 / -1; grid-row: 2; margin: ${s(6)} 0 0; font-size: ${s(20)}; }
-  .view--half_horizontal .flight-top .flight-stats { grid-column: 2; grid-row: 1; flex-direction: column; align-items: flex-start; justify-self: center; gap: ${s(2)}; margin-top: 0; }
+  .view--half_horizontal .flight-top .flight-stats { grid-column: 2; grid-row: 1; flex-direction: column; align-items: flex-start; justify-self: center; gap: ${s(2)}; margin-top: 0; font-size: ${s(20)}; }
   .view--half_horizontal .flight-stat-aircraft { font-size: ${s(15)}; font-weight: 500; }
   .view--half_horizontal .airline-name { font-size: ${s(18)}; }
   .view--half_horizontal .flight-number { font-size: ${s(30)}; }
   .view--half_horizontal .flight-aircraft { display: none; }
   .view--half_horizontal .flight-status { font-size: ${s(18)}; }
   .view--half_horizontal .route-plane { font-size: ${s(28)}; }
+  /* X gives half_horizontal more height than OG; spend some of it loosening the stacked text blocks. */
+  .screen--lg .view--half_horizontal .flight-number { line-height: 1.15; }
+  .screen--lg .view--half_horizontal .flight-stats { line-height: 1.25; }
+  .screen--lg .view--half_horizontal .route-end { line-height: 1.25; }
   .route-line { flex: 1; height: ${s(2)}; background: black; position: relative; }
   .route-line-flown { height: ${s(3)}; background: black; }
   .route-line-remaining { height: 0; background: none; border-top: ${s(3)} dotted black; }
@@ -223,13 +234,11 @@ export function renderMarkup(
   .route-time { font-size: 0.7em; font-weight: 700; margin-top: ${s(2)}; }
   .route-end--arr .route-time { font-weight: 800; }
   .route-delta { font-size: 0.55em; font-weight: 700; white-space: nowrap; }
-  .route-sched { font-size: 0.5em; font-weight: 600; white-space: nowrap; }
-  .route-dim { font-weight: 600; }
   .flight-stats { display: flex; flex-wrap: wrap; gap: ${s(4)} ${s(16)}; font-size: ${s(16)}; margin-top: ${s(7)}; }
   .stat-label { font-size: 0.85em; font-weight: 700; letter-spacing: 1px; }
   .stat-value { font-size: 1.15em; font-weight: 800; }
   .stat-item--past .stat-value { font-size: 1em; font-weight: 700; }
-  .stat-telemetry { font-weight: 600; white-space: nowrap; }
+  .stat-telemetry { font-weight: 600; white-space: nowrap; display: inline-flex; gap: ${s(14)}; }
   .airline-logo { width: 100%; min-width: 0; flex: 0 1 auto; max-width: calc(${logoWidth} * var(--s, 1)); max-height: calc(${logoHeight} * var(--s, 1)); object-fit: contain; }
 </style>
 <div class="view view--${variant}">
@@ -261,7 +270,7 @@ function renderFullCard(f: FlightDisplayData, baseUrl: string, assetVersion?: st
   const primaryHtml = primary
     ? `<span class="info-primary${primary.past ? ' info-primary--past' : ''}"><span class="info-label">${primary.label}</span><span class="info-value">${primary.value}</span></span>`
     : ''
-  const telemetryHtml = telemetry.length ? `<span class="info-telemetry">${telemetry.join(' · ')}</span>` : ''
+  const telemetryHtml = telemetry.length ? `<span class="info-telemetry">${telemetrySpans(telemetry)}</span>` : ''
   const showInfo = primaryHtml !== '' || telemetryHtml !== ''
 
   return `
@@ -308,10 +317,8 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl:
   const remainingClass = `route-line route-line-remaining${isInFlight(f) ? ' route-line--airborne' : ''}`
   const leftLineClass = hasProgress ? 'route-line route-line-flown' : remainingClass
 
-  const devLayout: DeviationLayout =
-    variant === 'half_vertical' ? 'stacked' : variant === 'half_horizontal' ? 'inline' : 'terse'
-  const depDev = deviationHtml(deviation(f.depDelayMin, f.schedDep), devLayout, 'route')
-  const arrDev = deviationHtml(deviation(f.delayMin, f.schedEta), devLayout, 'route')
+  const depDev = deviationHtml(deviation(f.depDelayMin, f.schedDep), 'terse', 'route')
+  const arrDev = deviationHtml(deviation(f.delayMin, f.schedEta), 'terse', 'route')
   const routeHtml = `
     <div class="flight-route">
       <span class="route-end"><span class="route-code">${escapeHtml(f.depAirport || '---')}</span><span class="route-time">${escapeHtml(f.depTime)}</span>${depDev}</span>
@@ -330,7 +337,7 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl:
   const primaryStat = primary
     ? `<span class="stat-item${primary.past ? ' stat-item--past' : ''}"><span class="stat-label">${primary.label}</span> <span class="stat-value">${primary.value}</span></span>`
     : ''
-  const telemetryStat = telemetry.length ? `<span class="stat-item stat-telemetry">${telemetry.join(' · ')}</span>` : ''
+  const telemetryStat = telemetry.length ? `<span class="stat-item stat-telemetry">${telemetrySpans(telemetry)}</span>` : ''
   const statsInner = `${aircraftStat}${primaryStat}${telemetryStat}`
   const statsHtml = showStats && statsInner ? `<div class="flight-stats">${statsInner}</div>` : ''
 
