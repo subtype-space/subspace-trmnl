@@ -90,9 +90,14 @@ function telemetryParts(f: FlightDisplayData, includeHeading: boolean): string[]
   return parts
 }
 
+// Departed but not yet landed: the remaining route switches from dotted (planned) to solid gray.
+function isInFlight(f: FlightDisplayData): boolean {
+  return !isArrived(f) && !countdown(f).preDeparture
+}
+
 // The arc's % label only means something mid-flight — 0% pre-departure and 100% after landing say nothing.
 function showProgressPct(f: FlightDisplayData): boolean {
-  return f.progressPct != null && f.progressPct > 0 && f.progressPct < 100 && !isArrived(f) && !countdown(f).preDeparture
+  return f.progressPct != null && f.progressPct > 0 && f.progressPct < 100 && isInFlight(f)
 }
 
 function formatFlightCode(f: FlightDisplayData): { airlineName: string; flightCode: string } {
@@ -160,7 +165,7 @@ export function renderMarkup(
   .arc-time { font-size: ${s(22)}; font-weight: 700; margin-top: ${s(4)}; }
   .arc-end--arr .arc-time { font-weight: 800; }
   .arc-delta { font-size: ${s(15)}; font-weight: 700; margin-top: ${s(2)}; white-space: nowrap; }
-  .arc-sched { font-size: ${s(13)}; font-weight: 600; color: #555; white-space: nowrap; }
+  .arc-sched { font-size: ${s(13)}; font-weight: 600; white-space: nowrap; }
   .arc-svg { flex: 1 1 0; min-width: 0; height: auto; display: block; overflow: visible; }
   .flight-info { display: flex; align-items: baseline; justify-content: space-between; gap: ${s(16)}; width: 100%; }
   .info-primary { display: flex; align-items: baseline; gap: ${s(10)}; }
@@ -168,7 +173,7 @@ export function renderMarkup(
   .info-primary--past .info-value { font-size: ${s(22)}; font-weight: 700; }
   .info-label { font-size: ${s(15)}; font-weight: 700; letter-spacing: 1.5px; }
   .info-value { font-size: ${s(30)}; font-weight: 800; }
-  .info-telemetry { font-size: ${s(18)}; font-weight: 600; color: #444; margin-left: auto; white-space: nowrap; }
+  .info-telemetry { font-size: ${s(18)}; font-weight: 600; margin-left: auto; white-space: nowrap; }
 
   /* TRMNL X (screen--lg): same centered block (the --s scale already grows the gaps);
      bump just the logo + header, since the arc + info row already fill the width. */
@@ -190,9 +195,9 @@ export function renderMarkup(
   .flight-top--no-logo .flight-meta { align-items: flex-start; text-align: left; margin-left: 0; }
   .view--half_horizontal .flight-top--no-logo .flight-meta { grid-column: 1; }
   /* Header hierarchy: flight number + status lead; airline name and aircraft are supporting text. */
-  .airline-name { font-size: ${variant === 'quadrant' ? s(15) : variant === 'full' ? s(24) : s(20)}; font-weight: 600; color: #333; letter-spacing: 0.2px; }
+  .airline-name { font-size: ${variant === 'quadrant' ? s(15) : variant === 'full' ? s(24) : s(20)}; font-weight: 600; letter-spacing: 0.2px; }
   .flight-number { font-size: ${variant === 'quadrant' ? s(26) : variant === 'full' ? s(48) : s(34)}; font-weight: 800; line-height: 1.05; white-space: nowrap; }
-  .flight-aircraft { font-size: ${variant === 'quadrant' ? s(13) : variant === 'full' ? s(17) : s(15)}; font-weight: 500; color: #555; }
+  .flight-aircraft { font-size: ${variant === 'quadrant' ? s(13) : variant === 'full' ? s(17) : s(15)}; font-weight: 500; }
   .flight-status { font-size: ${variant === 'quadrant' ? s(16) : variant === 'full' ? s(26) : s(20)}; font-weight: 700; }
   .flight-route { display: flex; align-items: center; gap: ${s(12)}; width: 100%; font-size: ${variant === 'quadrant' ? s(18) : s(24)}; font-weight: 700; margin: ${variant === 'quadrant' ? `${s(8)} 0 ${s(5)}` : `${s(14)} 0 ${s(8)}`}; }
   .view--half_vertical { display: flex; flex-direction: column; flex: 1; align-items: stretch; width: 100%; }
@@ -202,7 +207,7 @@ export function renderMarkup(
   .view--half_vertical .flight-route { width:100%; margin: 0; }
   .view--half_horizontal .flight-top .flight-route { grid-column: 1 / -1; grid-row: 2; margin: ${s(6)} 0 0; font-size: ${s(20)}; }
   .view--half_horizontal .flight-top .flight-stats { grid-column: 2; grid-row: 1; flex-direction: column; align-items: flex-start; justify-self: center; gap: ${s(2)}; margin-top: 0; }
-  .view--half_horizontal .flight-stat-aircraft { font-size: ${s(15)}; font-weight: 500; color: #555; }
+  .view--half_horizontal .flight-stat-aircraft { font-size: ${s(15)}; font-weight: 500; }
   .view--half_horizontal .airline-name { font-size: ${s(18)}; }
   .view--half_horizontal .flight-number { font-size: ${s(30)}; }
   .view--half_horizontal .flight-aircraft { display: none; }
@@ -211,19 +216,20 @@ export function renderMarkup(
   .route-line { flex: 1; height: ${s(2)}; background: black; position: relative; }
   .route-line-flown { height: ${s(3)}; background: black; }
   .route-line-remaining { height: 0; background: none; border-top: ${s(3)} dotted black; }
+  .route-line--airborne { height: ${s(4)}; background: #888; border-top: none; }
   .route-plane { font-size: ${variant === 'quadrant' ? s(28) : variant === 'full' ? s(48) : s(36)}; line-height: 1; }
   .route-plane .plane-icon { display: block; }
   .route-end { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; }
   .route-time { font-size: 0.7em; font-weight: 700; margin-top: ${s(2)}; }
   .route-end--arr .route-time { font-weight: 800; }
   .route-delta { font-size: 0.55em; font-weight: 700; white-space: nowrap; }
-  .route-sched { font-size: 0.5em; font-weight: 600; color: #555; white-space: nowrap; }
-  .route-dim { font-weight: 600; color: #555; }
+  .route-sched { font-size: 0.5em; font-weight: 600; white-space: nowrap; }
+  .route-dim { font-weight: 600; }
   .flight-stats { display: flex; flex-wrap: wrap; gap: ${s(4)} ${s(16)}; font-size: ${s(16)}; margin-top: ${s(7)}; }
   .stat-label { font-size: 0.85em; font-weight: 700; letter-spacing: 1px; }
   .stat-value { font-size: 1.15em; font-weight: 800; }
   .stat-item--past .stat-value { font-size: 1em; font-weight: 700; }
-  .stat-telemetry { font-weight: 600; color: #444; white-space: nowrap; }
+  .stat-telemetry { font-weight: 600; white-space: nowrap; }
   .airline-logo { width: 100%; min-width: 0; flex: 0 1 auto; max-width: calc(${logoWidth} * var(--s, 1)); max-height: calc(${logoHeight} * var(--s, 1)); object-fit: contain; }
 </style>
 <div class="view view--${variant}">
@@ -275,7 +281,7 @@ function renderFullCard(f: FlightDisplayData, baseUrl: string, assetVersion?: st
         <span class="arc-time">${escapeHtml(f.depTime)}</span>
         ${deviationHtml(deviation(f.depDelayMin, f.schedDep), 'stacked', 'arc')}
       </div>
-      ${buildArcSvg(f.progressPct, showProgressPct(f))}
+      ${buildArcSvg(f.progressPct, showProgressPct(f), isInFlight(f))}
       <div class="arc-end arc-end--arr">
         <span class="arc-code">${escapeHtml(f.arrAirport || '---')}</span>
         <span class="arc-time">${escapeHtml(f.eta)}</span>
@@ -297,8 +303,10 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl:
   const hasProgress = f.progressPct != null
   const leftFlex = hasProgress ? Math.max(f.progressPct!, 2) : 1
   const rightFlex = hasProgress ? Math.max(100 - f.progressPct!, 2) : 1
-  // Flown segment is solid only when we know progress; otherwise both sides dotted (position unknown)
-  const leftLineClass = hasProgress ? 'route-line route-line-flown' : 'route-line route-line-remaining'
+  // Flown segment is solid only when we know progress; otherwise both sides use the remaining style (position unknown).
+  // Remaining is dotted before departure and solid gray once airborne.
+  const remainingClass = `route-line route-line-remaining${isInFlight(f) ? ' route-line--airborne' : ''}`
+  const leftLineClass = hasProgress ? 'route-line route-line-flown' : remainingClass
 
   const devLayout: DeviationLayout =
     variant === 'half_vertical' ? 'stacked' : variant === 'half_horizontal' ? 'inline' : 'terse'
@@ -309,7 +317,7 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl:
       <span class="route-end"><span class="route-code">${escapeHtml(f.depAirport || '---')}</span><span class="route-time">${escapeHtml(f.depTime)}</span>${depDev}</span>
       <span class="${leftLineClass}" style="flex: ${leftFlex};"></span>
       <span class="route-plane">${planeSvg()}</span>
-      <span class="route-line route-line-remaining" style="flex: ${rightFlex};"></span>
+      <span class="${remainingClass}" style="flex: ${rightFlex};"></span>
       <span class="route-end route-end--arr"><span class="route-code">${escapeHtml(f.arrAirport || '---')}</span><span class="route-time">${escapeHtml(f.eta)}</span>${arrDev}</span>
     </div>`
 

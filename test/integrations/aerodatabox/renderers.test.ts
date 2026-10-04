@@ -46,18 +46,27 @@ describe('renderMarkup', () => {
     expect(out).not.toContain('class="stat-tile') // bordered tiles are gone
   })
 
-  it('renders the flat route line with solid-flown / dotted-remaining on half_horizontal', () => {
+  it('renders the flat route line with solid-flown / gray-remaining in flight on half_horizontal', () => {
     const out = renderMarkup(sampleFlight, 'half_horizontal', 0, 'https://example.com')
     expect(out).toContain('view--half_horizontal')
     // assert on element usage, not the (always-present) CSS rule of the same name
     expect(out).toContain('class="route-line route-line-flown"')
-    expect(out).toContain('class="route-line route-line-remaining"')
+    expect(out).toContain('class="route-line route-line-remaining route-line--airborne"')
   })
 
-  it('marks both route segments dotted when progress is unknown', () => {
+  it('keeps the remaining route dotted before departure', () => {
+    const pre = { ...sampleFlight, progressPct: 0, minsToDeparture: 30 }
+    expect(renderMarkup(pre, 'half_horizontal', 0, 'https://example.com')).toContain('class="route-line route-line-remaining"')
+    expect(renderMarkup(pre, 'full', 0, 'https://example.com')).toContain('stroke-dasharray')
+    const mid = renderMarkup(sampleFlight, 'full', 0, 'https://example.com')
+    expect(mid).toContain('stroke="#888"')
+    expect(mid).not.toContain('stroke-dasharray')
+  })
+
+  it('uses the remaining style on both sides when progress is unknown', () => {
     const out = renderMarkup({ ...sampleFlight, progressPct: null }, 'half_horizontal', 0, 'https://example.com')
     expect(out).not.toContain('class="route-line route-line-flown"')
-    expect(out).toContain('class="route-line route-line-remaining"')
+    expect(out.match(/class="route-line route-line-remaining route-line--airborne"/g)).toHaveLength(2)
   })
 
   it('leads the info row with the arrival countdown and trails live telemetry as secondary text', () => {
@@ -102,7 +111,7 @@ describe('renderMarkup', () => {
 
   it('labels the arc with completion % only mid-flight', () => {
     const mid = renderMarkup(sampleFlight, 'full', 0, 'https://example.com')
-    expect(mid).toContain('>62%</tspan><tspan font-weight="600" fill="#555"> flown</tspan>')
+    expect(mid).toContain('>62%</tspan><tspan font-weight="600"> flown</tspan>')
     const pre = renderMarkup({ ...sampleFlight, progressPct: 0, minsToDeparture: 30 }, 'full', 0, 'https://example.com')
     expect(pre).not.toContain('class="arc-pct"')
     const done = renderMarkup({ ...sampleFlight, status: 'Arrived', progressPct: 100 }, 'full', 0, 'https://example.com')

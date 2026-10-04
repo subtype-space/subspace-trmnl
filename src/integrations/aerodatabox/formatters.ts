@@ -111,14 +111,15 @@ export function calcProgress(
 // route progress rather than a stray number. x is clamped so the label never runs off the arc's ends.
 function progressLabel(pct: number, at: { x: number; y: number }): string {
   const x = Math.max(70, Math.min(530, at.x))
-  return `<text class="arc-pct" x="${x.toFixed(1)}" y="${(at.y - 30).toFixed(1)}" text-anchor="middle" font-size="21" fill="black"><tspan font-weight="800">${Math.round(pct)}%</tspan><tspan font-weight="600" fill="#555"> flown</tspan></text>`
+  return `<text class="arc-pct" x="${x.toFixed(1)}" y="${(at.y - 30).toFixed(1)}" text-anchor="middle" font-size="21" fill="black"><tspan font-weight="800">${Math.round(pct)}%</tspan><tspan font-weight="600"> flown</tspan></text>`
 }
 
 // Build a great-circle-style arc with the plane positioned (and rotated to the
-// path tangent) at progressPct. Flown segment is solid, remaining is dashed.
+// path tangent) at progressPct. Flown segment is solid black; remaining is dotted before departure
+// and solid gray once airborne (a thick stroke dithers cleanly on e-ink, unlike gray text).
 // Splitting the quadratic bezier at t via de Casteljau gives both halves exactly.
 // `showPct` labels the plane with its completion % (only meaningful mid-flight).
-export function buildArcSvg(progressPct: number | null, showPct = false): string {
+export function buildArcSvg(progressPct: number | null, showPct = false, inFlight = false): string {
   const P0 = { x: 34, y: 100 }
   const P1 = { x: 300, y: -8 } // control point sets the (gentle) arc height
   const P2 = { x: 566, y: 100 }
@@ -142,15 +143,16 @@ export function buildArcSvg(progressPct: number | null, showPct = false): string
   const speed = 2 * Math.hypot(mid.b.x - mid.a.x, mid.b.y - mid.a.y)
   const gapT = speed > 0 ? Math.min(42 / speed, 0.16) : 0.08
   const back = split(Math.max(t - gapT, 0)) // flown (solid) ends here, just behind the tail
-  const fwd = split(Math.min(t + gapT, 1)) // remaining (dotted) starts here, just past the nose
+  const fwd = split(Math.min(t + gapT, 1)) // remaining starts here, just past the nose
 
   const n = (v: number) => v.toFixed(1)
+  const remainingStroke = inFlight ? 'stroke="#888" stroke-width="5"' : 'stroke="black" stroke-width="4" stroke-dasharray="1 11"'
   const flownPath = t - gapT > 0.01 ? `M${P0.x},${P0.y} Q${n(back.a.x)},${n(back.a.y)} ${n(back.c.x)},${n(back.c.y)}` : ''
   const remainingPath = t + gapT < 0.99 ? `M${n(fwd.c.x)},${n(fwd.c.y)} Q${n(fwd.b.x)},${n(fwd.b.y)} ${P2.x},${P2.y}` : ''
 
   // The plane path is centered on the origin pointing east (+x), so rotate by the tangent angle to align its nose with travel
   return `<svg class="arc-svg" viewBox="0 0 600 124" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
-      ${remainingPath ? `<path d="${remainingPath}" fill="none" stroke="black" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 11" />` : ''}
+      ${remainingPath ? `<path d="${remainingPath}" fill="none" ${remainingStroke} stroke-linecap="round" />` : ''}
       ${flownPath ? `<path d="${flownPath}" fill="none" stroke="black" stroke-width="5" stroke-linecap="round" />` : ''}
       <g transform="translate(${n(mid.c.x)},${n(mid.c.y)}) rotate(${n(angle)})">${planeArcPath(2.6)}</g>
       ${showPct && progressPct != null ? progressLabel(progressPct, mid.c) : ''}
