@@ -13,7 +13,7 @@ const baseFlight: FlightDisplayData = {
   altitudeFt: '37,000',
   speedMph: '503',
   aircraftModel: 'Boeing 737 MAX 9',
-  heading: '251° W',
+  heading: '251°',
   delayString: null, // filled per-scenario from delayMin below
   depTime: '08:12',
   schedDep: '08:12',
@@ -38,15 +38,15 @@ export const scenarios: Scenario[] = [
     flight: { ...baseFlight, depDelayMin: 12, schedDep: '08:00', delayMin: 12, schedEta: '14:24' },
   },
   {
-    title: 'Delayed — 35 min (35m late · sched 07:37 / 14:01)',
+    title: 'Delayed — 35 min (35m late · was 07:37 / 14:01)',
     flight: { ...baseFlight, depDelayMin: 35, schedDep: '07:37', delayMin: 35, schedEta: '14:01' },
   },
   {
-    title: 'Heavily delayed — 95 min (1h 35m late · sched 06:37 / 13:01)',
+    title: 'Heavily delayed — 95 min (1h 35m late · was 06:37 / 13:01)',
     flight: { ...baseFlight, depDelayMin: 95, schedDep: '06:37', delayMin: 95, schedEta: '13:01' },
   },
   {
-    title: 'Early — arrives 22 min ahead (22m early · sched 14:58)',
+    title: 'Early — arrives 22 min ahead (22m early · was 14:58)',
     flight: { ...baseFlight, delayMin: -22, schedEta: '14:58' },
   },
   {

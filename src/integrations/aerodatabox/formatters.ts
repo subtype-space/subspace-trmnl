@@ -71,10 +71,7 @@ export function planeSvg(): string {
 
 export function formatHeading(track: number | undefined): string {
   if (typeof track !== 'number') return '--'
-  const deg = Math.round(track) % 360
-  const cardinals = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
-  const idx = Math.round(deg / 45) % 8
-  return `${deg}° ${cardinals[idx]}`
+  return `${Math.round(track) % 360}°`
 }
 
 // Haversine distance in km between two lat/lon points

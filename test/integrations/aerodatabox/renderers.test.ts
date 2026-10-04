@@ -13,7 +13,7 @@ const sampleFlight: FlightDisplayData = {
   altitudeFt: '37,000',
   speedMph: '503',
   aircraftModel: 'Boeing 737 MAX 9',
-  heading: '251° W',
+  heading: '251°',
   delayString: null,
   depTime: '08:12',
   schedDep: '08:12',
@@ -73,11 +73,11 @@ describe('renderMarkup', () => {
     const out = renderMarkup(sampleFlight, 'full', 0, 'https://example.com')
     expect(out).toContain('>ARRIVING IN<')
     expect(out).toContain('2h 18m')
-    expect(out).toContain('class="info-telemetry">37,000 ft · 503 mph · 251° W<')
+    expect(out).toContain('class="info-telemetry"><span>37,000 ft</span><span>503 mph</span><span>251°</span><')
     // half variants drop heading to save width
     const half = renderMarkup(sampleFlight, 'half_vertical', 0, 'https://example.com')
-    expect(half).toContain('37,000 ft · 503 mph<')
-    expect(half).not.toContain('251° W')
+    expect(half).toContain('<span>37,000 ft</span><span>503 mph</span><')
+    expect(half).not.toContain('251°')
   })
 
   it('hides telemetry when it is not meaningful (on the ground, landed, or unknown readings)', () => {
@@ -87,7 +87,7 @@ describe('renderMarkup', () => {
     expect(landed).not.toContain('class="info-telemetry"')
     // a partial reading drops the unknown parts instead of printing --
     const partial = renderMarkup({ ...sampleFlight, speedMph: '--', heading: '--' }, 'full', 0, 'https://example.com')
-    expect(partial).toContain('class="info-telemetry">37,000 ft<')
+    expect(partial).toContain('class="info-telemetry"><span>37,000 ft</span><')
   })
 
   it('keeps the same structure with and without telemetry (no TRIP card, no row of --)', () => {
@@ -163,11 +163,11 @@ describe('renderMarkup', () => {
   it('spells out notable (>15 min) deviations as an explicit delay amount plus the scheduled time', () => {
     const late = renderMarkup({ ...sampleFlight, delayMin: 22, schedEta: '14:14' }, 'full', 0, 'https://example.com')
     expect(late).toContain('>22m late<')
-    expect(late).toContain('>sched 14:14<')
+    expect(late).toContain('>was 14:14<')
 
-    const early = renderMarkup({ ...sampleFlight, delayMin: -20, schedEta: '14:56' }, 'half_vertical', 0, 'https://example.com')
+    const early = renderMarkup({ ...sampleFlight, delayMin: -20, schedEta: '14:56' }, 'full', 0, 'https://example.com')
     expect(early).toContain('>20m early<')
-    expect(early).toContain('>sched 14:56<')
+    expect(early).toContain('>was 14:56<')
 
     const long = renderMarkup({ ...sampleFlight, delayMin: 95, schedEta: '13:01' }, 'full', 0, 'https://example.com')
     expect(long).toContain('>1h 35m late<')
@@ -175,19 +175,23 @@ describe('renderMarkup', () => {
     // minor deviations stay inside the on-time window: no callout (matches the "On time" verdict)
     const minor = renderMarkup({ ...sampleFlight, delayMin: 10, schedEta: '14:26' }, 'full', 0, 'https://example.com')
     expect(minor).not.toContain('m late<')
-    expect(minor).not.toContain('>sched ')
+    expect(minor).not.toContain('>was ')
 
     // unknown schedule: no callout
     const unknown = renderMarkup({ ...sampleFlight, delayMin: 40, schedEta: '--' }, 'full', 0, 'https://example.com')
     expect(unknown).not.toContain('m late<')
   })
 
-  it('fits the deviation to each variant (stacked / inline / delta-only on quadrant)', () => {
+  it('fits the deviation to each variant (stacked on full, delta-only everywhere else)', () => {
     const late = { ...sampleFlight, delayMin: 22, schedEta: '14:14' }
-    expect(renderMarkup(late, 'half_horizontal', 0, 'https://example.com')).toContain('22m late <span class="route-dim">· sched 14:14</span>')
+    for (const variant of ['half_horizontal', 'half_vertical'] as const) {
+      const half = renderMarkup(late, variant, 0, 'https://example.com')
+      expect(half).toContain('>22m late<')
+      expect(half).not.toContain('was 14:14')
+    }
     const quad = renderMarkup(late, 'quadrant', 0, 'https://example.com')
     expect(quad).toContain('>22m late<')
-    expect(quad).not.toContain('sched 14:14')
+    expect(quad).not.toContain('was 14:14')
   })
 
   it('calls out departure and arrival deviations independently', () => {
@@ -195,8 +199,8 @@ describe('renderMarkup', () => {
     const mixed = { ...sampleFlight, depDelayMin: 26, schedDep: '07:46', delayMin: -10, schedEta: '14:46' }
     const out = renderMarkup(mixed, 'full', 0, 'https://example.com')
     expect(out).toContain('>26m late<')
-    expect(out).toContain('>sched 07:46<')
-    expect(out).not.toContain('sched 14:46')
+    expect(out).toContain('>was 07:46<')
+    expect(out).not.toContain('was 14:46')
   })
 
   it('shows the on-time verdict in the header status line, and hides it when unknown', () => {
