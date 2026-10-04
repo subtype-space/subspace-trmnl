@@ -13,14 +13,37 @@ function buildLogoUrl(baseUrl: string, airlineIcao: string, assetVersion?: strin
   return assetVersion ? `${url}?v=${encodeURIComponent(assetVersion)}` : url
 }
 
-// Display a small 'anchor' label when the flight is off schedule by
-// a configurable amount of minutes
+// The logo leads the header on the left. No ICAO -> no image at all; a failed load hides the image
+// and flags the header so it re-aligns left (see .flight-top--no-logo).
+function logoHtml(f: FlightDisplayData, baseUrl: string, assetVersion?: string): string {
+  if (!f.airlineIcao) return ''
+  const src = buildLogoUrl(baseUrl, f.airlineIcao, assetVersion)
+  return `<img class="image-dither airline-logo" src="${src}" onerror="this.style.display='none';this.parentElement.classList.add('flight-top--no-logo')" />`
+}
+
+// Only call out a schedule deviation once it's notable — the same 15-min window the
+// on-time verdict uses, so a "+12m" never sits next to an "On time" status.
 const ANCHOR_MIN_DEVIATION_MIN = 15
 
-function wasAnchor(delayMin: number | null, schedTime: string): string {
-  return delayMin != null && Math.abs(delayMin) > ANCHOR_MIN_DEVIATION_MIN && schedTime !== '--'
-    ? `was ${escapeHtml(schedTime)}`
-    : ''
+type Deviation = { delta: string; sched: string }
+
+// Explicit delay amount ("35m late" / "22m early") plus the original clock, or null when on schedule/unknown.
+function deviation(delayMin: number | null, schedTime: string): Deviation | null {
+  if (delayMin == null || Math.abs(delayMin) <= ANCHOR_MIN_DEVIATION_MIN || schedTime === '--') return null
+  const amount = formatDuration(Math.abs(delayMin))
+  return { delta: `${amount} ${delayMin > 0 ? 'late' : 'early'}`, sched: `sched ${escapeHtml(schedTime)}` }
+}
+
+// How much of the deviation each variant has room for under the airport code:
+// stacked (delta + sched on two lines), inline (one line), or terse (delta only).
+type DeviationLayout = 'stacked' | 'inline' | 'terse'
+
+function deviationHtml(dev: Deviation | null, layout: DeviationLayout, prefix: 'arc' | 'route'): string {
+  if (!dev) return ''
+  const delta = `<span class="${prefix}-delta">${dev.delta}</span>`
+  if (layout === 'terse') return delta
+  if (layout === 'inline') return `<span class="${prefix}-delta">${dev.delta} <span class="${prefix}-dim">· ${dev.sched}</span></span>`
+  return `${delta}<span class="${prefix}-sched">${dev.sched}</span>`
 }
 
 // No-telemetry countdown: before wheels-up we count down to departure, after to arrival.
@@ -30,29 +53,56 @@ function countdown(f: FlightDisplayData): { preDeparture: boolean; mins: number 
 }
 
 // Terminal states: once the flight has landed the arrival countdown is meaningless
-// (it would read a stale "Arriving"), so the no-telemetry tile shows the landing instead.
+// (it would read a stale "Arriving"), so the info row shows the landing instead.
 function isArrived(f: FlightDisplayData): boolean {
   return f.status === 'Arrived' || f.status === 'Likely Arrived'
 }
 
-// The primary no-telemetry tile: departs-in / arrives-in while active, or the landed time once arrived.
-// `terse` picks the short labels (DEP IN / ARR IN) used on the space-constrained half variants.
-function progressTile(f: FlightDisplayData, terse: boolean): { label: string; value: string } {
+// The primary info-row item: departs-in / arrives-in while active, or the landed time once arrived.
+// Shown in every state (with or without telemetry) so outbound and return legs keep the same structure.
+// Every layout that has an info row has room for the full DEPARTS IN / ARRIVING IN labels.
+// `past` marks the landed state: historical, so the row renders it quieter than a live countdown.
+function progressItem(f: FlightDisplayData): { label: string; value: string; past?: boolean } | null {
   if (isArrived(f)) {
     // bit of a misnomer. eta resolves to actual times in priority:
     // runwayTime > revisedTime > predictedTime > scheduledTime
     // We just show 'landed' as a fallback case. Shouldn't really happen though
-    return { label: 'ARRIVED', value: f.eta !== '--' ? escapeHtml(f.eta) : 'Landed' }
+    // The landing clock already sits under the arrival airport, so prefer "how long ago" here.
+    if (f.minsRemaining != null && f.minsRemaining < 0) {
+      return { label: 'ARRIVED', value: `${escapeHtml(formatDuration(-f.minsRemaining))} ago`, past: true }
+    }
+    return { label: 'ARRIVED', value: f.eta !== '--' ? escapeHtml(f.eta) : 'Landed', past: true }
   }
   const countdownState = countdown(f)
-  const label = terse
-    ? countdownState.preDeparture
-      ? 'DEP IN'
-      : 'ARR IN'
-    : countdownState.preDeparture
-      ? 'DEPARTS IN'
-      : 'ARRIVING IN'
-  return { label, value: countdownState.mins != null ? escapeHtml(formatDuration(countdownState.mins)) : '--' }
+  if (countdownState.mins == null) return null
+  const label = countdownState.preDeparture ? 'DEPARTS IN' : 'ARRIVING IN'
+  return { label, value: escapeHtml(formatDuration(countdownState.mins)) }
+}
+
+// Live telemetry is secondary: only worth showing while airborne. On the ground (or landed)
+// altitude/speed/heading are noise, and any unknown ('--') reading is dropped rather than shown.
+function telemetryParts(f: FlightDisplayData, includeHeading: boolean): string[] {
+  if (isArrived(f) || f.altitudeFt === 'Ground') return []
+  const parts: string[] = []
+  if (f.altitudeFt !== '--') parts.push(`${escapeHtml(f.altitudeFt)} ft`)
+  if (f.speedMph !== '--') parts.push(`${escapeHtml(f.speedMph)} mph`)
+  if (includeHeading && f.heading !== '--') parts.push(escapeHtml(f.heading))
+  return parts
+}
+
+// The arc's % label only means something mid-flight — 0% pre-departure and 100% after landing say nothing.
+function showProgressPct(f: FlightDisplayData): boolean {
+  return f.progressPct != null && f.progressPct > 0 && f.progressPct < 100 && !isArrived(f) && !countdown(f).preDeparture
+}
+
+function formatFlightCode(f: FlightDisplayData): { airlineName: string; flightCode: string } {
+  const airlineCode = f.airlineIata || ''
+  const airlineName = AIRLINE_NAMES[airlineCode] ?? (airlineCode || f.flightIata)
+  const flightCode =
+    airlineCode && f.flightIata.startsWith(airlineCode)
+      ? `${airlineCode} ${f.flightIata.slice(airlineCode.length)}`
+      : f.flightIata
+  return { airlineName, flightCode }
 }
 
 /**
@@ -96,35 +146,37 @@ export function renderMarkup(
   .flight-card { --s: 1; }
   .screen--lg .flight-card { --s: 1.3; }
 
-  /* full variant: hero arc + stat tiles. Stretch the framework chain so the
-     card can distribute its blocks top-to-bottom and fill the taller X screen. */
+  /* full variant: header, hero arc, then a single info row, as one vertically centered block.
+     The route sits close under the header (the arc's own viewBox already carries headroom for
+     the progress label), with a little more air before the info row. */
   .view--full, .view--full .layout, .view--full .columns, .view--full .column, .view--full .markdown { display: flex; flex-direction: column; flex: 1; width: 100%; }
-  .view--full .flight-card { justify-content: space-between; padding: ${s(20)} ${s(40)}; }
-  /* No live telemetry -> no tiles; center the remaining header + arc so the card doesn't
-     look top-heavy with an empty lower half. */
-  .view--full .flight-card--compact { justify-content: center; gap: ${s(56)}; }
+  .view--full .flight-card { justify-content: center; padding: ${s(12)} ${s(40)}; }
+  .view--full .flight-arc-wrap { margin-top: ${s(20)}; }
+  .view--full .flight-info { margin-top: ${s(28)}; }
   .view--full .flight-top { align-items: center; }
   .flight-arc-wrap { display: flex; align-items: center; gap: ${s(10)}; width: 100%; }
   .arc-end { display: flex; flex-direction: column; align-items: center; min-width: ${s(96)}; }
-  .arc-code { font-size: ${s(40)}; font-weight: 800; line-height: 1; }
-  .arc-time { font-size: ${s(18)}; font-weight: 600; color: #333; margin-top: ${s(4)}; }
-  .arc-sched { font-size: ${s(14)}; font-weight: 600; color: #666; margin-top: ${s(2)}; }
+  .arc-code { font-size: ${s(34)}; font-weight: 800; line-height: 1; }
+  .arc-time { font-size: ${s(22)}; font-weight: 700; margin-top: ${s(4)}; }
+  .arc-end--arr .arc-time { font-weight: 800; }
+  .arc-delta { font-size: ${s(15)}; font-weight: 700; margin-top: ${s(2)}; white-space: nowrap; }
+  .arc-sched { font-size: ${s(13)}; font-weight: 600; color: #555; white-space: nowrap; }
   .arc-svg { flex: 1 1 0; min-width: 0; height: auto; display: block; overflow: visible; }
-  .stat-tiles { display: flex; gap: ${s(12)}; width: 100%; }
-  .stat-tile { flex: 1; border: ${s(2)} solid black; border-radius: ${s(10)}; padding: ${s(10)} ${s(6)}; display: flex; flex-direction: column; align-items: center; gap: ${s(3)}; }
-  .stat-tile-label { font-size: ${s(15)}; font-weight: 700; letter-spacing: 1.5px; }
-  .stat-tile-value { font-size: ${s(26)}; font-weight: 800; }
+  .flight-info { display: flex; align-items: baseline; justify-content: space-between; gap: ${s(16)}; width: 100%; }
+  .info-primary { display: flex; align-items: baseline; gap: ${s(10)}; }
+  .info-primary--past .info-label { font-size: ${s(13)}; }
+  .info-primary--past .info-value { font-size: ${s(22)}; font-weight: 700; }
+  .info-label { font-size: ${s(15)}; font-weight: 700; letter-spacing: 1.5px; }
+  .info-value { font-size: ${s(30)}; font-weight: 800; }
+  .info-telemetry { font-size: ${s(18)}; font-weight: 600; color: #444; margin-left: auto; white-space: nowrap; }
 
-  /* TRMNL X (screen--lg): the taller screen leaves room to breathe, so center the
-     blocks with a fixed gap (OG stays space-between — its content already fills the
-     shorter screen and a forced gap would overflow/clip the header), and bump just
-     the logo + header (arc + tiles already fill the width). */
-  .screen--lg .view--full .flight-card { justify-content: center; gap: ${s(44)}; }
+  /* TRMNL X (screen--lg): same centered block (the --s scale already grows the gaps);
+     bump just the logo + header, since the arc + info row already fill the width. */
   .screen--lg .view--full .airline-logo { max-width: ${s(370)}; max-height: ${s(165)}; }
-  .screen--lg .view--full .airline-name { font-size: ${s(34)}; }
-  .screen--lg .view--full .flight-number { font-size: ${s(50)}; }
-  .screen--lg .view--full .flight-aircraft { font-size: ${s(22)}; }
-  .screen--lg .view--full .flight-status { font-size: ${s(27)}; }
+  .screen--lg .view--full .airline-name { font-size: ${s(27)}; }
+  .screen--lg .view--full .flight-number { font-size: ${s(56)}; }
+  .screen--lg .view--full .flight-aircraft { font-size: ${s(19)}; }
+  .screen--lg .view--full .flight-status { font-size: ${s(30)}; }
 
   .flight-card { margin: ${variant === 'full' ? '0' : variant === 'half_vertical' ? `${s(12)} 0 0` : variant === 'half_horizontal' ? `${s(8)} 0` : `${s(6)} ${s(8)}`}; padding: ${variant === 'full' ? `${s(12)} ${s(24)}` : '0'}; font-family: 'IBM Plex Sans', 'SF Pro Text', 'Segoe UI', sans-serif; display: flex; flex-direction: column; flex: 1; }
   .flight-details { margin-top: ${variant === 'full' ? s(60) : '0'}; }
@@ -132,23 +184,26 @@ export function renderMarkup(
   .view--half_horizontal .flight-top { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; align-items: center; column-gap: ${s(16)}; row-gap: ${s(2)}; }
   .view--half_horizontal .airline-logo { grid-column: 1; grid-row: 1; align-self: center; }
   .view--half_horizontal .flight-meta { grid-column: 3; grid-row: 1; }
-  .flight-meta { display: flex; flex-direction: column; gap: ${variant === 'quadrant' ? s(3) : s(5)}; align-items: flex-end; text-align: right; margin-left: auto; }
-  .airline-name { font-size: ${variant === 'quadrant' ? s(18) : variant === 'full' ? s(30) : s(24)}; font-weight: 700; letter-spacing: 0.2px; }
-  .flight-number { font-size: ${variant === 'quadrant' ? s(26) : variant === 'full' ? s(44) : s(34)}; font-weight: 800; }
-  .flight-aircraft { font-size: ${variant === 'quadrant' ? s(14) : variant === 'full' ? s(20) : s(17)}; font-weight: 500; color: #444; }
-  .flight-status { font-size: ${variant === 'quadrant' ? s(16) : variant === 'full' ? s(24) : s(20)}; font-weight: 600; }
-  .flight-route { display: flex; align-items: center; gap: ${s(12)}; width: 100%; font-size: ${variant === 'quadrant' ? s(20) : s(28)}; font-weight: 700; margin: ${variant === 'quadrant' ? `${s(8)} 0 ${s(5)}` : `${s(14)} 0 ${s(8)}`}; }
+  .flight-meta { display: flex; flex-direction: column; gap: ${variant === 'quadrant' ? s(2) : s(4)}; align-items: flex-end; text-align: right; margin-left: auto; flex-shrink: 0; }
+  /* No logo (unknown airline or the image failed): left-align the header so it sits over the
+     origin instead of hanging off the right edge with nothing to balance it. */
+  .flight-top--no-logo .flight-meta { align-items: flex-start; text-align: left; margin-left: 0; }
+  .view--half_horizontal .flight-top--no-logo .flight-meta { grid-column: 1; }
+  /* Header hierarchy: flight number + status lead; airline name and aircraft are supporting text. */
+  .airline-name { font-size: ${variant === 'quadrant' ? s(15) : variant === 'full' ? s(24) : s(20)}; font-weight: 600; color: #333; letter-spacing: 0.2px; }
+  .flight-number { font-size: ${variant === 'quadrant' ? s(26) : variant === 'full' ? s(48) : s(34)}; font-weight: 800; line-height: 1.05; white-space: nowrap; }
+  .flight-aircraft { font-size: ${variant === 'quadrant' ? s(13) : variant === 'full' ? s(17) : s(15)}; font-weight: 500; color: #555; }
+  .flight-status { font-size: ${variant === 'quadrant' ? s(16) : variant === 'full' ? s(26) : s(20)}; font-weight: 700; }
+  .flight-route { display: flex; align-items: center; gap: ${s(12)}; width: 100%; font-size: ${variant === 'quadrant' ? s(18) : s(24)}; font-weight: 700; margin: ${variant === 'quadrant' ? `${s(8)} 0 ${s(5)}` : `${s(14)} 0 ${s(8)}`}; }
   .view--half_vertical { display: flex; flex-direction: column; flex: 1; align-items: stretch; width: 100%; }
-  .view--half_vertical .flight-top { margin-bottom: ${s(36)}; }
-  .view--half_vertical .flight-details { margin-top: auto; display: flex; flex-direction: column; gap: ${s(16)}; }
-  .view--half_vertical .flight-stats { margin-top: ${s(36)}; font-size: ${s(14)}; gap: ${s(10)}; justify-content: space-between; }
+  .view--half_vertical .flight-card { justify-content: center; gap: ${s(28)}; margin: 0; }
+  .view--half_vertical .flight-details { display: flex; flex-direction: column; gap: ${s(14)}; }
+  .view--half_vertical .flight-stats { justify-content: space-between; align-items: baseline; margin-top: 0; }
   .view--half_vertical .flight-route { width:100%; margin: 0; }
-  .view--half_vertical .stat-item { display: flex; flex-direction: column; align-items: center; }
-  .view--half_vertical .stat-value { font-size: ${s(16)}; font-weight: 700; }
-  .view--half_horizontal .flight-top .flight-route { grid-column: 1 / -1; grid-row: 2; margin: ${s(6)} 0 0; font-size: ${s(22)}; }
-  .view--half_horizontal .flight-top .flight-stats { grid-column: 2; grid-row: 1; flex-direction: column; align-items: flex-start; justify-self: center; gap: ${s(2)}; font-size: ${s(16)}; margin-top: 0; }
-  .view--half_horizontal .flight-stat-aircraft { font-weight: 600; }
-  .view--half_horizontal .airline-name { font-size: ${s(20)}; }
+  .view--half_horizontal .flight-top .flight-route { grid-column: 1 / -1; grid-row: 2; margin: ${s(6)} 0 0; font-size: ${s(20)}; }
+  .view--half_horizontal .flight-top .flight-stats { grid-column: 2; grid-row: 1; flex-direction: column; align-items: flex-start; justify-self: center; gap: ${s(2)}; margin-top: 0; }
+  .view--half_horizontal .flight-stat-aircraft { font-size: ${s(15)}; font-weight: 500; color: #555; }
+  .view--half_horizontal .airline-name { font-size: ${s(18)}; }
   .view--half_horizontal .flight-number { font-size: ${s(30)}; }
   .view--half_horizontal .flight-aircraft { display: none; }
   .view--half_horizontal .flight-status { font-size: ${s(18)}; }
@@ -159,11 +214,17 @@ export function renderMarkup(
   .route-plane { font-size: ${variant === 'quadrant' ? s(28) : variant === 'full' ? s(48) : s(36)}; line-height: 1; }
   .route-plane .plane-icon { display: block; }
   .route-end { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; }
-  .route-time { font-size: 0.6em; font-weight: 600; color: #333; margin-top: ${s(2)}; }
-  .route-sched { font-size: 0.5em; font-weight: 600; color: #666; }
-  .flight-stats { display: flex; ${variant === 'full' ? 'justify-content: space-between;' : `gap: ${variant === 'quadrant' ? s(14) : s(26)};`} font-size: ${variant === 'full' ? s(24) : variant === 'quadrant' ? s(15) : s(20)}; margin-top: ${variant === 'quadrant' ? s(3) : s(7)}; }
-  .stat-label { font-weight: 700; }
-  .airline-logo { width: 100%; max-width: calc(${logoWidth} * var(--s, 1)); max-height: calc(${logoHeight} * var(--s, 1)); object-fit: contain; }
+  .route-time { font-size: 0.7em; font-weight: 700; margin-top: ${s(2)}; }
+  .route-end--arr .route-time { font-weight: 800; }
+  .route-delta { font-size: 0.55em; font-weight: 700; white-space: nowrap; }
+  .route-sched { font-size: 0.5em; font-weight: 600; color: #555; white-space: nowrap; }
+  .route-dim { font-weight: 600; color: #555; }
+  .flight-stats { display: flex; flex-wrap: wrap; gap: ${s(4)} ${s(16)}; font-size: ${s(16)}; margin-top: ${s(7)}; }
+  .stat-label { font-size: 0.85em; font-weight: 700; letter-spacing: 1px; }
+  .stat-value { font-size: 1.15em; font-weight: 800; }
+  .stat-item--past .stat-value { font-size: 1em; font-weight: 700; }
+  .stat-telemetry { font-weight: 600; color: #444; white-space: nowrap; }
+  .airline-logo { width: 100%; min-width: 0; flex: 0 1 auto; max-width: calc(${logoWidth} * var(--s, 1)); max-height: calc(${logoHeight} * var(--s, 1)); object-fit: contain; }
 </style>
 <div class="view view--${variant}">
   <div class="layout">
@@ -185,82 +246,52 @@ export function renderMarkup(
 }
 
 function renderFullCard(f: FlightDisplayData, baseUrl: string, assetVersion?: string): string {
-  const logoUrl = buildLogoUrl(baseUrl, f.airlineIcao, assetVersion)
-  const airlineCode = f.airlineIata || ''
-  const airlineName = AIRLINE_NAMES[airlineCode] ?? (airlineCode || f.flightIata)
-  const flightCode =
-    airlineCode && f.flightIata.startsWith(airlineCode)
-      ? `${airlineCode} ${f.flightIata.slice(airlineCode.length)}`
-      : f.flightIata
+  const { airlineName, flightCode } = formatFlightCode(f)
 
-  const altDisplay = `${escapeHtml(f.altitudeFt)}${f.altitudeFt !== '--' && f.altitudeFt !== 'Ground' ? ' ft' : ''}`
-  const spdDisplay = `${escapeHtml(f.speedMph)}${f.speedMph !== '--' ? ' mph' : ''}`
-
-  // Check for live telemetry, if there is none, fallback to est mins remaining and progress complete
-  const hasLiveData = f.altitudeFt !== '--' || f.speedMph !== '--' || f.heading !== '--'
-  const hasFallback = f.minsToDeparture != null || f.minsRemaining != null || f.progressPct != null
-  const depSched = wasAnchor(f.depDelayMin, f.schedDep)
-  const arrSched = wasAnchor(f.delayMin, f.schedEta)
-  const baseTiles = hasLiveData
-    ? [
-        { label: 'ALT', value: altDisplay },
-        { label: 'SPD', value: spdDisplay },
-        { label: 'HDG', value: escapeHtml(f.heading) },
-      ]
-    : hasFallback
-      ? [progressTile(f, false), { label: 'TRIP', value: f.progressPct != null ? `${f.progressPct}%` : '--' }]
-      : []
-
-  const baseHtml = baseTiles
-    .map(
-      (tile) =>
-        `<div class="stat-tile"><span class="stat-tile-label">${tile.label}</span><span class="stat-tile-value">${tile.value}</span></div>`
-    )
-    .join('')
-  const tilesHtml = baseHtml
-  const showTiles = tilesHtml !== ''
+  // One info row in every state: the countdown / landed time leads, live telemetry trails as
+  // secondary text when airborne. Keeps outbound and return legs structurally identical.
+  const primary = progressItem(f)
+  const telemetry = telemetryParts(f, true)
+  const primaryHtml = primary
+    ? `<span class="info-primary${primary.past ? ' info-primary--past' : ''}"><span class="info-label">${primary.label}</span><span class="info-value">${primary.value}</span></span>`
+    : ''
+  const telemetryHtml = telemetry.length ? `<span class="info-telemetry">${telemetry.join(' · ')}</span>` : ''
+  const showInfo = primaryHtml !== '' || telemetryHtml !== ''
 
   return `
-  <div class="flight-card${showTiles ? '' : ' flight-card--compact'}">
-    <div class="flight-top">
-      <img class="image-dither airline-logo" src="${logoUrl}" onerror="this.style.display='none'" />
+  <div class="flight-card">
+    <div class="flight-top${f.airlineIcao ? '' : ' flight-top--no-logo'}">
+      ${logoHtml(f, baseUrl, assetVersion)}
       <div class="flight-meta">
         <span class="airline-name">${escapeHtml(airlineName)}</span>
         <span class="flight-number">${escapeHtml(flightCode)}</span>
-        <span class="flight-aircraft">${escapeHtml(f.aircraftModel)}</span>
         <span class="flight-status">${escapeHtml(f.status)}${f.delayString ? ` <span class="flight-adherence">· ${escapeHtml(f.delayString)}</span>` : ''}</span>
+        <span class="flight-aircraft">${escapeHtml(f.aircraftModel)}</span>
       </div>
     </div>
     <div class="flight-arc-wrap">
       <div class="arc-end">
         <span class="arc-code">${escapeHtml(f.depAirport || '---')}</span>
         <span class="arc-time">${escapeHtml(f.depTime)}</span>
-        ${depSched ? `<span class="arc-sched">${depSched}</span>` : ''}
+        ${deviationHtml(deviation(f.depDelayMin, f.schedDep), 'stacked', 'arc')}
       </div>
-      ${buildArcSvg(f.progressPct)}
-      <div class="arc-end">
+      ${buildArcSvg(f.progressPct, showProgressPct(f))}
+      <div class="arc-end arc-end--arr">
         <span class="arc-code">${escapeHtml(f.arrAirport || '---')}</span>
         <span class="arc-time">${escapeHtml(f.eta)}</span>
-        ${arrSched ? `<span class="arc-sched">${arrSched}</span>` : ''}
+        ${deviationHtml(deviation(f.delayMin, f.schedEta), 'stacked', 'arc')}
       </div>
     </div>
-    ${showTiles ? `<div class="stat-tiles">${tilesHtml}</div>` : ''}
+    ${showInfo ? `<div class="flight-info">${primaryHtml}${telemetryHtml}</div>` : ''}
   </div>`
 }
 
 function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl: string, assetVersion?: string): string {
   if (variant === 'full') return renderFullCard(f, baseUrl, assetVersion)
 
-  const logoUrl = buildLogoUrl(baseUrl, f.airlineIcao, assetVersion)
   const showStats = variant !== 'quadrant'
-  const showRoute = true
   const embedRouteInTop = variant === 'half_horizontal'
-  const airlineCode = f.airlineIata || ''
-  const airlineName = AIRLINE_NAMES[airlineCode] ?? (airlineCode || f.flightIata)
-  const flightCode =
-    airlineCode && f.flightIata.startsWith(airlineCode)
-      ? `${airlineCode} ${f.flightIata.slice(airlineCode.length)}`
-      : f.flightIata
+  const { airlineName, flightCode } = formatFlightCode(f)
 
   // If we have progress data, use flex ratios to position the plane icon
   const hasProgress = f.progressPct != null
@@ -269,59 +300,47 @@ function renderFlightCard(f: FlightDisplayData, variant: MarkupVariant, baseUrl:
   // Flown segment is solid only when we know progress; otherwise both sides dotted (position unknown)
   const leftLineClass = hasProgress ? 'route-line route-line-flown' : 'route-line route-line-remaining'
 
-  const depSched = wasAnchor(f.depDelayMin, f.schedDep)
-  const arrSched = wasAnchor(f.delayMin, f.schedEta)
-  const routeHtml = showRoute
-    ? `
+  const devLayout: DeviationLayout =
+    variant === 'half_vertical' ? 'stacked' : variant === 'half_horizontal' ? 'inline' : 'terse'
+  const depDev = deviationHtml(deviation(f.depDelayMin, f.schedDep), devLayout, 'route')
+  const arrDev = deviationHtml(deviation(f.delayMin, f.schedEta), devLayout, 'route')
+  const routeHtml = `
     <div class="flight-route">
-      <span class="route-end"><span class="route-code">${escapeHtml(f.depAirport || '---')}</span><span class="route-time">${escapeHtml(f.depTime)}</span>${depSched ? `<span class="route-sched">${depSched}</span>` : ''}</span>
+      <span class="route-end"><span class="route-code">${escapeHtml(f.depAirport || '---')}</span><span class="route-time">${escapeHtml(f.depTime)}</span>${depDev}</span>
       <span class="${leftLineClass}" style="flex: ${leftFlex};"></span>
       <span class="route-plane">${planeSvg()}</span>
       <span class="route-line route-line-remaining" style="flex: ${rightFlex};"></span>
-      <span class="route-end"><span class="route-code">${escapeHtml(f.arrAirport || '---')}</span><span class="route-time">${escapeHtml(f.eta)}</span>${arrSched ? `<span class="route-sched">${arrSched}</span>` : ''}</span>
+      <span class="route-end route-end--arr"><span class="route-code">${escapeHtml(f.arrAirport || '---')}</span><span class="route-time">${escapeHtml(f.eta)}</span>${arrDev}</span>
     </div>`
-    : ''
 
-  // Live telemetry with fallback to mins remaining and progress complete
-  const hasLiveData = f.altitudeFt !== '--' || f.speedMph !== '--' || f.heading !== '--'
-  const hasFallback = f.minsToDeparture != null || f.minsRemaining != null || f.progressPct != null
+  // Same info row as the full variant: countdown / landed time first, telemetry (alt + speed only —
+  // heading isn't worth the width here) as secondary text when airborne.
+  const primary = progressItem(f)
+  const telemetry = telemetryParts(f, false)
   const aircraftStat =
     variant === 'half_horizontal' ? `<span class="stat-item flight-stat-aircraft">${escapeHtml(f.aircraftModel)}</span>` : ''
-  const stat = (label: string, value: string) =>
-    `<span class="stat-item"><span class="stat-label">${label}:</span> <span class="stat-value">${value}</span></span>`
-  let statsInner = ''
-  if (hasLiveData) {
-    statsInner = `${aircraftStat}
-      ${stat('ALT', `${escapeHtml(f.altitudeFt)}${f.altitudeFt !== '--' && f.altitudeFt !== 'Ground' ? ' ft' : ''}`)}
-      ${stat('SPD', `${escapeHtml(f.speedMph)}${f.speedMph !== '--' ? ' mph' : ''}`)}
-      ${stat('HDG', escapeHtml(f.heading))}`
-  } else if (hasFallback) {
-    const fallbackTile = progressTile(f, true)
-    statsInner = `${aircraftStat}
-      ${stat(fallbackTile.label, fallbackTile.value)}
-      ${stat('TRIP', f.progressPct != null ? `${f.progressPct}%` : '--')}`
-  } else {
-    statsInner = aircraftStat
-  }
+  const primaryStat = primary
+    ? `<span class="stat-item${primary.past ? ' stat-item--past' : ''}"><span class="stat-label">${primary.label}</span> <span class="stat-value">${primary.value}</span></span>`
+    : ''
+  const telemetryStat = telemetry.length ? `<span class="stat-item stat-telemetry">${telemetry.join(' · ')}</span>` : ''
+  const statsInner = `${aircraftStat}${primaryStat}${telemetryStat}`
   const statsHtml = showStats && statsInner ? `<div class="flight-stats">${statsInner}</div>` : ''
 
-  const routeBlock = showRoute ? routeHtml : ''
-  const statsBlock = showStats ? statsHtml : ''
-  const detailsContent = `${statsBlock}${routeBlock}`
-  const detailsBlock = embedRouteInTop ? '' : `<div class="flight-details">${detailsContent}</div>`
+  // half_vertical reads top-down: route first (origin/destination/arrival), then the info row.
+  const detailsBlock = embedRouteInTop ? '' : `<div class="flight-details">${routeHtml}${statsHtml}</div>`
 
   return `
   <div class="flight-card">
-    <div class="flight-top">
-      <img class="image-dither airline-logo" src="${logoUrl}" onerror="this.style.display='none'" />
+    <div class="flight-top${f.airlineIcao ? '' : ' flight-top--no-logo'}">
+      ${logoHtml(f, baseUrl, assetVersion)}
       <div class="flight-meta">
         <span class="airline-name">${escapeHtml(airlineName)}</span>
         <span class="flight-number">${escapeHtml(flightCode)}</span>
-        <span class="flight-aircraft">${escapeHtml(f.aircraftModel)}</span>
         <span class="flight-status">${escapeHtml(f.status)}</span>
+        <span class="flight-aircraft">${escapeHtml(f.aircraftModel)}</span>
       </div>
-      ${embedRouteInTop ? routeBlock : ''}
-      ${embedRouteInTop ? statsBlock : ''}
+      ${embedRouteInTop ? routeHtml : ''}
+      ${embedRouteInTop ? statsHtml : ''}
     </div>
     ${detailsBlock}
   </div>`

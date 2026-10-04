@@ -107,10 +107,18 @@ export function calcProgress(
   return Math.max(0, Math.min(100, pct))
 }
 
+// "62% flown" riding just above the plane: the bold figure plus a lighter unit word makes it read as
+// route progress rather than a stray number. x is clamped so the label never runs off the arc's ends.
+function progressLabel(pct: number, at: { x: number; y: number }): string {
+  const x = Math.max(70, Math.min(530, at.x))
+  return `<text class="arc-pct" x="${x.toFixed(1)}" y="${(at.y - 30).toFixed(1)}" text-anchor="middle" font-size="21" fill="black"><tspan font-weight="800">${Math.round(pct)}%</tspan><tspan font-weight="600" fill="#555"> flown</tspan></text>`
+}
+
 // Build a great-circle-style arc with the plane positioned (and rotated to the
 // path tangent) at progressPct. Flown segment is solid, remaining is dashed.
 // Splitting the quadratic bezier at t via de Casteljau gives both halves exactly.
-export function buildArcSvg(progressPct: number | null): string {
+// `showPct` labels the plane with its completion % (only meaningful mid-flight).
+export function buildArcSvg(progressPct: number | null, showPct = false): string {
   const P0 = { x: 34, y: 100 }
   const P1 = { x: 300, y: -8 } // control point sets the (gentle) arc height
   const P2 = { x: 566, y: 100 }
@@ -145,5 +153,6 @@ export function buildArcSvg(progressPct: number | null): string {
       ${remainingPath ? `<path d="${remainingPath}" fill="none" stroke="black" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 11" />` : ''}
       ${flownPath ? `<path d="${flownPath}" fill="none" stroke="black" stroke-width="5" stroke-linecap="round" />` : ''}
       <g transform="translate(${n(mid.c.x)},${n(mid.c.y)}) rotate(${n(angle)})">${planeArcPath(2.6)}</g>
+      ${showPct && progressPct != null ? progressLabel(progressPct, mid.c) : ''}
     </svg>`
 }
