@@ -224,6 +224,7 @@ export function renderMarkup(
   .route-end--arr .route-time { font-weight: 800; }
   .route-delta { font-size: 0.55em; font-weight: 700; white-space: nowrap; }
   .route-sched { font-size: 0.5em; font-weight: 600; white-space: nowrap; }
+  .route-dim { font-weight: 600; }
   .flight-stats { display: flex; flex-wrap: wrap; gap: ${s(4)} ${s(16)}; font-size: ${s(16)}; margin-top: ${s(7)}; }
   .stat-label { font-size: 0.85em; font-weight: 700; letter-spacing: 1px; }
   .stat-value { font-size: 1.15em; font-weight: 800; }
