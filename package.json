@@ -1,6 +1,6 @@
 {
   "name": "subspace-trmnl",
-  "version": "1.20.11",
+  "version": "1.20.12",
   "description": "TRMNL plugin service for subtype.space",
   "repository": {
     "type": "git",
