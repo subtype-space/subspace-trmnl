@@ -115,7 +115,7 @@ export type FlightDisplayData = {
   minsToDeparture: number | null // minutes until departure (from "now"); null if unknown, <=0 if departed
   minsRemaining: number | null // minutes until arrival (from "now"); null if unknown, <=0 if past
   progressPct: number | null // 0-100, null if unknown
-  lastUpdated: string // relative staleness (e.g. "5m ago", "Yesterday")
+  lastUpdated: string // relative staleness (e.g. "just now", "recently", "2h ago", "yesterday")
 }
 
 export type Provider = 'apimarket' | 'rapidapi'

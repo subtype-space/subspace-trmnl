@@ -254,8 +254,8 @@ export function buildFlightDisplayData(flight: AeroFlightContract): FlightDispla
       const diffHr = Math.floor(diffMs / 3_600_000)
       const diffDays = Math.floor(diffMs / 86_400_000)
 
-      if (diffMin < 30) lastUpdated = 'recently'
-      else if (diffMin < 60) lastUpdated = `${diffMin}m ago`
+      if (diffMin < 1) lastUpdated = 'just now'
+      else if (diffMin < 60) lastUpdated = 'recently'
       else if (diffHr < 24) lastUpdated = `${diffHr}h ago`
       else if (diffDays === 1) lastUpdated = 'yesterday'
       else lastUpdated = `${diffDays}d ago`
