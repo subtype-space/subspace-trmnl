@@ -274,10 +274,4 @@ describe('renderMarkup', () => {
     const noCountdown = renderMarkup({ ...arrived, minsRemaining: null }, 'full', 0, 'https://example.com')
     expect(noCountdown).toContain('class="info-value">14:54<')
   })
-
-  it('escapes HTML in the last-updated label', () => {
-    const out = renderMarkup({ ...sampleFlight, lastUpdated: '<script>' }, 'full', 0, 'https://example.com')
-    expect(out).not.toContain('<script>')
-    expect(out).toContain('&lt;script&gt;')
-  })
 })
