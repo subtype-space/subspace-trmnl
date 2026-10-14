@@ -150,7 +150,7 @@ function getArrivalUtcMs(flight: AeroFlightContract): number | null {
 }
 
 // Get best departure time as UTC ms for time-based progress
-function getDepartureUtcMs(flight: AeroFlightContract): number | null {
+export function getDepartureUtcMs(flight: AeroFlightContract): number | null {
   const timeInfo = flight.departure.runwayTime ?? flight.departure.revisedTime ?? flight.departure.scheduledTime
   if (!timeInfo?.utc) return null
   const ms = parseUtcMs(timeInfo.utc)
@@ -179,7 +179,7 @@ export function buildFlightDisplayData(flight: AeroFlightContract): FlightDispla
   const isActive = ACTIVE_STATUSES.includes(flight.status)
   const isPreflight = PREFLIGHT_STATUSES.includes(flight.status)
 
-  // Check if flight is likely arrived — active status but ETA passed by 2+ hours
+  // Check if flight is likely arrived — active status but ETA passed by 30+ minutes
   const arrivalMs = getArrivalUtcMs(flight)
   const likelyArrived = isActive && arrivalMs != null && Date.now() - arrivalMs > LIKELY_ARRIVED_BUFFER_MS
 
@@ -278,7 +278,8 @@ export function buildFlightDisplayData(flight: AeroFlightContract): FlightDispla
     if (progressPct == null) {
       progressPct = calcTimeBasedProgress(flight) ?? inferProgressFromStatus(flight.status)
     }
-  } else if (isPreflight) {
+  } else if (isPreflight && (departureMs == null || departureMs > Date.now())) {
+    // Past departure time, a pre-flight status is usually stale (e.g. long-haul with no live data), so fall through to time-based
     progressPct = 0
   } else {
     progressPct = calcTimeBasedProgress(flight) ?? inferProgressFromStatus(flight.status)
