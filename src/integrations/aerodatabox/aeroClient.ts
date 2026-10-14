@@ -1,5 +1,6 @@
-import type { AeroFlightContract, AeroFlightStatus } from '../../types/aerodatabox/types.js'
+import type { AeroFlightContract } from '../../types/aerodatabox/types.js'
 import { logger } from '../../utils/logger.js'
+import { getDepartureUtcMs } from './statusMapper.js'
 import type { Provider, CacheEntry } from '../../types/aerodatabox/types.js'
 
 
@@ -21,13 +22,17 @@ export class AeroClient {
   private readonly cache = new Map<string, CacheEntry>()
   private readonly inflight = new Map<string, Promise<AeroFlightContract | null>>()
 
-  // 5 min under TRMNL's 1hr refresh so multi-device users share a single API call per cycle
+  // TRMNL refresh is capped at 30 min, so devices see ~2 renders per cached fetch — time-based fields (countdowns,
+  // no-telemetry progress) still advance per render; only API data is held for the full TTL
   private readonly ACTIVE_TTL_MS = 55 * 60 * 1000
   // Settled flights keep the same flight number until next day's operation — 4hr cache is safe
   private readonly SETTLED_TTL_MS = 4 * 60 * 60 * 1000
   // if a flight number is not found, set the TTL to 55 minutes instead of 4 hours
   // don't want to cache for 4 hours for something that COULD change into something real
   private readonly NOT_FOUND_TTL_MS = 55 * 60 * 1000 
+  // Gate/check-in/delay changes cluster in the last couple hours before departure — refresh faster there
+  private readonly NEAR_DEPARTURE_TTL_MS = 15 * 60 * 1000
+  private readonly NEAR_DEPARTURE_WINDOW_MS = 2 * 60 * 60 * 1000
 
   // API queue system
   // 60k unit / 2 req-s api.market tier as of July 2026 (up from 24k / 1 req-s) - 10% buffer under the 2 req/s ceiling
@@ -73,14 +78,21 @@ export class AeroClient {
   /**
    * Get the appropriate cache TTL based on the flight status so we encourage the usage of the cache
    * Active flights get a time to live of 55 minutes in the cache, while settled flights get a time to live of 4 hours
+   * Flights departing within 2 hours (no wheels-up yet) get 15 minutes so check-in/gate/delay updates show up quickly
    * 
    * Caching null hits for a given flight number is also important to avoid repeated API calls for non-existent flights
    * According to google - this is called negative caching
    * 
-   * @param status AeroFlightStatus or null, representing the status of the flight
+   * @param data The cached AeroFlightContract, or null if the flight was not found
    * @returns The time to live in milliseconds for the cache entry based on the flight status
    */
-  private getTtl(status: AeroFlightStatus | null): number {
+  private getTtl(data: AeroFlightContract | null): number {
+    const status = data?.status ?? null
+    const departureMs = data ? getDepartureUtcMs(data) : null
+    if (departureMs != null && !data?.departure.runwayTime) {
+      const untilDeparture = departureMs - Date.now()
+      if (untilDeparture > 0 && untilDeparture < this.NEAR_DEPARTURE_WINDOW_MS) return this.NEAR_DEPARTURE_TTL_MS
+    }
     switch (status) {
       case 'Arrived':
       case 'Canceled':
@@ -151,7 +163,7 @@ export class AeroClient {
     logger.info(`[AERO] retrieving flight information for ${flightNumber}`)
     const now = Date.now()
     const cached = this.cache.get(flightNumber)
-    if (cached && now - cached.at < this.getTtl(cached.status)) {
+    if (cached && now - cached.at < this.getTtl(cached.data)) {
       logger.debug(`[AERO] Cache hit for ${flightNumber}`)
       return cached.data
     }

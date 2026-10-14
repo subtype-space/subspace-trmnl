@@ -32,8 +32,11 @@ jobs:
       - name: Build and push Docker image
         run: |
           if [[ "${GITHUB_REF_NAME}" == v* ]]; then
+            V=${GITHUB_REF_NAME}
+            MAJOR_MINOR=${V%.*} 
             docker buildx build \
               -t ghcr.io/${{ github.repository_owner }}/subspace-trmnl:${{ github.ref_name }} \
+              -t ghcr.io/${{ github.repository_owner }}/subspace-trmnl:${MAJOR_MINOR} \
               -t ghcr.io/${{ github.repository_owner }}/subspace-trmnl:latest \
               --push .
           else

@@ -182,4 +182,17 @@ describe('buildFlightDisplayData', () => {
     expect(d.speedMph).toBe('--')
     expect(d.heading).toBe('--')
   })
+
+  it('uses time-based progress when a pre-flight status is stale past departure time', () => {
+    const iso = (offsetMin: number) => new Date(Date.now() + offsetMin * 60_000).toISOString()
+    const d = buildFlightDisplayData(
+      makeFlight({
+        status: 'Expected',
+        location: undefined,
+        departure: { ...makeFlight().departure, scheduledTime: { utc: iso(-60), local: '' } },
+        arrival: { ...makeFlight().arrival, scheduledTime: { utc: iso(60), local: '' } },
+      })
+    )
+    expect(d.progressPct).toBe(50)
+  })
 })
