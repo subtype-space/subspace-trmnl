@@ -189,8 +189,8 @@ describe('buildFlightDisplayData', () => {
       makeFlight({
         status: 'Expected',
         location: undefined,
-        departure: { ...makeFlight().departure, scheduledTime: { utc: iso(-60) } },
-        arrival: { ...makeFlight().arrival, scheduledTime: { utc: iso(60) } },
+        departure: { ...makeFlight().departure, scheduledTime: { utc: iso(-60), local: '' } },
+        arrival: { ...makeFlight().arrival, scheduledTime: { utc: iso(60), local: '' } },
       })
     )
     expect(d.progressPct).toBe(50)
