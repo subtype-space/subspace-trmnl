@@ -5,7 +5,9 @@ import { join } from 'path'
 import Database from 'better-sqlite3'
 
 const dbPath = join(mkdtempSync(join(tmpdir(), 'trmnl-db-')), 'trmnl.sqlite')
-process.env.PUBLIC_BASE_URL = 'http://localhost'
+process.env.PUBLIC_BASE_URL ??= 'http://localhost'
+process.env.TRMNL_CLIENT_ID ??= 'test'
+process.env.TRMNL_CLIENT_SECRET ??= 'test'
 process.env.TRMNL_DB_PATH = dbPath
 const { initTrmnlDB, pruneStaleTokens } = await import('../../src/utils/dbConnector.js')
 
