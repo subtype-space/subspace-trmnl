@@ -141,12 +141,11 @@ export function bindUserUuidToToken(tokenHash: string, userUuid: string) {
   ).run(userUuid, tokenHash)
 }
 
-// remove outdated hashed access tokens from the database (revoked or stale)
+// remove outdated hashed access tokens from the database (revoked or stale), then settings left without a live token
 export function pruneStaleTokens() {
   const db = getDb()
   const now = Date.now()
   const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000
-  const oneYearMs = 365 * 24 * 60 * 60 * 1000
 
   const { changes: revokedPruned } = db
     .prepare(
@@ -158,17 +157,36 @@ export function pruneStaleTokens() {
     )
     .run(now - ninetyDaysMs)
 
+  // stale = not revoked, but not seen in 90 days (or never seen at all, e.g. install never completed)
   const { changes: stalePruned } = db
     .prepare(
       `
     delete from trmnl_connections
-    where last_seen_at is null
-      and created_at < ?
+    where revoked_at is null
+      and coalesce(last_seen_at, created_at) < ?
   `
     )
-    .run(now - oneYearMs)
+    .run(now - ninetyDaysMs)
 
-  logger.info(`[ DB ] Token cleanup: removed ${revokedPruned} revoked, ${stalePruned} stale`)
+  // user_uuid is per plugin connection, so settings with no live token left belong to an uninstalled or abandoned connection
+  let settingsPruned = 0
+  for (const table of ['trmnl_settings', 'trmnl_flight_settings']) {
+    settingsPruned += db
+      .prepare(
+        `
+      delete from ${table}
+      where user_uuid not in (
+        select user_uuid from trmnl_connections
+        where revoked_at is null and user_uuid is not null
+      )
+    `
+      )
+      .run().changes
+  }
+
+  logger.info(
+    `[ DB ] Token cleanup: removed ${revokedPruned} revoked, ${stalePruned} stale, ${settingsPruned} orphaned settings`
+  )
 }
 
 export async function revokeByUserUuid(userUuid: string) {
