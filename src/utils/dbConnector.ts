@@ -141,7 +141,7 @@ export function bindUserUuidToToken(tokenHash: string, userUuid: string) {
   ).run(userUuid, tokenHash)
 }
 
-// remove outdated hashed access tokens from the database (revoked or stale)
+// remove outdated hashed access tokens from the database (revoked or stale), then settings left without a live token
 export function pruneStaleTokens() {
   const db = getDb()
   const now = Date.now()
