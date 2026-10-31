@@ -146,7 +146,6 @@ export function pruneStaleTokens() {
   const db = getDb()
   const now = Date.now()
   const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000
-  const oneYearMs = 365 * 24 * 60 * 60 * 1000
 
   const { changes: revokedPruned } = db
     .prepare(
@@ -158,15 +157,16 @@ export function pruneStaleTokens() {
     )
     .run(now - ninetyDaysMs)
 
+  // stale = not revoked, but not seen in 90 days (or never seen at all, e.g. install never completed)
   const { changes: stalePruned } = db
     .prepare(
       `
     delete from trmnl_connections
-    where last_seen_at is null
-      and created_at < ?
+    where revoked_at is null
+      and coalesce(last_seen_at, created_at) < ?
   `
     )
-    .run(now - oneYearMs)
+    .run(now - ninetyDaysMs)
 
   logger.info(`[ DB ] Token cleanup: removed ${revokedPruned} revoked, ${stalePruned} stale`)
 }
