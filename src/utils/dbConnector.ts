@@ -168,7 +168,25 @@ export function pruneStaleTokens() {
     )
     .run(now - ninetyDaysMs)
 
-  logger.info(`[ DB ] Token cleanup: removed ${revokedPruned} revoked, ${stalePruned} stale`)
+  // user_uuid is per plugin connection, so settings with no live token left belong to an uninstalled or abandoned connection
+  let settingsPruned = 0
+  for (const table of ['trmnl_settings', 'trmnl_flight_settings']) {
+    settingsPruned += db
+      .prepare(
+        `
+      delete from ${table}
+      where user_uuid not in (
+        select user_uuid from trmnl_connections
+        where revoked_at is null and user_uuid is not null
+      )
+    `
+      )
+      .run().changes
+  }
+
+  logger.info(
+    `[ DB ] Token cleanup: removed ${revokedPruned} revoked, ${stalePruned} stale, ${settingsPruned} orphaned settings`
+  )
 }
 
 export async function revokeByUserUuid(userUuid: string) {
