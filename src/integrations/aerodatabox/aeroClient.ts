@@ -24,7 +24,7 @@ export class AeroClient {
 
   // TRMNL refresh is capped at 30 min, so devices see ~2 renders per cached fetch — time-based fields (countdowns,
   // no-telemetry progress) still advance per render; only API data is held for the full TTL
-  private readonly ACTIVE_TTL_MS = 55 * 60 * 1000
+  private readonly ACTIVE_TTL_MS = 30 * 60 * 1000
   // Settled flights keep the same flight number until next day's operation — 4hr cache is safe
   private readonly SETTLED_TTL_MS = 4 * 60 * 60 * 1000
   // if a flight number is not found, set the TTL to 55 minutes instead of 4 hours
@@ -77,7 +77,7 @@ export class AeroClient {
 
   /**
    * Get the appropriate cache TTL based on the flight status so we encourage the usage of the cache
-   * Active flights get a time to live of 55 minutes in the cache, while settled flights get a time to live of 4 hours
+   * Active flights get a time to live of 30 minutes in the cache, while settled flights get a time to live of 4 hours
    * Flights departing within 2 hours (no wheels-up yet) get 15 minutes so check-in/gate/delay updates show up quickly
    * 
    * Caching null hits for a given flight number is also important to avoid repeated API calls for non-existent flights

@@ -63,9 +63,9 @@ Optional:
 
 ## Flight tracker API economics (as of October 2026)
 
-The flight tracker runs on AeroDataBox via api.market ($30/mo, 60k units, 2 req/s; quota resets on the 1st of each month). Each lookup is ~2 units. TRMNL's updated analytics count ~74 active devices that completed the full setup flow (the earlier "180 installs" figure was inflated). Usage was 13k units by Oct 13, pacing for ~30k/cycle (~50%). Revisit at ~85% sustained usage — upgrade the AeroDataBox tier, don't switch providers. TRMNL revenue no longer fully covers the API cost at this tier; that's accepted.
+The flight tracker runs on AeroDataBox via api.market ($30/mo, 60k units, 2 req/s; quota resets on the 1st of each month). Each lookup is ~2 units. TRMNL's updated analytics count ~74 active devices that completed the full setup flow (the earlier "180 installs" figure was inflated). Usage was 13k units by Oct 13, pacing for ~30k/cycle (~50%). Revisit at ~85% sustained usage — upgrade the AeroDataBox tier, don't switch providers. TRMNL revenue no longer fully covers the API cost at this tier; that's accepted. Update, by Oct 31st we were at approximately 33k calls out of 60k units.
 
-Cache TTLs live in `aeroClient.ts`: 55 min for active flights, 4 hr for settled ones, 15 min within 2 hr of departure (before wheels-up). The near-departure window is the main lever on quota if usage climbs.
+Cache TTLs live in `aeroClient.ts`: 30 min for active flights, 4 hr for settled ones, 15 min within 2 hr of departure (before wheels-up). The near-departure window is the main lever on quota if usage climbs.
 
 We evaluated the Flightradar24 API and passed on it. Their API (unlike their website) has no schedule or status data — no scheduled times, delays, or cancellations — and at 8 credits per flight we'd have zero quota headroom. Their 60k credit Explorer promo also shrinks to 30k after Dec 31, 2026, and credit top-ups require an active subscription, so there's no cheap standalone option. If schedule coverage ever becomes the real problem, compare against FlightAware AeroAPI or OAG, not FR24.
 
