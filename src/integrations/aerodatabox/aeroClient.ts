@@ -4,13 +4,15 @@ import { getDepartureUtcMs } from './statusMapper.js'
 import type { Provider, CacheEntry } from '../../types/aerodatabox/types.js'
 
 
-const PROVIDERS: Record<Provider, { baseUrl: string; headers: (key: string) => Record<string, string> }> = {
+const PROVIDERS: Record<Provider, { baseUrl: string; minIntervalMs: number; headers: (key: string) => Record<string, string> }> = {
   apimarket: {
     baseUrl: 'https://prod.api.market/api/v1/aedbx/aerodatabox',
+    minIntervalMs: 550,
     headers: (key) => ({ 'x-api-market-key': key, Accept: 'application/json' }),
   },
   rapidapi: {
     baseUrl: 'https://aerodatabox.p.rapidapi.com',
+    minIntervalMs: 550,
     headers: (key) => ({ 'x-rapidapi-key': key, 'x-rapidapi-host': 'aerodatabox.p.rapidapi.com', Accept: 'application/json' }),
   },
 }
@@ -35,8 +37,6 @@ export class AeroClient {
   private readonly NEAR_DEPARTURE_WINDOW_MS = 2 * 60 * 60 * 1000
 
   // API queue system
-  // 60k unit / 2 req-s api.market tier as of July 2026 (up from 24k / 1 req-s) - 10% buffer under the 2 req/s ceiling
-  private readonly MIN_INTERVAL_MS = 550
   private lastCallAt = 0
   private processing = false
   private readonly queue: Array<() => void> = []
@@ -61,12 +61,11 @@ export class AeroClient {
     })
   }
 
-  // flight API limits 2 req/s on the current tier
   private async processQueue(): Promise<void> {
     if (this.processing) return
     this.processing = true
     while (this.queue.length > 0) {
-      const wait = Math.max(0, this.lastCallAt + this.MIN_INTERVAL_MS - Date.now())
+      const wait = Math.max(0, this.lastCallAt + this.provider.minIntervalMs - Date.now())
       if (wait > 0) await new Promise<void>((r) => setTimeout(r, wait))
       const next = this.queue.shift()!
       this.lastCallAt = Date.now()
