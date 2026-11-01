@@ -42,7 +42,8 @@ These are required if you are running TRMNL plugins (metro or flight tracker).
 | `WMATA_PRIMARY_KEY` | For metro plugin | WMATA API key for DC Metro arrival predictions and incidents |
 | `TRMNL_FLIGHTS_CLIENT_ID` | For flight plugin | OAuth 2.0 client ID for the TRMNL flight tracker plugin |
 | `TRMNL_FLIGHTS_CLIENT_SECRET` | For flight plugin | OAuth 2.0 client secret paired with `TRMNL_FLIGHTS_CLIENT_ID` |
-| `AERODATABOX_API_KEY` | For flight plugin | RapidAPI key for AeroDataBox (live flight status data) |
+| `AERODATABOX_API_KEY` | For flight plugin | AeroDataBox API key for the selected provider (live flight status data) |
+| `AERODATABOX_PROVIDER` | No | AeroDataBox gateway: `apimarket` (default), `rapidapi`, or `direct` |
 | `TRMNL_DB_PATH` | No | Path to SQLite database file (default: `./trmnl.sqlite`) |
 | `TRMNL_IP_ALLOW_PRIVATE` | No | Set to `true` to bypass TRMNL worker IP allowlist check (useful for local dev) |
 

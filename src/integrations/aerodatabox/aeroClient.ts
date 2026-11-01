@@ -15,6 +15,11 @@ const PROVIDERS: Record<Provider, { baseUrl: string; minIntervalMs: number; head
     minIntervalMs: 550,
     headers: (key) => ({ 'x-rapidapi-key': key, 'x-rapidapi-host': 'aerodatabox.p.rapidapi.com', Accept: 'application/json' }),
   },
+  direct: {
+    baseUrl: 'https://api.aerodatabox.com',
+    minIntervalMs: 220,
+    headers: (key) => ({ 'X-Api-Key': key, Accept: 'application/json' }),
+  },
 }
 
 export class AeroClient {

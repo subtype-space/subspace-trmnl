@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import { createRequire } from 'module'
+import type { Provider } from './types/aerodatabox/types.js'
 
 const require = createRequire(import.meta.url)
 const { version: appVersion } = require('../package.json') as { version: string }
@@ -44,6 +45,6 @@ export const config = {
     },
     aerodatabox: {
         apiKey:         process.env.AERODATABOX_API_KEY ?? '',
-        provider:       (process.env.AERODATABOX_PROVIDER ?? 'apimarket') as 'apimarket' | 'rapidapi',
+        provider:       (process.env.AERODATABOX_PROVIDER ?? 'apimarket') as Provider,
     }
 }
