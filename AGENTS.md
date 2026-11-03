@@ -63,7 +63,7 @@ Optional:
 
 ## Flight tracker API economics (as of October 2026)
 
-The flight tracker runs on AeroDataBox via api.market ($30/mo, 60k units, 2 req/s; quota resets on the 1st of each month). Each lookup is ~2 units. TRMNL's updated analytics count ~74 active devices that completed the full setup flow (the earlier "180 installs" figure was inflated). Usage was 13k units by Oct 13, pacing for ~30k/cycle (~50%). Revisit at ~85% sustained usage — upgrade the AeroDataBox tier, don't switch providers. TRMNL revenue no longer fully covers the API cost at this tier; that's accepted. Update, by Oct 31st we were at approximately 33k calls out of 60k units.
+The flight tracker runs on AeroDataBox direct (`AERODATABOX_PROVIDER=direct`, `https://api.aerodatabox.com`, `X-Api-Key` header): $19/mo, 40k units, 5 req/s, same unit costs as before. It moved off api.market in November 2026, when api.market raised its price to $37.50/mo for 50k units. The direct plan has no tier between 40k ($19) and 400k ($99). Each lookup is ~2 units. TRMNL's updated analytics count ~74 active devices that completed the full setup flow (the earlier "180 installs" figure was inflated). Usage was 13k units by Oct 13, pacing for ~30k/cycle (~50%). October usage was ~33k, which is ~82% of the 40k direct cap. Revisit at ~85% sustained usage: tune the cache TTLs first, because the next direct tier is $99. TRMNL revenue no longer fully covers the API cost at this tier; that's accepted.
 
 Cache TTLs live in `aeroClient.ts`: 30 min for active flights, 4 hr for settled ones, 15 min within 2 hr of departure (before wheels-up). The near-departure window is the main lever on quota if usage climbs.
 
