@@ -118,7 +118,7 @@ export type FlightDisplayData = {
   lastUpdated: string // relative staleness (e.g. "just now", "recently", "2h ago", "yesterday")
 }
 
-export type Provider = 'apimarket' | 'rapidapi'
+export type Provider = 'apimarket' | 'rapidapi' | 'direct'
 
 export type TrmnlFlightSettings = {
   user_uuid: string
