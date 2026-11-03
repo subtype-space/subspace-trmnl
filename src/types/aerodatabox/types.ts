@@ -120,6 +120,14 @@ export type FlightDisplayData = {
 
 export type Provider = 'apimarket' | 'rapidapi' | 'direct'
 
+export type CacheTtls = {
+  activeMs: number
+  settledMs: number
+  notFoundMs: number
+  nearDepartureMs: number
+  nearDepartureWindowMs: number
+}
+
 export type TrmnlFlightSettings = {
   user_uuid: string
   flight_numbers?: string | null

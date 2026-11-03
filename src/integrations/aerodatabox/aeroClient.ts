@@ -1,7 +1,7 @@
 import type { AeroFlightContract } from '../../types/aerodatabox/types.js'
 import { logger } from '../../utils/logger.js'
 import { getDepartureUtcMs } from './statusMapper.js'
-import type { Provider, CacheEntry } from '../../types/aerodatabox/types.js'
+import type { Provider, CacheEntry, CacheTtls } from '../../types/aerodatabox/types.js'
 
 
 const PROVIDERS: Record<Provider, { baseUrl: string; minIntervalMs: number; headers: (key: string) => Record<string, string> }> = {
@@ -29,27 +29,21 @@ export class AeroClient {
   private readonly cache = new Map<string, CacheEntry>()
   private readonly inflight = new Map<string, Promise<AeroFlightContract | null>>()
 
-  // TRMNL refresh is capped at 30 min, so devices see ~2 renders per cached fetch — time-based fields (countdowns,
-  // no-telemetry progress) still advance per render; only API data is held for the full TTL
-  private readonly ACTIVE_TTL_MS = 30 * 60 * 1000
-  // Settled flights keep the same flight number until next day's operation — 4hr cache is safe
-  private readonly SETTLED_TTL_MS = 4 * 60 * 60 * 1000
-  // if a flight number is not found, set the TTL to 55 minutes instead of 4 hours
-  // don't want to cache for 4 hours for something that COULD change into something real
-  private readonly NOT_FOUND_TTL_MS = 55 * 60 * 1000 
-  // Gate/check-in/delay changes cluster in the last couple hours before departure — refresh faster there
-  private readonly NEAR_DEPARTURE_TTL_MS = 15 * 60 * 1000
-  private readonly NEAR_DEPARTURE_WINDOW_MS = 2 * 60 * 60 * 1000
+  private readonly ttl: CacheTtls
 
   // API queue system
   private lastCallAt = 0
   private processing = false
   private readonly queue: Array<() => void> = []
 
-  constructor(apiKey: string, provider: Provider = 'apimarket') {
+  constructor(apiKey: string, provider: Provider, ttl: CacheTtls) {
     this.apiKey = apiKey
     this.provider = PROVIDERS[provider]
+    this.ttl = ttl
     logger.info(`[AERO] Using provider: ${provider}`)
+    logger.info(
+      `[AERO] Cache TTLs (min): active=${ttl.activeMs / 60000} settled=${ttl.settledMs / 60000} notFound=${ttl.notFoundMs / 60000} nearDeparture=${ttl.nearDepartureMs / 60000} nearDepartureWindow=${ttl.nearDepartureWindowMs / 60000}`,
+    )
   }
 
   private enqueue<T>(fn: () => Promise<T>): Promise<T> {
@@ -95,17 +89,17 @@ export class AeroClient {
     const departureMs = data ? getDepartureUtcMs(data) : null
     if (departureMs != null && !data?.departure.runwayTime) {
       const untilDeparture = departureMs - Date.now()
-      if (untilDeparture > 0 && untilDeparture < this.NEAR_DEPARTURE_WINDOW_MS) return this.NEAR_DEPARTURE_TTL_MS
+      if (untilDeparture > 0 && untilDeparture < this.ttl.nearDepartureWindowMs) return this.ttl.nearDepartureMs
     }
     switch (status) {
       case 'Arrived':
       case 'Canceled':
       case 'Diverted':
-        return this.SETTLED_TTL_MS
+        return this.ttl.settledMs
       case null:
-        return this.NOT_FOUND_TTL_MS
+        return this.ttl.notFoundMs
       default:
-        return this.ACTIVE_TTL_MS
+        return this.ttl.activeMs
     }
   }
 
