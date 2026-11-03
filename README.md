@@ -44,6 +44,11 @@ These are required if you are running TRMNL plugins (metro or flight tracker).
 | `TRMNL_FLIGHTS_CLIENT_SECRET` | For flight plugin | OAuth 2.0 client secret paired with `TRMNL_FLIGHTS_CLIENT_ID` |
 | `AERODATABOX_API_KEY` | For flight plugin | AeroDataBox API key for the selected provider (live flight status data) |
 | `AERODATABOX_PROVIDER` | No | AeroDataBox gateway: `apimarket` (default), `rapidapi`, or `direct` |
+| `AERODATABOX_ACTIVE_TTL_MIN` | No | Cache TTL in minutes for active flights (default: `30`) |
+| `AERODATABOX_SETTLED_TTL_MIN` | No | Cache TTL in minutes for arrived, canceled, or diverted flights (default: `240`) |
+| `AERODATABOX_NOT_FOUND_TTL_MIN` | No | Cache TTL in minutes for flight numbers with no result (default: `55`) |
+| `AERODATABOX_NEAR_DEPARTURE_TTL_MIN` | No | Cache TTL in minutes for flights near departure, before wheels-up (default: `15`) |
+| `AERODATABOX_NEAR_DEPARTURE_WINDOW_MIN` | No | Time before departure, in minutes, that uses the near-departure TTL (default: `120`) |
 | `TRMNL_DB_PATH` | No | Path to SQLite database file (default: `./trmnl.sqlite`) |
 | `TRMNL_IP_ALLOW_PRIVATE` | No | Set to `true` to bypass TRMNL worker IP allowlist check (useful for local dev) |
 

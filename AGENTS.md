@@ -59,13 +59,14 @@ Optional:
 - `PORT` - Server port (default: 9595)
 - `LOG_LEVEL` - Logging level (default: info)
 - `TRMNL_DB_PATH` - SQLite database path
+- `AERODATABOX_*_TTL_MIN` - AeroDataBox cache TTLs in minutes (see the flight tracker section)
 - `ASSET_CACHE_BUST` - Append `?v=<app version>` to static asset URLs (airline logo banners) so a deploy busts the 7-day `maxAge` cache instead of waiting it out (default: false)
 
 ## Flight tracker API economics (as of October 2026)
 
-The flight tracker runs on AeroDataBox via api.market ($30/mo, 60k units, 2 req/s; quota resets on the 1st of each month). Each lookup is ~2 units. TRMNL's updated analytics count ~74 active devices that completed the full setup flow (the earlier "180 installs" figure was inflated). Usage was 13k units by Oct 13, pacing for ~30k/cycle (~50%). Revisit at ~85% sustained usage — upgrade the AeroDataBox tier, don't switch providers. TRMNL revenue no longer fully covers the API cost at this tier; that's accepted. Update, by Oct 31st we were at approximately 33k calls out of 60k units.
+The flight tracker runs on AeroDataBox direct (`AERODATABOX_PROVIDER=direct`, `https://api.aerodatabox.com`, `X-Api-Key` header): $19/mo, 40k units, 5 req/s, same unit costs as before. It moved off api.market in November 2026, when api.market raised its price to $37.50/mo for 50k units. The direct plan has no tier between 40k ($19) and 400k ($99). Each lookup is ~2 units. TRMNL's updated analytics count ~74 active devices that completed the full setup flow (the earlier "180 installs" figure was inflated). Usage was 13k units by Oct 13, pacing for ~30k/cycle (~50%). October usage was ~33k, which is ~82% of the 40k direct cap. Revisit at ~85% sustained usage: tune the cache TTLs first, because the next direct tier is $99. TRMNL revenue no longer fully covers the API cost at this tier; that's accepted.
 
-Cache TTLs live in `aeroClient.ts`: 30 min for active flights, 4 hr for settled ones, 15 min within 2 hr of departure (before wheels-up). The near-departure window is the main lever on quota if usage climbs.
+Cache TTLs are set with env vars in `src/config.ts` (`AERODATABOX_*_TTL_MIN`, in minutes). Defaults: 30 min for active flights, 4 hr for settled ones, 55 min for not-found, 15 min within 2 hr of departure (before wheels-up). The active TTL and the near-departure window are the main levers on quota if usage climbs. Change them in the deployment env, not in code. October's ~33k units were measured with a 55-min active TTL.
 
 We evaluated the Flightradar24 API and passed on it. Their API (unlike their website) has no schedule or status data — no scheduled times, delays, or cancellations — and at 8 credits per flight we'd have zero quota headroom. Their 60k credit Explorer promo also shrinks to 30k after Dec 31, 2026, and credit top-ups require an active subscription, so there's no cheap standalone option. If schedule coverage ever becomes the real problem, compare against FlightAware AeroAPI or OAG, not FR24.
 
