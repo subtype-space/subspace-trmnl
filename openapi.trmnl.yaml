@@ -505,7 +505,7 @@ paths:
         '302':
           description: Redirect back to TRMNL or the settings page.
         '400':
-          description: Missing uuid, invalid flight number(s), or more than 4 flights.
+          description: Missing uuid, invalid flight number(s), invalid tail number(s), or more than 20 flights and tail numbers combined.
           content:
             text/html:
               schema: { type: string }

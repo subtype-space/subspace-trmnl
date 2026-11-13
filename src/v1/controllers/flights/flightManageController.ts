@@ -5,6 +5,7 @@ import { getFlightSettingsByUuid, upsertFlightSettings } from '../../../utils/db
 import { wrapSettingsPage } from '../../../utils/settingsLayout.js'
 
 const FLIGHT_PATTERN = /^[A-Z0-9]{2,3}\d{1,4}$/
+export const MAX_TRACKED = 20
 const TAIL_PATTERN = /^[A-Z0-9]{1,2}-?[A-Z0-9]{1,5}$/
 
 function parseList(raw: unknown): string[] {
@@ -73,11 +74,11 @@ function renderSettingsPage(opts: {
         ${errorHtml}
         ${successHtml}
         <p class="hint">
-          Track an aircraft by registration — shows its current or next flight. Up to 4 flights and tail numbers combined.
+          Track an aircraft by registration — shows its current or next flight. Up to ${MAX_TRACKED} flights and tail numbers combined.
           Coverage is best for airline aircraft; private and charter flights may not be found.
         </p>
         <p class="hint section-gap">
-          Multiple flights rotate on each screen refresh throughout the day.
+          Multiple flights rotate on each screen refresh throughout the day. The more you add, the less often each one appears.
         </p>
         <p class="hint section-gap">
           Live telemetry (speed, altitude, heading) may be unavailable for flights in areas with sparse ADS-B receiver coverage, such as over the Atlantic.
@@ -148,8 +149,8 @@ export const flightManagePostController: RequestHandler = async (req, res) => {
     ? `Invalid flight number(s): ${invalidFlights.join(', ')}`
     : invalidTails.length
       ? `Invalid tail number(s): ${invalidTails.join(', ')}`
-      : flights.length + tails.length > 4
-        ? 'Maximum 4 flights and tail numbers combined'
+      : flights.length + tails.length > MAX_TRACKED
+        ? `Maximum ${MAX_TRACKED} flights and tail numbers combined`
         : null
   if (error) {
     res.status(400).type('text/html').send(
