@@ -119,6 +119,7 @@ export type FlightDisplayData = {
 }
 
 export type Provider = 'apimarket' | 'rapidapi' | 'direct'
+export type SearchBy = 'number' | 'reg'
 
 export type CacheTtls = {
   activeMs: number
@@ -131,5 +132,6 @@ export type CacheTtls = {
 export type TrmnlFlightSettings = {
   user_uuid: string
   flight_numbers?: string | null
+  tail_numbers?: string | null
   plugin_setting_id?: number | null
 }

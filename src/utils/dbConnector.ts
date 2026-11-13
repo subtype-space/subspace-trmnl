@@ -23,6 +23,7 @@ export type TrmnlSettings = {
 export type TrmnlFlightSettings = {
   user_uuid: string
   flight_numbers?: string | null
+  tail_numbers?: string | null
   plugin_setting_id?: number | null
 }
 
@@ -60,10 +61,13 @@ export function initTrmnlDB() {
   create table if not exists trmnl_flight_settings (
     user_uuid text primary key,
     flight_numbers text,
+    tail_numbers text,
     plugin_setting_id integer,
     updated_at integer not null
   );
 `)
+  const flightCols = db.prepare('pragma table_info(trmnl_flight_settings)').all() as { name: string }[]
+  if (!flightCols.some((c) => c.name === 'tail_numbers')) db.exec('alter table trmnl_flight_settings add column tail_numbers text')
 }
 
 // Everything below here is beyond me - like I know what's going on, but the syntax...
@@ -269,7 +273,7 @@ export async function getFlightSettingsByUuid(userUuid: string): Promise<TrmnlFl
   const row = db
     .prepare(
       `
-      select user_uuid, flight_numbers, plugin_setting_id, updated_at
+      select user_uuid, flight_numbers, tail_numbers, plugin_setting_id, updated_at
       from trmnl_flight_settings
       where user_uuid = ?
     `
@@ -278,6 +282,7 @@ export async function getFlightSettingsByUuid(userUuid: string): Promise<TrmnlFl
     | {
         user_uuid: string
         flight_numbers: string | null
+        tail_numbers: string | null
         plugin_setting_id: number | null
         updated_at: number
       }
@@ -288,6 +293,7 @@ export async function getFlightSettingsByUuid(userUuid: string): Promise<TrmnlFl
   return {
     user_uuid: row.user_uuid,
     flight_numbers: row.flight_numbers,
+    tail_numbers: row.tail_numbers,
     plugin_setting_id: row.plugin_setting_id,
   }
 }
@@ -297,18 +303,20 @@ export async function upsertFlightSettings(input: TrmnlFlightSettings) {
 
   const userUuid = input.user_uuid
   const flightNumbers = input.flight_numbers ?? null
+  const tailNumbers = input.tail_numbers ?? null
   const pluginSettingId = input.plugin_setting_id ?? null
 
   db.prepare(
     `
     insert into trmnl_flight_settings (
-      user_uuid, flight_numbers, plugin_setting_id, updated_at
+      user_uuid, flight_numbers, tail_numbers, plugin_setting_id, updated_at
     )
-    values (?, ?, ?, ?)
+    values (?, ?, ?, ?, ?)
     on conflict(user_uuid) do update set
       flight_numbers = coalesce(excluded.flight_numbers, trmnl_flight_settings.flight_numbers),
+      tail_numbers = coalesce(excluded.tail_numbers, trmnl_flight_settings.tail_numbers),
       plugin_setting_id = coalesce(excluded.plugin_setting_id, trmnl_flight_settings.plugin_setting_id),
       updated_at = excluded.updated_at
   `
-  ).run(userUuid, flightNumbers, pluginSettingId, Date.now())
+  ).run(userUuid, flightNumbers, tailNumbers, pluginSettingId, Date.now())
 }
