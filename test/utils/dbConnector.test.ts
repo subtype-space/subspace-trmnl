@@ -9,7 +9,7 @@ process.env.PUBLIC_BASE_URL ??= 'http://localhost'
 process.env.TRMNL_CLIENT_ID ??= 'test'
 process.env.TRMNL_CLIENT_SECRET ??= 'test'
 process.env.TRMNL_DB_PATH = dbPath
-const { initTrmnlDB, pruneStaleTokens } = await import('../../src/utils/dbConnector.js')
+const { initTrmnlDB, pruneStaleTokens, upsertFlightSettings, getFlightSettingsByUuid } = await import('../../src/utils/dbConnector.js')
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -52,5 +52,19 @@ describe('pruneStaleTokens', () => {
 
     expect(db.prepare('select user_uuid from trmnl_settings').pluck().all()).toEqual(['live-uuid'])
     expect(db.prepare('select user_uuid from trmnl_flight_settings').pluck().all()).toEqual(['live-uuid'])
+  })
+})
+
+describe('flight settings tail_numbers', () => {
+  it('adds the column to a pre-existing table and round-trips it', async () => {
+    const db = new Database(dbPath)
+    db.exec(`drop table trmnl_flight_settings;
+      create table trmnl_flight_settings (user_uuid text primary key, flight_numbers text, plugin_setting_id integer, updated_at integer not null);
+      insert into trmnl_flight_settings (user_uuid, flight_numbers, updated_at) values ('old-uuid', 'UA804', 1)`)
+
+    initTrmnlDB()
+    await upsertFlightSettings({ user_uuid: 'old-uuid', tail_numbers: 'N12345' })
+
+    expect(await getFlightSettingsByUuid('old-uuid')).toMatchObject({ flight_numbers: 'UA804', tail_numbers: 'N12345' })
   })
 })

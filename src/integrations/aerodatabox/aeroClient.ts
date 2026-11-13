@@ -1,7 +1,7 @@
 import type { AeroFlightContract } from '../../types/aerodatabox/types.js'
 import { logger } from '../../utils/logger.js'
 import { getDepartureUtcMs } from './statusMapper.js'
-import type { Provider, CacheEntry } from '../../types/aerodatabox/types.js'
+import type { Provider, CacheEntry, CacheTtls, SearchBy } from '../../types/aerodatabox/types.js'
 
 
 const PROVIDERS: Record<Provider, { baseUrl: string; minIntervalMs: number; headers: (key: string) => Record<string, string> }> = {
@@ -29,27 +29,21 @@ export class AeroClient {
   private readonly cache = new Map<string, CacheEntry>()
   private readonly inflight = new Map<string, Promise<AeroFlightContract | null>>()
 
-  // TRMNL refresh is capped at 30 min, so devices see ~2 renders per cached fetch — time-based fields (countdowns,
-  // no-telemetry progress) still advance per render; only API data is held for the full TTL
-  private readonly ACTIVE_TTL_MS = 30 * 60 * 1000
-  // Settled flights keep the same flight number until next day's operation — 4hr cache is safe
-  private readonly SETTLED_TTL_MS = 4 * 60 * 60 * 1000
-  // if a flight number is not found, set the TTL to 55 minutes instead of 4 hours
-  // don't want to cache for 4 hours for something that COULD change into something real
-  private readonly NOT_FOUND_TTL_MS = 55 * 60 * 1000 
-  // Gate/check-in/delay changes cluster in the last couple hours before departure — refresh faster there
-  private readonly NEAR_DEPARTURE_TTL_MS = 15 * 60 * 1000
-  private readonly NEAR_DEPARTURE_WINDOW_MS = 2 * 60 * 60 * 1000
+  private readonly ttl: CacheTtls
 
   // API queue system
   private lastCallAt = 0
   private processing = false
   private readonly queue: Array<() => void> = []
 
-  constructor(apiKey: string, provider: Provider = 'apimarket') {
+  constructor(apiKey: string, provider: Provider, ttl: CacheTtls) {
     this.apiKey = apiKey
     this.provider = PROVIDERS[provider]
+    this.ttl = ttl
     logger.info(`[AERO] Using provider: ${provider}`)
+    logger.info(
+      `[AERO] Cache TTLs (min): active=${ttl.activeMs / 60000} settled=${ttl.settledMs / 60000} notFound=${ttl.notFoundMs / 60000} nearDeparture=${ttl.nearDepartureMs / 60000} nearDepartureWindow=${ttl.nearDepartureWindowMs / 60000}`,
+    )
   }
 
   private enqueue<T>(fn: () => Promise<T>): Promise<T> {
@@ -95,31 +89,32 @@ export class AeroClient {
     const departureMs = data ? getDepartureUtcMs(data) : null
     if (departureMs != null && !data?.departure.runwayTime) {
       const untilDeparture = departureMs - Date.now()
-      if (untilDeparture > 0 && untilDeparture < this.NEAR_DEPARTURE_WINDOW_MS) return this.NEAR_DEPARTURE_TTL_MS
+      if (untilDeparture > 0 && untilDeparture < this.ttl.nearDepartureWindowMs) return this.ttl.nearDepartureMs
     }
     switch (status) {
       case 'Arrived':
       case 'Canceled':
       case 'Diverted':
-        return this.SETTLED_TTL_MS
+        return this.ttl.settledMs
       case null:
-        return this.NOT_FOUND_TTL_MS
+        return this.ttl.notFoundMs
       default:
-        return this.ACTIVE_TTL_MS
+        return this.ttl.activeMs
     }
   }
 
   /**
    * Flight lookup method using API
-   * @param flightNumber The flight number to perform an API call for a search
+   * @param searchBy 'number' for a flight number, 'reg' for a tail number
+   * @param flightNumber The flight or tail number to perform an API call for a search
    * @returns An AeroFlightContract object, an error if a search failed, or null if no flight was found
    * 
-   * Note: This function is not cached, and will always perform an API call. Use getFlightByNumberCached() for caching.
+   * Note: This function is not cached, and will always perform an API call. Use getFlightCached() for caching.
    * 
    * @throws {Error} If the API call fails or returns an error response
    */
-  async getFlightByNumber(flightNumber: string): Promise<AeroFlightContract | null> {
-    const url = `${this.provider.baseUrl}/flights/number/${encodeURIComponent(flightNumber)}?withLocation=true`
+  async getFlight(searchBy: SearchBy, flightNumber: string): Promise<AeroFlightContract | null> {
+    const url = `${this.provider.baseUrl}/flights/${searchBy}/${encodeURIComponent(flightNumber)}?withLocation=true`
 
     return this.enqueue(async () => {
       logger.debug(`[AERO] GET ${url}`)
@@ -159,32 +154,34 @@ export class AeroClient {
   }
 
   /**
-   * Flight lookup method using API with caching. Wraps around getFlightByNumber() to provide caching and inflight request deduplication
-   * @param flightNumber The flight number to perform an API search for
+   * Flight lookup method using API with caching. Wraps around getFlight() to provide caching and inflight request deduplication
+   * @param searchBy 'number' for a flight number, 'reg' for a tail number
+   * @param flightNumber The flight or tail number to perform an API search for
    * @returns An AeroFlightContract or null - null cases are caught by the flightMarkupController
    */
-  async getFlightByNumberCached(flightNumber: string): Promise<AeroFlightContract | null> {
-    logger.info(`[AERO] retrieving flight information for ${flightNumber}`)
+  async getFlightCached(searchBy: SearchBy, flightNumber: string): Promise<AeroFlightContract | null> {
+    logger.info(`[AERO] retrieving flight information for ${searchBy} ${flightNumber}`)
+    const key = `${searchBy}:${flightNumber}`
     const now = Date.now()
-    const cached = this.cache.get(flightNumber)
+    const cached = this.cache.get(key)
     if (cached && now - cached.at < this.getTtl(cached.data)) {
       logger.debug(`[AERO] Cache hit for ${flightNumber}`)
       return cached.data
     }
 
-    const existing = this.inflight.get(flightNumber)
+    const existing = this.inflight.get(key)
     if (existing) return existing
 
     logger.debug(`[AERO] Cache miss for ${flightNumber}`)
     const promise = (async () => {
-      const data = await this.getFlightByNumber(flightNumber)
-      this.cache.set(flightNumber, { data, at: Date.now(), status: data?.status ?? null })
-      this.inflight.delete(flightNumber)
+      const data = await this.getFlight(searchBy, flightNumber)
+      this.cache.set(key, { data, at: Date.now(), status: data?.status ?? null })
+      this.inflight.delete(key)
       return data
     })().catch((err) => {
-      this.inflight.delete(flightNumber)
+      this.inflight.delete(key)
       // Return stale cache on error if available
-      const stale = this.cache.get(flightNumber)
+      const stale = this.cache.get(key)
       if (stale) {
         logger.warn(`[AERO] Fetch failed for ${flightNumber}, returning stale cache: ${String(err)}`)
         return stale.data
@@ -192,7 +189,7 @@ export class AeroClient {
       throw err
     })
 
-    this.inflight.set(flightNumber, promise)
+    this.inflight.set(key, promise)
     return promise
   }
 
@@ -200,7 +197,7 @@ export class AeroClient {
    * API can return an array of multiple AeroFlightContracts for the same flight number
    * With different times, we filter out cargo flights, and choose the best flight based on the lastUpdated timestamp
    * 
-   * This is used privately by getFlightByNumber() to pick the best flight from the API response and not used outside this class
+   * This is used privately by getFlight() to pick the best flight from the API response and not used outside this class
    * 
    * @param flights An array of AeroFlightContract objects returned from the API for the same flight number
    * @returns The best flight AeroFlightContract object, or null if no suitable flight was found

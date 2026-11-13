@@ -5,11 +5,20 @@ import { getFlightSettingsByUuid, upsertFlightSettings } from '../../../utils/db
 import { wrapSettingsPage } from '../../../utils/settingsLayout.js'
 
 const FLIGHT_PATTERN = /^[A-Z0-9]{2,3}\d{1,4}$/
+const TAIL_PATTERN = /^[A-Z0-9]{1,2}-?[A-Z0-9]{1,5}$/
+
+function parseList(raw: unknown): string[] {
+  return (typeof raw === 'string' ? raw : '')
+    .split(',')
+    .map((s) => s.replace(/\s+/g, '').toUpperCase())
+    .filter(Boolean)
+}
 
 function renderSettingsPage(opts: {
   uuid: string
   jwt: string
   flightNumbers: string
+  tailNumbers: string
   pluginSettingId?: number | null
   error?: string
   saved?: boolean
@@ -46,11 +55,26 @@ function renderSettingsPage(opts: {
           autocapitalize="characters"
           spellcheck="false"
         />
+        <p class="hint">
+          Enter flight numbers separated by commas — e.g. <strong>UA804, DL123</strong>.
+          IATA (UA804) and ICAO (UAL804) formats are both accepted.
+        </p>
+        <div class="field-label section-gap">Tail numbers</div>
+        <input
+          type="text"
+          name="tailNumbers"
+          value="${escapeHtml(opts.tailNumbers)}"
+          placeholder="N12345, C-FABC"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="characters"
+          spellcheck="false"
+        />
         ${errorHtml}
         ${successHtml}
         <p class="hint">
-          Enter up to 4 flight numbers separated by commas — e.g. <strong>UA804, DL123</strong>.
-          IATA (UA804) and ICAO (UAL804) formats are both accepted.
+          Track an aircraft by registration — shows its current or next flight. Up to 4 flights and tail numbers combined.
+          Coverage is best for airline aircraft; private and charter flights may not be found.
         </p>
         <p class="hint section-gap">
           Multiple flights rotate on each screen refresh throughout the day.
@@ -94,6 +118,7 @@ export const flightManageGetController: RequestHandler = async (req, res) => {
       uuid,
       jwt: jwt ?? '',
       flightNumbers: settings?.flight_numbers ?? '',
+      tailNumbers: settings?.tail_numbers ?? '',
       pluginSettingId: settings?.plugin_setting_id,
       saved: req.query.saved === '1',
     })
@@ -110,48 +135,41 @@ export const flightManagePostController: RequestHandler = async (req, res) => {
   const jwt = req.body?.jwt ?? ''
 
   logger.info('[AERO] Saving user flight settings')
-  const raw = req.body?.flightNumbers
-  const rawStr = typeof raw === 'string' ? raw : ''
-
-  const flights = rawStr
-    .split(',')
-    .map((s: string) => s.replace(/\s+/g, '').toUpperCase())
-    .filter(Boolean)
+  const rawFlights = typeof req.body?.flightNumbers === 'string' ? req.body.flightNumbers : ''
+  const rawTails = typeof req.body?.tailNumbers === 'string' ? req.body.tailNumbers : ''
+  const flights = parseList(rawFlights)
+  const tails = parseList(rawTails)
 
   const settings = await getFlightSettingsByUuid(uuid)
 
-  // Validate each flight number
-  const invalid = flights.filter((f: string) => !FLIGHT_PATTERN.test(f))
-  if (invalid.length > 0) {
+  const invalidFlights = flights.filter((f) => !FLIGHT_PATTERN.test(f))
+  const invalidTails = tails.filter((t) => !TAIL_PATTERN.test(t))
+  const error = invalidFlights.length
+    ? `Invalid flight number(s): ${invalidFlights.join(', ')}`
+    : invalidTails.length
+      ? `Invalid tail number(s): ${invalidTails.join(', ')}`
+      : flights.length + tails.length > 4
+        ? 'Maximum 4 flights and tail numbers combined'
+        : null
+  if (error) {
     res.status(400).type('text/html').send(
       renderSettingsPage({
         uuid,
         jwt,
-        flightNumbers: rawStr,
+        flightNumbers: rawFlights,
+        tailNumbers: rawTails,
         pluginSettingId: settings?.plugin_setting_id,
-        error: `Invalid flight number(s): ${invalid.join(', ')}`,
-      })
-    )
-    return
-  }
-
-  if (flights.length > 4) {
-    res.status(400).type('text/html').send(
-      renderSettingsPage({
-        uuid,
-        jwt,
-        flightNumbers: rawStr,
-        pluginSettingId: settings?.plugin_setting_id,
-        error: 'Maximum 4 flights allowed',
+        error,
       })
     )
     return
   }
 
   const flightNumbers = flights.join(',')
-  logger.debug(`[AERO] ${uuid} updated flights to ${flightNumbers}`)
+  const tailNumbers = tails.join(',')
+  logger.debug(`[AERO] ${uuid} updated flights to ${flightNumbers}, tails to ${tailNumbers}`)
 
-  await upsertFlightSettings({ user_uuid: uuid, flight_numbers: flightNumbers })
+  await upsertFlightSettings({ user_uuid: uuid, flight_numbers: flightNumbers, tail_numbers: tailNumbers })
 
   // Land back on our own page (with the "Settings saved" banner) instead of bouncing
   // straight to trmnl.com — a save with no visible confirmation reads as broken.

@@ -8,7 +8,7 @@ import { AeroClient } from '../../../integrations/aerodatabox/aeroClient.js'
 import { buildFlightDisplayData } from '../../../integrations/aerodatabox/statusMapper.js'
 import { renderMarkup } from '../../../integrations/aerodatabox/renderer.js'
 
-const aeroClient = config.aerodatabox.apiKey ? new AeroClient(config.aerodatabox.apiKey, config.aerodatabox.provider) : null
+const aeroClient = config.aerodatabox.apiKey ? new AeroClient(config.aerodatabox.apiKey, config.aerodatabox.provider, config.aerodatabox.ttl) : null
 const rotationIndex = new Map<string, number>()
 
 function nextRotationIndex(userUuid: string, count: number): number {
@@ -82,15 +82,19 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
     settings = null
     settingsUnavailable = true
   }
-  const flightNumbers = (settings?.flight_numbers ?? '')
-    .split(',')
-    .map((s) => s.trim().toUpperCase())
-    .filter(Boolean)
-    .slice(0, 4)
+  const toList = (raw?: string | null) =>
+    (raw ?? '')
+      .split(',')
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean)
+  const targets = [
+    ...toList(settings?.flight_numbers).map((id) => ({ searchBy: 'number' as const, id })),
+    ...toList(settings?.tail_numbers).map((id) => ({ searchBy: 'reg' as const, id })),
+  ].slice(0, 4)
 
   const baseUrl = new URL(config.api.publicBaseUrl).origin
 
-  if (flightNumbers.length === 0) {
+  if (targets.length === 0) {
     const emptyMessage = settingsUnavailable ? 'Temporarily unavailable - try again shortly' : 'Configure flights in settings'
     logger.info(settingsUnavailable ? '[AERO] Flight settings unavailable' : '[AERO] No flights configured')
     res.json({
@@ -104,14 +108,14 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
   }
 
   // Only fetch data for the flight we're about to display (1 API call per request)
-  const idx = nextRotationIndex(userUuid, flightNumbers.length)
-  const flightNumber = flightNumbers[idx]
-  const airlineCode = flightNumber.replace(/\d+$/, '')
+  const { searchBy, id: flightNumber } = targets[nextRotationIndex(userUuid, targets.length)]
+  const airlineCode = searchBy === 'number' ? flightNumber.replace(/\d+$/, '') : ''
+  const notFound = searchBy === 'number' ? 'Flight not found' : 'No flights found for aircraft'
 
   let displayData: FlightDisplayData
   try {
-    const aeroFlight = await aeroClient.getFlightByNumberCached(flightNumber)
-    displayData = aeroFlight ? buildFlightDisplayData(aeroFlight) : emptyFlightDisplay(flightNumber, airlineCode, 'Flight not found')
+    const aeroFlight = await aeroClient.getFlightCached(searchBy, flightNumber)
+    displayData = aeroFlight ? buildFlightDisplayData(aeroFlight) : emptyFlightDisplay(flightNumber, airlineCode, notFound)
   } catch (e) {
     logger.warn(`[AERO] Failed to fetch data for ${flightNumber}`, String(e))
     displayData = emptyFlightDisplay(flightNumber, airlineCode, 'Data unavailable')
