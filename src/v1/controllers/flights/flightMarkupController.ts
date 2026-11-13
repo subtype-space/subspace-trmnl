@@ -7,6 +7,7 @@ import { parseTrmnlMeta } from '../../../utils/trmnlMeta.js'
 import { AeroClient } from '../../../integrations/aerodatabox/aeroClient.js'
 import { buildFlightDisplayData } from '../../../integrations/aerodatabox/statusMapper.js'
 import { renderMarkup } from '../../../integrations/aerodatabox/renderer.js'
+import { MAX_TRACKED } from './flightManageController.js'
 
 const aeroClient = config.aerodatabox.apiKey ? new AeroClient(config.aerodatabox.apiKey, config.aerodatabox.provider, config.aerodatabox.ttl) : null
 const rotationIndex = new Map<string, number>()
@@ -90,7 +91,7 @@ export const flightMarkupController: RequestHandler = async (req, res) => {
   const targets = [
     ...toList(settings?.flight_numbers).map((id) => ({ searchBy: 'number' as const, id })),
     ...toList(settings?.tail_numbers).map((id) => ({ searchBy: 'reg' as const, id })),
-  ].slice(0, 4)
+  ].slice(0, MAX_TRACKED)
 
   const baseUrl = new URL(config.api.publicBaseUrl).origin
 
